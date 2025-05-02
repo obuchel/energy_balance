@@ -1,15 +1,15 @@
 {
   "files": {
     "main.css": "/energy_balance/static/css/main.da9080f6.css",
-    "main.js": "/energy_balance/static/js/main.c72891af.js",
+    "main.js": "/energy_balance/static/js/main.51406508.js",
     "static/js/453.5aa16127.chunk.js": "/energy_balance/static/js/453.5aa16127.chunk.js",
     "index.html": "/energy_balance/index.html",
     "main.da9080f6.css.map": "/energy_balance/static/css/main.da9080f6.css.map",
-    "main.c72891af.js.map": "/energy_balance/static/js/main.c72891af.js.map",
+    "main.51406508.js.map": "/energy_balance/static/js/main.51406508.js.map",
     "453.5aa16127.chunk.js.map": "/energy_balance/static/js/453.5aa16127.chunk.js.map"
   },
   "entrypoints": [
     "static/css/main.da9080f6.css",
-    "static/js/main.c72891af.js"
+    "static/js/main.51406508.js"
   ]
 }
