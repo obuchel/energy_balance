@@ -39,8 +39,6 @@
     "react-router-dom": "^6.8.1",
     "react-scripts": "5.0.1",
     "firebase": "^10.7.1",
-    "d3": "^7.8.5",
-    "lucide-react": "^0.263.1",
     "web-vitals": "^3.3.0"
   },
   "devDependencies": {
