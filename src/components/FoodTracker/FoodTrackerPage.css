@@ -72,13 +72,7 @@
   margin-bottom: 30px;
 }
 
-.food-form-left {
-  background: #fff;
-  padding: 25px;
-  border-radius: 8px;
-  box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-}
-
+.food-form-left,
 .food-form-right {
   background: #fff;
   padding: 25px;
@@ -760,6 +754,421 @@
   margin: 0 auto;
 }
 
+/* Long COVID Side Panel Styles */
+.database-analysis-section {
+  background: linear-gradient(135deg, rgba(76, 175, 80, 0.1), rgba(33, 150, 243, 0.1));
+  border: 1px solid rgba(76, 175, 80, 0.2);
+  border-radius: 12px;
+  padding: 16px;
+  margin-bottom: 20px;
+}
+
+.database-analysis-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 16px;
+  font-size: 16px;
+}
+
+.category-icon {
+  font-size: 18px;
+}
+
+.category-icon.beneficial {
+  color: #4CAF50;
+}
+
+.inflammatory-level {
+  margin-bottom: 16px;
+}
+
+.inflammatory-level h5 {
+  margin: 0 0 8px 0;
+  font-size: 14px;
+  color: #333;
+}
+
+.level-indicator {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.level-indicator.level-moderate {
+  border-left: 4px solid #FF9800;
+}
+
+.level-value {
+  font-weight: bold;
+  font-size: 12px;
+}
+
+.level-description {
+  font-size: 12px;
+  opacity: 0.8;
+}
+
+.covid-impact-grid {
+  margin-bottom: 16px;
+}
+
+.covid-impact-grid h5 {
+  margin: 0 0 8px 0;
+  font-size: 14px;
+  color: #333;
+}
+
+.impact-categories {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.impact-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 6px 8px;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 6px;
+  font-size: 12px;
+}
+
+.impact-label {
+  font-weight: 500;
+}
+
+.impact-value {
+  font-weight: bold;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 10px;
+  text-transform: uppercase;
+}
+
+.impact-value.impact-moderate {
+  background-color: #FF9800;
+  color: white;
+}
+
+.functional-compounds {
+  margin-bottom: 16px;
+}
+
+.functional-compounds h5 {
+  margin: 0 0 8px 0;
+  font-size: 14px;
+  color: #333;
+}
+
+.compounds-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.compound-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 6px 8px;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 6px;
+  font-size: 12px;
+}
+
+.compound-name {
+  font-weight: 500;
+}
+
+.compound-level {
+  font-weight: bold;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 10px;
+  text-transform: uppercase;
+}
+
+.compound-level.level-high {
+  background-color: #4CAF50;
+  color: white;
+}
+
+.benefits-list, 
+.cautions-list {
+  margin-bottom: 16px;
+}
+
+.benefits-list h5, 
+.cautions-list h5 {
+  margin: 0 0 8px 0;
+  font-size: 14px;
+  color: #333;
+}
+
+.benefits-list ul,
+.cautions-list ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.benefits-list li {
+  padding: 4px 0;
+  font-size: 12px;
+  color: #4CAF50;
+  position: relative;
+  padding-left: 16px;
+}
+
+.benefits-list li:before {
+  content: "✓";
+  position: absolute;
+  left: 0;
+  color: #4CAF50;
+  font-weight: bold;
+}
+
+.cautions-list li {
+  padding: 4px 0;
+  font-size: 12px;
+  color: #FF5722;
+  position: relative;
+  padding-left: 16px;
+}
+
+.cautions-list li:before {
+  content: "⚠";
+  position: absolute;
+  left: 0;
+  color: #FF5722;
+}
+
+.safety-properties {
+  margin-bottom: 16px;
+}
+
+.safety-properties h5 {
+  margin: 0 0 8px 0;
+  font-size: 14px;
+  color: #333;
+}
+
+.properties-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.property-badge {
+  font-size: 10px;
+  font-weight: bold;
+  padding: 3px 8px;
+  border-radius: 12px;
+  text-transform: uppercase;
+}
+
+.property-badge.safe {
+  background-color: #4CAF50;
+  color: white;
+}
+
+.food-category h5 {
+  margin: 0 0 8px 0;
+  font-size: 14px;
+  color: #333;
+}
+
+.category-tag {
+  display: inline-block;
+  background-color: rgba(76, 175, 80, 0.2);
+  color: #4CAF50;
+  font-size: 11px;
+  font-weight: 500;
+  padding: 4px 8px;
+  border-radius: 6px;
+}
+
+.search-status {
+  background: rgba(33, 150, 243, 0.1);
+  border: 1px solid rgba(33, 150, 243, 0.2);
+  border-radius: 8px;
+  padding: 12px;
+  margin: 16px 0;
+  text-align: center;
+}
+
+.search-hint {
+  margin: 0;
+  font-size: 12px;
+  color: #2196F3;
+  font-style: italic;
+}
+
+.selected-food-placeholder {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  padding: 16px;
+  margin: 12px 0;
+  text-align: center;
+}
+
+.selected-food-placeholder p {
+  margin: 8px 0;
+  color: #B0BEC5;
+}
+
+.selected-food-placeholder strong {
+  color: #4CAF50;
+}
+
+.database-foods {
+  margin-bottom: 15px;
+}
+
+.database-food-item {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  padding: 12px;
+  margin-bottom: 10px;
+}
+
+.food-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.anti-inflammatory-badge {
+  font-size: 10px;
+  font-weight: bold;
+  padding: 2px 6px;
+  border-radius: 4px;
+  text-transform: uppercase;
+}
+
+.anti-inflammatory-badge.level-high {
+  background-color: #4CAF50;
+  color: white;
+}
+
+.anti-inflammatory-badge.level-moderate {
+  background-color: #FF9800;
+  color: white;
+}
+
+.anti-inflammatory-badge.level-low {
+  background-color: #f44336;
+  color: white;
+}
+
+.anti-inflammatory-badge.level-neutral {
+  background-color: #9E9E9E;
+  color: white;
+}
+
+.anti-inflammatory-badge.level-unknown {
+  background-color: #607D8B;
+  color: white;
+}
+
+.food-benefits,
+.food-cautions {
+  margin: 8px 0;
+  padding-left: 16px;
+}
+
+.food-benefits li {
+  color: #4CAF50;
+  font-size: 12px;
+  margin-bottom: 2px;
+}
+
+.food-cautions li {
+  color: #FF5722;
+  font-size: 12px;
+  margin-bottom: 2px;
+}
+
+.food-category-tag {
+  display: inline-block;
+  background-color: rgba(255, 255, 255, 0.1);
+  color: #B0BEC5;
+  font-size: 11px;
+  padding: 2px 6px;
+  border-radius: 3px;
+  margin-top: 5px;
+}
+
+.database-insights {
+  background: linear-gradient(135deg, rgba(76, 175, 80, 0.1), rgba(33, 150, 243, 0.1));
+  border: 1px solid rgba(76, 175, 80, 0.2);
+  border-radius: 12px;
+  padding: 16px;
+  margin: 20px 0;
+}
+
+.insights-summary {
+  display: flex;
+  gap: 15px;
+  margin: 12px 0;
+  flex-wrap: wrap;
+}
+
+.insight-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-width: 80px;
+}
+
+.insight-number {
+  font-size: 24px;
+  font-weight: bold;
+  line-height: 1;
+}
+
+.insight-label {
+  font-size: 10px;
+  text-align: center;
+  margin-top: 4px;
+  opacity: 0.8;
+}
+
+.insight-item.beneficial .insight-number {
+  color: #4CAF50;
+}
+
+.insight-item.neutral .insight-number {
+  color: #FF9800;
+}
+
+.insight-item.caution .insight-number {
+  color: #f44336;
+}
+
+.insights-note {
+  font-size: 11px;
+  opacity: 0.7;
+  text-align: center;
+  margin-top: 12px;
+  font-style: italic;
+}
+
+/* Enhanced category sections */
+.category-section.beneficial h4,
+.category-section.neutral h4,
+.category-section.caution h4 {
+  margin-bottom: 12px;
+}
+
 /* Responsive Design */
 @media (max-width: 768px) {
   .food-tracker-container {
@@ -825,6 +1234,23 @@
   
   .chart-container {
     height: 250px;
+  }
+
+  /* Long COVID Side Panel Mobile */
+  .insights-summary {
+    justify-content: center;
+  }
+  
+  .insight-item {
+    min-width: 70px;
+  }
+  
+  .insight-number {
+    font-size: 20px;
+  }
+  
+  .insight-label {
+    font-size: 9px;
   }
 }
 
