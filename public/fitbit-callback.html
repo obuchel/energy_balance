@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Fitbit Callback</title>
+    <script>
+        // Extract query parameters from current URL
+        const urlParams = new URLSearchParams(window.location.search);
+        const code = urlParams.get('code');
+        const state = urlParams.get('state');
+        const error = urlParams.get('error');
+        
+        // Build the hash URL with parameters
+        let hashUrl = '/energy_balance/#/fitbit-callback';
+        
+        if (code || error) {
+            const params = new URLSearchParams();
+            if (code) params.set('code', code);
+            if (state) params.set('state', state);
+            if (error) params.set('error', error);
+            hashUrl += '?' + params.toString();
+        }
+        
+        // Redirect to the hash URL
+        window.location.replace(hashUrl);
+    </script>
+</head>
+<body>
+    <p>Redirecting...</p>
+</body>
+</html>

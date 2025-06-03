@@ -1,0 +1,13 @@
+{
+  "files": {
+    "main.css": "/energy_balance/static/css/main.c826552a.css",
+    "main.js": "/energy_balance/static/js/main.c0b2347a.js",
+    "index.html": "/energy_balance/index.html",
+    "main.c826552a.css.map": "/energy_balance/static/css/main.c826552a.css.map",
+    "main.c0b2347a.js.map": "/energy_balance/static/js/main.c0b2347a.js.map"
+  },
+  "entrypoints": [
+    "static/css/main.c826552a.css",
+    "static/js/main.c0b2347a.js"
+  ]
+}
