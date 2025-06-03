@@ -1554,6 +1554,10 @@ function AnalysisTab({ foodLog, userProfile }) {
 
 // Final clean version of AnalysisTab - replace your current one with this:
 
+// Complete corrected AnalysisTab function with proper getChartData implementation
+
+// Complete corrected AnalysisTab function with proper getChartData implementation
+
 function AnalysisTab({ foodLog, userProfile }) {
   // Safety checks
   if (!foodLog || !Array.isArray(foodLog)) {
@@ -1574,7 +1578,7 @@ function AnalysisTab({ foodLog, userProfile }) {
     );
   }
 
-  // Data processing for charts
+  // Data processing for charts - Complete implementation
   const getChartData = () => {
     if (foodLog.length === 0) return { calorieData: [], macroSums: {}, microSums: {}, efficiencyData: [] };
 
@@ -1600,7 +1604,7 @@ function AnalysisTab({ foodLog, userProfile }) {
       metabolicEfficiency: +entry.metabolicEfficiency || 50
     }));
 
-    // Calculate macronutrient sums for today
+    // Calculate macronutrient sums for the most recent day
     const macroSums = lastDayEntries.reduce((acc, e) => {
       acc.protein = (acc.protein || 0) + (+e.protein || 0);
       acc.carbs = (acc.carbs || 0) + (+e.carbs || 0);
@@ -1608,7 +1612,7 @@ function AnalysisTab({ foodLog, userProfile }) {
       return acc;
     }, {});
 
-    // Calculate micronutrient sums for today
+    // Calculate micronutrient sums for the most recent day
     const microSums = lastDayEntries.reduce((acc, e) => {
       if (e.micronutrients) {
         Object.entries(e.micronutrients).forEach(([k, v]) => {
@@ -1623,25 +1627,30 @@ function AnalysisTab({ foodLog, userProfile }) {
     return { calorieData, macroSums, microSums, efficiencyData };
   };
 
-  const { calorieData, macroSums, microSums, efficiencyData } = getChartData();
+  // Calculate all necessary variables in the correct order
   const today = new Date().toISOString().slice(0, 10);
-  const todayDate = foodLog.length > 0 ? foodLog[0].date : today;
+  const analysisDate = foodLog.length > 0 ? foodLog[0].date : today;
+  const uniqueDates = [...new Set(foodLog.map(entry => entry.date))].length;
+  
+  // Calculate meals for actual today's date
+  const todayMeals = foodLog.filter(entry => entry.date === today);
+  
+  // Calculate meals for the analysis date (most recent date with data)
+  const analysisDateMeals = foodLog.filter(entry => entry.date === analysisDate);
+  
+  // Get chart data
+  const { calorieData, macroSums, microSums, efficiencyData } = getChartData();
 
   return (
     <div className="food-analysis-section">
       <div className="analysis-header">
         <h3>📊 Nutritional Analysis Dashboard</h3>
-        <p className="analysis-date">Analysis for {todayDate}</p>
+        <p className="analysis-date">Analysis for {analysisDate}</p>
         <div className="analysis-summary">
           <span className="summary-stat">
-            <strong>{foodLog.length}</strong> total meals logged
+            <strong>{todayMeals.length}</strong> meals logged today ({today})
           </span>
-          <span className="summary-stat">
-            <strong>{Object.keys(microSums).length}</strong> micronutrients tracked
-          </span>
-          <span className="summary-stat">
-            <strong>{Math.round(macroSums.protein + macroSums.carbs + macroSums.fat)}g</strong> macronutrients today
-          </span>
+
         </div>
       </div>
 
@@ -1681,10 +1690,10 @@ function AnalysisTab({ foodLog, userProfile }) {
         <h4>🔍 Key Insights</h4>
         <div className="insights-grid">
           <div className="insight-card">
-            <h5>Today's Macros</h5>
-            <p>Protein: <strong>{Math.round(macroSums.protein)}g</strong> | 
-               Carbs: <strong>{Math.round(macroSums.carbs)}g</strong> | 
-               Fat: <strong>{Math.round(macroSums.fat)}g</strong></p>
+            <h5>Analysis Date Macros</h5>
+            <p>Protein: <strong>{Math.round(macroSums.protein || 0)}g</strong> | 
+               Carbs: <strong>{Math.round(macroSums.carbs || 0)}g</strong> | 
+               Fat: <strong>{Math.round(macroSums.fat || 0)}g</strong></p>
           </div>
           
           <div className="insight-card">
@@ -1702,7 +1711,6 @@ function AnalysisTab({ foodLog, userProfile }) {
     </div>
   );
 }
-
 
 
 // Step 6: Add symptom tracking functionality for Long COVID patients
@@ -3052,7 +3060,8 @@ function EfficiencyChart({ data, userData, foodDatabase }) {
   return (
     <div className="chart-container">
       <div ref={chartRef} className="efficiency-chart" style={{ minHeight: '500px' }}></div>
-      <div className="chart-info" style={{ marginTop: '20px', padding: '15px', backgroundColor: '#f8f9fa', borderRadius: '8px' }}>
+      <div className="" style={{ marginTop: '20px', padding: '15px', backgroundColor: '#f8f9fa', borderRadius: '8px' }}>
+    
         <h4>Understanding Metabolic Efficiency</h4>
         <p>
           Metabolic efficiency refers to how effectively your body converts the calories you consume into usable energy. 
@@ -3067,7 +3076,7 @@ function EfficiencyChart({ data, userData, foodDatabase }) {
           <li>The red line tracks your efficiency over time across different meals</li>
           <li>Different meal types and timing can affect how efficiently your body processes food</li>
         </ul>
-      </div>
+        </div>
     </div>
   );
 }
