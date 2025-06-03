@@ -4,10 +4,8 @@ import { ChevronRight, ChevronLeft, Check, AlertCircle, Heart, Activity, Smartph
 import './RegistrationPage.css'; // Import CSS file
 
 import { createUserWithEmailAndPassword } from 'firebase/auth';
-
-import { auth } from '../../firebase-config';
+import { auth, db } from '../../firebase-config';
 import { collection, addDoc, query, where, getDocs, doc, setDoc } from 'firebase/firestore';
-
 
 // Updated StepIndicator component
 const StepIndicator = ({ step }) => (
@@ -180,12 +178,36 @@ function RegisterPage() {
     const newErrors = {};
     
     if (!formData.name.trim()) newErrors.name = 'Name is required';
-    if (!formData.email.trim()) newErrors.email = 'Email is required';
-    if (!/\S+@\S+\.\S+/.test(formData.email)) newErrors.email = 'Email is invalid';
-    if (!formData.password) newErrors.password = 'Password is required';
-    if (formData.password.length < 8) newErrors.password = 'Password must be at least 8 characters';
-    if (formData.password !== formData.confirmPassword) newErrors.confirmPassword = 'Passwords do not match';
-    if (!formData.age) newErrors.age = 'Age is required';
+    
+    // Enhanced email validation
+    if (!formData.email.trim()) {
+      newErrors.email = 'Email is required';
+    } else {
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(formData.email.trim())) {
+        newErrors.email = 'Please enter a valid email address';
+      }
+    }
+    
+    // Enhanced password validation
+    if (!formData.password) {
+      newErrors.password = 'Password is required';
+    } else if (formData.password.length < 6) {
+      newErrors.password = 'Password must be at least 6 characters (Firebase requirement)';
+    } else if (formData.password.length < 8) {
+      newErrors.password = 'Password should be at least 8 characters for better security';
+    }
+    
+    if (formData.password !== formData.confirmPassword) {
+      newErrors.confirmPassword = 'Passwords do not match';
+    }
+    
+    if (!formData.age) {
+      newErrors.age = 'Age is required';
+    } else if (formData.age < 13) {
+      newErrors.age = 'Age must be at least 13 (Firebase requirement)';
+    }
+    
     if (!formData.gender) newErrors.gender = 'Gender is required';
     
     setErrors(newErrors);
@@ -229,6 +251,52 @@ function RegisterPage() {
   const handleDeviceSelect = (deviceId) => {
     setFormData(prev => ({ ...prev, selectedDevice: deviceId }));
     setErrors(prev => ({ ...prev, device: '' }));
+  };
+
+  // Function to save user data to Firestore
+  const saveUserToDatabase = async (user, userData = formData) => {
+    try {
+      const userProfile = {
+        uid: user.uid,
+        name: userData.name.trim(),
+        email: userData.email.toLowerCase().trim(),
+        age: parseInt(userData.age),
+        gender: userData.gender,
+        weight: userData.weight ? parseFloat(userData.weight) : null,
+        height: userData.height ? parseFloat(userData.height) : null,
+        covidDate: userData.covidDate || null,
+        covidDuration: userData.covidDuration || null,
+        severity: userData.severity || null,
+        symptoms: userData.symptoms || [],
+        medicalConditions: userData.medicalConditions || null,
+        selectedDevice: userData.selectedDevice,
+        deviceConnected: userData.deviceConnected,
+        authorizationGiven: userData.authorizationGiven,
+        createdAt: new Date().toISOString(),
+        lastUpdated: new Date().toISOString(),
+        // Additional fields for energy management
+        energyProfile: {
+          baselineCalculated: false,
+          currentEnergyLevel: 50, // Default starting point
+          energyEnvelope: null,
+          dailyEnergyBudget: null
+        },
+        preferences: {
+          notifications: true,
+          reminderFrequency: 'daily',
+          dataRetention: '1year'
+        }
+      };
+
+      // Use setDoc with the user's UID as the document ID
+      await setDoc(doc(db, 'users', user.uid), userProfile);
+      
+      console.log('User data saved successfully to Firestore');
+      return userProfile;
+    } catch (error) {
+      console.error('Error saving user data to Firestore:', error);
+      throw new Error('Failed to save user profile. Please try again.');
+    }
   };
 
   const handleDeviceConnection = async () => {
@@ -327,8 +395,9 @@ function RegisterPage() {
           return; // Exit early since we're redirecting
         } else {
           // Handle other OAuth providers (Apple Watch, Garmin, etc.)
+          // For now, these will proceed to step 3 without actual OAuth
           await new Promise(resolve => setTimeout(resolve, 2000));
-          setConnectionStatus('Connected successfully!');
+          setConnectionStatus('Device ready for authorization');
         }
         
         setFormData(prev => ({ ...prev, deviceConnected: true }));
@@ -347,10 +416,40 @@ function RegisterPage() {
     }
   };
 
+  // Check if email already exists in the system
+  const checkEmailExists = async (email) => {
+    try {
+      const usersRef = collection(db, 'users');
+      const q = query(usersRef, where('email', '==', email.toLowerCase()));
+      const querySnapshot = await getDocs(q);
+      return !querySnapshot.empty;
+    } catch (error) {
+      console.error('Error checking email existence:', error);
+      // If we can't check, proceed with registration and let Firebase Auth handle it
+      return false;
+    }
+  };
+
   // Step navigation
-  const handleNext = () => {
+  const handleNext = async () => {
     if (step === 1 && validateStep1()) {
-      setStep(2);
+      // Check if email already exists before proceeding
+      setLoading(true);
+      try {
+        const emailExists = await checkEmailExists(formData.email);
+        if (emailExists) {
+          setErrors({ email: 'This email address is already registered. Please use a different email or try signing in.' });
+          setLoading(false);
+          return;
+        }
+        setLoading(false);
+        setStep(2);
+      } catch (error) {
+        setLoading(false);
+        console.error('Error checking email:', error);
+        // Proceed anyway and let Firebase handle the duplicate check
+        setStep(2);
+      }
     } else if (step === 2 && validateStep2()) {
       handleDeviceConnection();
     }
@@ -369,17 +468,52 @@ function RegisterPage() {
     }
     
     setLoading(true);
+    setErrors({}); // Clear any previous errors
     
     try {
-      // Simulate registration
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      // Clean and validate email format
+      const cleanEmail = formData.email.trim().toLowerCase();
+      const cleanPassword = formData.password.trim();
       
-      // In a real app, you would:
-      // 1. Create user account via API call
-      // 2. Store device connection info
-      // 3. Set up data synchronization
+      console.log('Starting registration process...');
+      console.log('Email:', cleanEmail);
+      console.log('Password length:', cleanPassword.length);
       
-      console.log('Registration completed:', formData);
+      // Additional validation before Firebase call
+      if (cleanPassword.length < 6) {
+        throw new Error('Password must be at least 6 characters long');
+      }
+      
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(cleanEmail)) {
+        throw new Error('Please enter a valid email address');
+      }
+
+      // Double-check email doesn't exist (in case user bypassed earlier check)
+      console.log('Checking email availability...');
+      const emailExists = await checkEmailExists(cleanEmail);
+      if (emailExists) {
+        throw new Error('This email address is already registered. Please use a different email or try signing in.');
+      }
+
+      // Create Firebase Auth user with cleaned data
+      console.log('Creating Firebase Auth user...');
+      const userCredential = await createUserWithEmailAndPassword(
+        auth, 
+        cleanEmail, 
+        cleanPassword
+      );
+      
+      const user = userCredential.user;
+      console.log('Firebase Auth user created successfully:', user.uid);
+      
+      // Update formData with cleaned email for database storage
+      const updatedFormData = { ...formData, email: cleanEmail };
+      
+      // Save user data to Firestore
+      console.log('Saving user data to Firestore...');
+      await saveUserToDatabase(user, updatedFormData);
+      
+      console.log('Registration completed successfully');
       
       // Show success message
       alert('Registration successful! Welcome to Energy Balance.');
@@ -388,12 +522,39 @@ function RegisterPage() {
       navigate('/login', { 
         state: { 
           message: 'Registration successful! Please sign in with your new account.',
-          email: formData.email // Pre-fill email on login page
+          email: cleanEmail // Pre-fill email on login page
         }
       });
       
     } catch (error) {
-      setErrors({ submit: 'Registration failed. Please try again.' });
+      console.error('Registration error:', error);
+      console.error('Error code:', error.code);
+      console.error('Error message:', error.message);
+      
+      let errorMessage = 'Registration failed. Please try again.';
+      
+      // Handle specific Firebase Auth errors
+      if (error.code === 'auth/email-already-in-use') {
+        errorMessage = 'This email address is already registered. Please use a different email or try signing in.';
+      } else if (error.code === 'auth/weak-password') {
+        errorMessage = 'Password is too weak. Please choose a stronger password with at least 6 characters.';
+      } else if (error.code === 'auth/invalid-email') {
+        errorMessage = 'Invalid email address format. Please check your email and try again.';
+      } else if (error.code === 'auth/operation-not-allowed') {
+        errorMessage = 'Email/password accounts are not enabled. Please contact support.';
+      } else if (error.code === 'auth/too-many-requests') {
+        errorMessage = 'Too many failed attempts. Please wait a few minutes and try again.';
+      } else if (error.message.includes('Failed to save user profile')) {
+        errorMessage = 'Account created but profile setup failed. Please contact support.';
+      } else if (error.message.includes('already registered')) {
+        errorMessage = error.message;
+      } else if (error.message.includes('Password must be')) {
+        errorMessage = error.message;
+      } else if (error.message.includes('valid email')) {
+        errorMessage = error.message;
+      }
+      
+      setErrors({ submit: errorMessage });
     } finally {
       setLoading(false);
     }
@@ -467,7 +628,7 @@ function RegisterPage() {
                       value={formData.password}
                       onChange={handleInputChange}
                       className={`form-input ${errors.password ? 'error' : ''}`}
-                      placeholder="Minimum 8 characters"
+                      placeholder="Minimum 6 characters (Firebase requirement)"
                     />
                     {errors.password && <p className="error-message">{errors.password}</p>}
                   </div>
@@ -654,9 +815,19 @@ function RegisterPage() {
                   <button
                     type="submit"
                     className="btn btn-primary"
+                    disabled={loading}
                   >
-                    Next
-                    <ChevronRight className="btn-icon" />
+                    {loading ? (
+                      <>
+                        <div className="loading-spinner"></div>
+                        Checking...
+                      </>
+                    ) : (
+                      <>
+                        Next
+                        <ChevronRight className="btn-icon" />
+                      </>
+                    )}
                   </button>
                 </div>
               </form>

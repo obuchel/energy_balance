@@ -1,7 +1,8 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { db } from '../../firebase-config';
+import { db, auth } from '../../firebase-config';
 import { doc, getDoc, collection, query, where, getDocs } from 'firebase/firestore';
+import { signOut } from 'firebase/auth';
 import * as d3 from 'd3';
 import './Dashboard.css';
 
@@ -183,12 +184,47 @@ function Dashboard() {
     navigate('/food-tracker');
   };
   
-  // Handle logout
-  const handleLogout = () => {
-    console.log('Logout clicked - clearing localStorage');
-    localStorage.removeItem('userData');
-    console.log('Navigating to login...');
-    navigate('/login', { replace: true });
+  // Handle logout - Complete logout from both localStorage and Firebase Auth
+  const handleLogout = async () => {
+    console.log('Logout clicked - starting complete logout process');
+    
+    try {
+      // 1. Sign out from Firebase Auth
+      if (auth.currentUser) {
+        console.log('Signing out Firebase user:', auth.currentUser.email);
+        await signOut(auth);
+        console.log('Firebase signOut successful');
+      } else {
+        console.log('No Firebase user to sign out');
+      }
+      
+      // 2. Clear localStorage
+      console.log('Clearing localStorage userData');
+      localStorage.removeItem('userData');
+      
+      // 3. Clear any other potential session data
+      sessionStorage.clear();
+      console.log('Cleared sessionStorage');
+      
+      // 4. Reset component state
+      setUserData(null);
+      setLoading(false);
+      
+      console.log('Complete logout finished, navigating to login...');
+      
+      // 5. Navigate to login with replace to prevent back navigation
+      navigate('/login', { replace: true });
+      
+    } catch (error) {
+      console.error('Error during logout:', error);
+      
+      // Even if Firebase signOut fails, still clear local data and redirect
+      localStorage.removeItem('userData');
+      sessionStorage.clear();
+      setUserData(null);
+      
+      navigate('/login', { replace: true });
+    }
   };
   
   // Show loading state
