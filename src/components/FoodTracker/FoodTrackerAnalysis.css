@@ -1,0 +1,727 @@
+/* =================================
+   FOOD TRACKER ANALYSIS PAGE STYLES
+   ================================= */
+
+/* Main container styles */
+.food-analysis-section {
+    padding: 20px;
+    max-width: 1200px;
+    margin: 0 auto;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+    background-color: #f8f9fa;
+    min-height: 100vh;
+  }
+  
+  /* Analysis header */
+  .analysis-header {
+    text-align: center;
+    margin-bottom: 40px;
+    padding: 30px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border-radius: 12px;
+    color: white;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+  }
+  
+  .analysis-header h3 {
+    margin: 0 0 10px 0;
+    font-size: 2.2rem;
+    font-weight: 700;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+  }
+  
+  .analysis-date {
+    font-size: 1.1rem;
+    margin: 0 0 20px 0;
+    opacity: 0.9;
+    font-weight: 500;
+  }
+  
+  .analysis-summary {
+    display: flex;
+    justify-content: center;
+    gap: 30px;
+    flex-wrap: wrap;
+    margin-top: 20px;
+  }
+  
+  .summary-stat {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 15px;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 8px;
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    min-width: 120px;
+  }
+  
+  .summary-stat strong {
+    font-size: 1.4rem;
+    font-weight: 700;
+    display: block;
+    margin-bottom: 5px;
+  }
+  
+  /* Charts container */
+  .charts-container {
+    display: flex;
+    flex-direction: column;
+    gap: 40px;
+    margin-bottom: 40px;
+  }
+  
+  /* Chart wrapper */
+  .chart-wrapper {
+    background: white;
+    padding: 30px;
+    border-radius: 12px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+    border: 1px solid #e9ecef;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+  }
+  
+  .chart-wrapper:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.12);
+  }
+  
+  .chart-header {
+    margin-bottom: 25px;
+    border-bottom: 2px solid #f1f3f5;
+    padding-bottom: 15px;
+  }
+  
+  .chart-header h4 {
+    margin: 0 0 8px 0;
+    font-size: 1.4rem;
+    font-weight: 600;
+    color: #333;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  
+  .chart-description {
+    margin: 0;
+    color: #6c757d;
+    font-size: 0.95rem;
+    line-height: 1.4;
+  }
+  
+  /* Analysis insights */
+  .analysis-insights {
+    background: white;
+    padding: 30px;
+    border-radius: 12px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+    border: 1px solid #e9ecef;
+  }
+  
+  .analysis-insights h4 {
+    margin: 0 0 20px 0;
+    font-size: 1.4rem;
+    font-weight: 600;
+    color: #333;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  
+  .insights-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 20px;
+  }
+  
+  .insight-card {
+    padding: 20px;
+    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+    border-radius: 8px;
+    border-left: 4px solid #007bff;
+  }
+  
+  .insight-card h5 {
+    margin: 0 0 10px 0;
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: #333;
+  }
+  
+  .insight-card p {
+    margin: 0;
+    color: #555;
+    line-height: 1.5;
+  }
+  
+  /* =================================
+     MICRONUTRIENT CHART STYLES
+     ================================= */
+  
+  .micronutrient-chart-container {
+    display: flex;
+    flex-direction: column;
+    gap: 30px;
+    max-width: 1000px;
+    margin: 0 auto;
+  }
+  
+  .chart-card {
+    background: white;
+    border-radius: 12px;
+    padding: 30px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+    border: 1px solid #e9ecef;
+  }
+  
+  .chart-title {
+    font-size: 1.5rem;
+    font-weight: 600;
+    margin: 0 0 20px 0;
+    color: #333;
+  }
+  
+  /* Display mode buttons */
+  .display-mode-buttons {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 20px;
+  }
+  
+  .mode-button {
+    padding: 8px 16px;
+    border: 2px solid #dee2e6;
+    background: white;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    font-weight: 500;
+    transition: all 0.2s ease;
+  }
+  
+  .mode-button:hover {
+    border-color: #adb5bd;
+    background: #f8f9fa;
+  }
+  
+  .mode-button-active {
+    background: #007bff;
+    color: white;
+    border-color: #007bff;
+  }
+  
+  .mode-button-deficient {
+    background: #dc3545;
+    color: white;
+    border-color: #dc3545;
+  }
+  
+  .mode-button-optimal {
+    background: #28a745;
+    color: white;
+    border-color: #28a745;
+  }
+  
+  /* Category filter */
+  .category-filter {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+  }
+  
+  .category-button {
+    padding: 8px 16px;
+    border: 2px solid #dee2e6;
+    background: white;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    font-weight: 500;
+    transition: all 0.2s ease;
+  }
+  
+  .category-button:hover {
+    border-color: #adb5bd;
+    background: #f8f9fa;
+  }
+  
+  .category-button-active {
+    background: #6f42c1;
+    color: white;
+    border-color: #6f42c1;
+  }
+  
+  /* Deficiency alert */
+  .deficiency-alert {
+    background: #fff3cd;
+    border: 1px solid #ffeaa7;
+    border-radius: 6px;
+    padding: 15px;
+    margin-bottom: 20px;
+  }
+  
+  .deficiency-message {
+    margin: 0;
+    color: #856404;
+    font-weight: 500;
+  }
+  
+  /* COVID alert */
+  .covid-alert {
+    border-radius: 6px;
+    padding: 15px;
+    margin-bottom: 20px;
+    border: 1px solid;
+  }
+  
+  .covid-severity-mild {
+    background: #d1ecf1;
+    border-color: #bee5eb;
+    color: #0c5460;
+  }
+  
+  .covid-severity-moderate {
+    background: #fff3cd;
+    border-color: #ffeaa7;
+    color: #856404;
+  }
+  
+  .covid-severity-severe {
+    background: #f8d7da;
+    border-color: #f5c6cb;
+    color: #721c24;
+  }
+  
+  .covid-severity-very-severe {
+    background: #d1ecf1;
+    border-color: #bee5eb;
+    color: #0c5460;
+  }
+  
+  .covid-title {
+    margin: 0 0 5px 0;
+    font-weight: 600;
+  }
+  
+  .covid-description {
+    margin: 0;
+    font-size: 0.9rem;
+  }
+  
+  /* Bullet chart styles */
+  .bullet-chart {
+    margin-bottom: 25px;
+    padding: 15px;
+    background: #f8f9fa;
+    border-radius: 8px;
+    border: 1px solid #e9ecef;
+  }
+  
+  .bullet-chart-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+  
+  .bullet-chart-title {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  
+  .nutrient-name {
+    font-weight: 600;
+    color: #333;
+    font-size: 1rem;
+  }
+  
+  .adjusted-badge {
+    background: #6f42c1;
+    color: white;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    font-weight: 500;
+  }
+  
+  .bullet-chart-values {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 0.9rem;
+    color: #555;
+  }
+  
+  .bullet-chart-percentage {
+    font-weight: 600;
+  }
+  
+  /* Bullet chart track */
+  .bullet-chart-track {
+    position: relative;
+    width: 100%;
+    height: 20px;
+    background: #e9ecef;
+    border-radius: 10px;
+    overflow: hidden;
+  }
+  
+  .threshold-marker {
+    position: absolute;
+    top: 0;
+    width: 2px;
+    height: 100%;
+    background: #dc3545;
+    z-index: 2;
+  }
+  
+  .actual-value-bar {
+    position: absolute;
+    top: 0;
+    left: 0;
+    height: 100%;
+    border-radius: 10px;
+    transition: width 0.3s ease;
+    z-index: 1;
+  }
+  
+  .target-line {
+    position: absolute;
+    top: 0;
+    width: 2px;
+    height: 100%;
+    background: #333;
+    z-index: 3;
+  }
+  
+  /* Chart legend */
+  .chart-legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 20px;
+    margin-top: 30px;
+    padding-top: 20px;
+    border-top: 1px solid #dee2e6;
+  }
+  
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  
+  .legend-color {
+    width: 16px;
+    height: 16px;
+    border-radius: 3px;
+    border: 1px solid #ccc;
+  }
+  
+  .legend-optimal { background: #4CAF50; }
+  .legend-good { background: #8BC34A; }
+  .legend-moderate { background: #FFC107; }
+  .legend-low { background: #FF9800; }
+  .legend-very-low { background: #F44336; }
+  
+  .legend-target {
+    width: 2px;
+    height: 16px;
+    background: #333;
+    border: none;
+  }
+  
+  .legend-threshold {
+    width: 2px;
+    height: 16px;
+    background: #dc3545;
+    border: none;
+  }
+  
+  .legend-text {
+    font-size: 0.85rem;
+    color: #555;
+  }
+  
+  /* Profile card */
+  .profile-card {
+    background: white;
+    border-radius: 12px;
+    padding: 25px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+    border: 1px solid #e9ecef;
+  }
+  
+  .profile-title {
+    font-size: 1.3rem;
+    font-weight: 600;
+    margin: 0 0 20px 0;
+    color: #333;
+  }
+  
+  .profile-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 15px;
+  }
+  
+  .profile-item {
+    padding: 15px;
+    background: #f8f9fa;
+    border-radius: 6px;
+    border-left: 4px solid #007bff;
+  }
+  
+  .profile-label {
+    margin: 0 0 5px 0;
+    font-size: 0.85rem;
+    color: #6c757d;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  
+  .profile-value {
+    margin: 0;
+    font-size: 1rem;
+    font-weight: 600;
+    color: #333;
+  }
+  
+  .covid-toggle-button {
+    background: none;
+    border: 1px solid #dee2e6;
+    padding: 4px 8px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    transition: all 0.2s ease;
+  }
+  
+  .covid-toggle-button:hover {
+    background: #f8f9fa;
+    border-color: #adb5bd;
+  }
+  
+  /* Loading states */
+  .loading-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 300px;
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+  }
+  
+  .loading-indicator {
+    text-align: center;
+  }
+  
+  .spinner {
+    width: 40px;
+    height: 40px;
+    border: 4px solid #f3f3f3;
+    border-top: 4px solid #007bff;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin: 0 auto 15px;
+  }
+  
+  @keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+  }
+  
+  .loading-text {
+    margin: 0;
+    color: #6c757d;
+    font-size: 0.9rem;
+  }
+  
+  /* Error states */
+  .analysis-error, .chart-error {
+    background: #f8d7da;
+    border: 1px solid #f5c6cb;
+    border-radius: 8px;
+    padding: 20px;
+    margin: 20px;
+    color: #721c24;
+  }
+  
+  .analysis-error h3 {
+    margin-top: 0;
+    color: #721c24;
+  }
+  
+  .analysis-error details {
+    margin-top: 15px;
+  }
+  
+  .analysis-error pre {
+    background: #f8f9fa;
+    padding: 10px;
+    border-radius: 4px;
+    overflow-x: auto;
+    font-size: 12px;
+    color: #333;
+  }
+  
+  /* Chart container */
+  .chart-container {
+    width: 100%;
+    margin: 0 auto;
+  }
+  
+  .efficiency-chart, .macro-chart {
+    width: 100%;
+    overflow: visible;
+  }
+  
+  .chart-info {
+    margin-top: 20px;
+    padding: 20px;
+    background: #f8f9fa;
+    border-radius: 8px;
+    border: 1px solid #e9ecef;
+  }
+  
+  .chart-info h4 {
+    margin: 0 0 15px 0;
+    color: #333;
+    font-size: 1.2rem;
+  }
+  
+  .chart-info p {
+    margin: 0 0 10px 0;
+    line-height: 1.6;
+    color: #555;
+  }
+  
+  .chart-info ul {
+    margin: 10px 0;
+    padding-left: 20px;
+  }
+  
+  .chart-info li {
+    margin-bottom: 5px;
+    color: #555;
+  }
+  
+  /* Placeholder styles */
+  .placeholder {
+    text-align: center;
+    padding: 60px 20px;
+    color: #6c757d;
+    background: #f8f9fa;
+    border-radius: 8px;
+    border: 2px dashed #dee2e6;
+  }
+  
+  .placeholder p {
+    margin: 0;
+    font-size: 1.1rem;
+  }
+  
+  /* Tooltip styles */
+  .d3-tooltip, .chart-tooltip {
+    position: absolute;
+    background: white;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    padding: 12px;
+    font-size: 13px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.15);
+    pointer-events: none;
+    z-index: 1000;
+    max-width: 300px;
+    line-height: 1.4;
+  }
+  
+  .d3-tooltip ul, .chart-tooltip ul {
+    margin: 8px 0 0 0;
+    padding-left: 18px;
+  }
+  
+  .d3-tooltip li, .chart-tooltip li {
+    margin-bottom: 4px;
+  }
+  
+  /* Responsive design */
+  @media (max-width: 768px) {
+    .food-analysis-section {
+      padding: 15px;
+    }
+    
+    .analysis-header {
+      padding: 20px;
+    }
+    
+    .analysis-header h3 {
+      font-size: 1.8rem;
+    }
+    
+    .analysis-summary {
+      gap: 15px;
+    }
+    
+    .summary-stat {
+      min-width: 100px;
+      padding: 12px;
+    }
+    
+    .chart-wrapper {
+      padding: 20px;
+    }
+    
+    .chart-header h4 {
+      font-size: 1.2rem;
+    }
+    
+    .insights-grid {
+      grid-template-columns: 1fr;
+    }
+    
+    .display-mode-buttons,
+    .category-filter {
+      flex-direction: column;
+      align-items: stretch;
+    }
+    
+    .mode-button,
+    .category-button {
+      text-align: center;
+    }
+    
+    .bullet-chart-header {
+      flex-direction: column;
+      align-items: flex-start;
+    }
+    
+    .profile-grid {
+      grid-template-columns: 1fr;
+    }
+    
+    .chart-legend {
+      flex-direction: column;
+      gap: 10px;
+    }
+  }
+  
+  @media (max-width: 480px) {
+    .analysis-header h3 {
+      font-size: 1.5rem;
+    }
+    
+    .summary-stat strong {
+      font-size: 1.2rem;
+    }
+    
+    .chart-title {
+      font-size: 1.3rem;
+    }
+  }

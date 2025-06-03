@@ -1,0 +1,348 @@
+/* MicronutrientChart.css */
+
+/* CSS Variables for consistency */
+:root {
+  --primary-color: #3b82f6;
+  --secondary-color: #6b7280;
+  --success-color: #10b981;
+  --error-color: #ef4444;
+  --warning-color: #f59e0b;
+  --info-color: #06b6d4;
+  
+  --gray-50: #f9fafb;
+  --gray-100: #f3f4f6;
+  --gray-200: #e5e7eb;
+  --gray-300: #d1d5db;
+  --gray-600: #4b5563;
+  --gray-700: #374151;
+  --gray-900: #111827;
+  
+  --white: #ffffff;
+  --border-radius: 8px;
+  --border-radius-lg: 12px;
+  --shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
+  --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+}
+
+/* Analysis Section */
+.food-analysis-section {
+  display: grid;
+  gap: 2rem;
+  padding: 1rem;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+/* Chart Container */
+.chart-container {
+  background: var(--white);
+  border-radius: var(--border-radius-lg);
+  padding: 1.5rem;
+  box-shadow: var(--shadow);
+  border: 1px solid var(--gray-200);
+  margin-bottom: 2rem;
+}
+
+/* Macronutrient Chart */
+.macro-chart {
+  width: 100%;
+  overflow: visible;
+}
+
+.macro-chart svg {
+  background: var(--white);
+  border-radius: var(--border-radius);
+}
+
+/* Micronutrient Chart */
+.micronutrient-chart {
+  background: var(--white);
+  border-radius: var(--border-radius-lg);
+  padding: 1.5rem;
+  box-shadow: var(--shadow);
+  border: 1px solid var(--gray-200);
+}
+
+.micronutrient-chart h3 {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: var(--gray-900);
+  margin: 0 0 1rem 0;
+}
+
+.micronutrient-chart p {
+  color: var(--gray-600);
+  margin: 0;
+  font-style: italic;
+}
+
+/* Efficiency Chart */
+.efficiency-chart {
+  width: 100%;
+  min-height: 400px;
+  position: relative;
+}
+
+.efficiency-chart svg {
+  background: var(--white);
+  border-radius: var(--border-radius);
+}
+
+.efficiency-chart .placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 300px;
+  background: var(--gray-50);
+  border-radius: var(--border-radius);
+  border: 2px dashed var(--gray-300);
+}
+
+.efficiency-chart .placeholder p {
+  color: var(--gray-600);
+  font-style: italic;
+  text-align: center;
+  margin: 0;
+}
+
+/* Chart Info */
+.chart-info {
+  background: var(--gray-50);
+  border-radius: var(--border-radius);
+  padding: 1rem;
+  margin-top: 1rem;
+  border: 1px solid var(--gray-200);
+}
+
+.chart-info h4 {
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: var(--gray-900);
+  margin: 0 0 0.5rem 0;
+}
+
+.chart-info p {
+  color: var(--gray-700);
+  margin: 0;
+  line-height: 1.5;
+}
+
+/* Chart Tooltip */
+.chart-tooltip {
+  background: var(--white) !important;
+  border: 1px solid var(--gray-300) !important;
+  border-radius: var(--border-radius) !important;
+  box-shadow: var(--shadow-lg) !important;
+  font-size: 0.875rem !important;
+  line-height: 1.4 !important;
+  max-width: 320px !important;
+  z-index: 1000 !important;
+}
+
+.chart-tooltip ul {
+  margin: 0.5rem 0 0 0 !important;
+  padding-left: 1rem !important;
+}
+
+.chart-tooltip li {
+  margin-bottom: 0.25rem !important;
+  color: var(--gray-700) !important;
+}
+
+/* D3 Chart Elements */
+.bar-group rect {
+  transition: opacity 0.2s ease;
+}
+
+.bar-group rect:hover {
+  opacity: 0.8 !important;
+  cursor: pointer;
+}
+
+.efficiency-point {
+  transition: all 0.2s ease;
+}
+
+.efficiency-point:hover {
+  r: 6 !important;
+  cursor: pointer;
+}
+
+.actual-energy-bar {
+  transition: opacity 0.2s ease;
+}
+
+.potential-energy-bar {
+  transition: opacity 0.2s ease;
+}
+
+/* Legend Styles */
+.legend text {
+  font-size: 14px !important;
+  fill: var(--gray-700) !important;
+}
+
+.legend rect {
+  stroke: var(--gray-300) !important;
+  stroke-width: 1px !important;
+}
+
+/* Axis Styles */
+.domain {
+  stroke: var(--gray-300) !important;
+}
+
+.tick line {
+  stroke: var(--gray-300) !important;
+}
+
+.tick text {
+  fill: var(--gray-600) !important;
+  font-size: 12px !important;
+}
+
+/* Chart Titles and Labels */
+svg text {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif !important;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .food-analysis-section {
+    padding: 0.5rem;
+    gap: 1rem;
+  }
+  
+  .chart-container {
+    padding: 1rem;
+  }
+  
+  .macro-chart {
+    overflow-x: auto;
+  }
+  
+  .efficiency-chart {
+    min-height: 300px;
+  }
+  
+  .chart-tooltip {
+    max-width: 280px !important;
+    font-size: 0.8rem !important;
+  }
+}
+
+@media (max-width: 480px) {
+  .chart-container {
+    padding: 0.75rem;
+  }
+  
+  .efficiency-chart {
+    min-height: 250px;
+  }
+  
+  .chart-info {
+    padding: 0.75rem;
+  }
+  
+  .chart-info h4 {
+    font-size: 1rem;
+  }
+  
+  .chart-info p {
+    font-size: 0.875rem;
+  }
+}
+
+/* Loading States */
+.chart-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 200px;
+  color: var(--gray-600);
+}
+
+.chart-loading::before {
+  content: '';
+  width: 20px;
+  height: 20px;
+  border: 2px solid var(--gray-300);
+  border-top: 2px solid var(--primary-color);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin-right: 0.5rem;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* Enhanced Efficiency Specific Styles */
+.enhanced-efficiency-chart {
+  position: relative;
+}
+
+.enhanced-efficiency-chart .chart-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid var(--gray-200);
+}
+
+.enhanced-efficiency-chart .chart-controls {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.chart-control-btn {
+  padding: 0.25rem 0.75rem;
+  background: var(--gray-100);
+  border: 1px solid var(--gray-300);
+  border-radius: var(--border-radius);
+  font-size: 0.875rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.chart-control-btn:hover {
+  background: var(--gray-200);
+}
+
+.chart-control-btn.active {
+  background: var(--primary-color);
+  color: var(--white);
+  border-color: var(--primary-color);
+}
+
+/* Utility Classes */
+.w-full {
+  width: 100%;
+}
+
+.mx-auto {
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.overflow-visible {
+  overflow: visible;
+}
+
+/* Print Styles */
+@media print {
+  .chart-container {
+    box-shadow: none;
+    border: 1px solid var(--gray-300);
+  }
+  
+  .chart-tooltip {
+    display: none !important;
+  }
+  
+  .chart-control-btn {
+    display: none;
+  }
+}
