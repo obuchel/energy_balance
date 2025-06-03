@@ -300,6 +300,46 @@ function SignInPage() {
           Don't have an account? <Link to="/register">Sign up here</Link>
         </div>
         
+        {/* About Energy Balance Section */}
+        <div className="about-section">
+          <h3>About Energy Balance</h3>
+          <p>
+            Energy Balance is a comprehensive health management system designed to help individuals 
+            recovering from Long COVID. Our platform helps you track and manage your energy levels, 
+            physical activity, and overall well-being through seamless integration with your wearable devices.
+          </p>
+          <p>
+            By monitoring your daily activities and energy expenditure, we help you maintain a healthy 
+            balance and prevent post-exertional malaise (PEM) episodes.
+          </p>
+          
+          <div className="supported-devices">
+            <h4>Supported Devices</h4>
+            <div className="device-icons">
+              <div className="device-item">
+                <span className="device-icon">⌚</span>
+                <span>Apple Watch</span>
+              </div>
+              <div className="device-item">
+                <span className="device-icon">📱</span>
+                <span>Fitbit</span>
+              </div>
+              <div className="device-item">
+                <span className="device-icon">⌚</span>
+                <span>Garmin</span>
+              </div>
+              <div className="device-item">
+                <span className="device-icon">📱</span>
+                <span>Samsung Health</span>
+              </div>
+              <div className="device-item">
+                <span className="device-icon">📊</span>
+                <span>Manual Entry</span>
+              </div>
+            </div>
+          </div>
+        </div>
+        
         {/* Debug info in development */}
         {process.env.NODE_ENV === 'development' && (
           <div className="debug-info" style={{marginTop: '20px', padding: '10px', backgroundColor: '#f5f5f5', fontSize: '12px'}}>
