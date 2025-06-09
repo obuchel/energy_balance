@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { collection, query, where, getDocs, addDoc, Timestamp, orderBy, limit, doc, getDoc } from 'firebase/firestore';
 import { db } from '../../firebase-config';
@@ -50,12 +50,35 @@ function FoodTrackerPage() {
   // Suggestion cache for performance
   const [suggestionCache, setSuggestionCache] = useState({});
 
-  // Updated authentication check using localStorage (matching Dashboard pattern)
-  useEffect(() => {
-    checkUserAuthentication();
-  }, [navigate]);
+  // Fetch user profile from Firestore
+  const fetchUserProfile = async (uid) => {
+    try {
+      const userDocRef = doc(db, 'users', uid);
+      const userDoc = await getDoc(userDocRef);
+      
+      if (userDoc.exists()) {
+        const userData = userDoc.data();
+        setUserProfile({
+          age: userData.age || 30,
+          gender: userData.gender || 'female',
+          weight: userData.weight || 65,
+          height: userData.height || 165,
+          activityLevel: userData.activityLevel || 'moderate',
+          hasLongCovid: userData.hasLongCovid || false,
+          longCovidSeverity: userData.longCovidSeverity || 'moderate',
+          ...userData
+        });
+      } else {
+        console.log('No user profile found, using defaults');
+      }
+    } catch (err) {
+      console.error("Error fetching user profile:", err);
+      setError('Failed to load user profile');
+    }
+  };
 
-  const checkUserAuthentication = async () => {
+  // Memoize the authentication check function
+  const checkUserAuthentication = useCallback(async () => {
     try {
       // Get user data from localStorage (same as Dashboard.js)
       const storedUserData = localStorage.getItem('userData');
@@ -76,10 +99,10 @@ function FoodTrackerPage() {
         await fetchUserProfile(parsedUserData.id);
       } else {
         // Use localStorage data as fallback
-        setUserProfile({
-          ...userProfile,
+        setUserProfile(prevProfile => ({
+          ...prevProfile,
           ...parsedUserData
-        });
+        }));
       }
       
     } catch (error) {
@@ -88,7 +111,185 @@ function FoodTrackerPage() {
     } finally {
       setAuthLoading(false);
     }
-  };
+  }, [navigate]); // Only include navigate as dependency
+
+  // Updated authentication check using localStorage (matching Dashboard pattern)
+  useEffect(() => {
+    checkUserAuthentication();
+  }, [checkUserAuthentication]);
+
+  // Add this function to create sample data - moved outside useCallback to avoid dependency issues
+  const createSampleFoodData = useCallback(async () => {
+    if (!currentUser || !currentUser.id) return;
+    
+    const today = new Date().toISOString().split('T')[0];
+    const yesterday = new Date();
+    yesterday.setDate(yesterday.getDate() - 1);
+    const yesterdayStr = yesterday.toISOString().split('T')[0];
+
+    const sampleEntries = [
+      {
+        name: 'Greek Yogurt with Berries',
+        protein: 20,
+        carbs: 35,
+        fat: 8,
+        calories: 320,
+        serving: 200,
+        micronutrients: {
+          vitamin_c: { value: 25, unit: 'mg' },
+          calcium: { value: 200, unit: 'mg' },
+          vitamin_b12: { value: 1.2, unit: 'mcg' },
+        },
+        mealType: 'Breakfast',
+        time: '8:00 AM',
+        date: today,
+        longCovidAdjust: userProfile.hasLongCovid,
+        longCovidBenefits: ['High protein for recovery', 'Probiotics for gut health'],
+        longCovidCautions: [],
+        longCovidRelevance: { antiInflammatory: 'moderate' },
+        metabolicEfficiency: 85,
+        createdAt: Timestamp.now()
+      },
+      {
+        name: 'Quinoa Salad with Grilled Chicken',
+        protein: 32,
+        carbs: 42,
+        fat: 15,
+        calories: 450,
+        serving: 300,
+        micronutrients: {
+          iron: { value: 3.5, unit: 'mg' },
+          magnesium: { value: 60, unit: 'mg' },
+          vitamin_b6: { value: 0.8, unit: 'mg' },
+          folate: { value: 80, unit: 'mcg' }
+        },
+        mealType: 'Lunch',
+        time: '12:30 PM',
+        date: today,
+        longCovidAdjust: userProfile.hasLongCovid,
+        longCovidBenefits: ['Complete protein', 'Anti-inflammatory nutrients'],
+        longCovidCautions: [],
+        longCovidRelevance: { antiInflammatory: 'high' },
+        metabolicEfficiency: 88,
+        createdAt: Timestamp.now()
+      },
+      {
+        name: 'Grilled Salmon with Sweet Potato',
+        protein: 38,
+        carbs: 30,
+        fat: 28,
+        calories: 520,
+        serving: 250,
+        micronutrients: {
+          vitamin_d: { value: 15, unit: 'mcg' },
+          vitamin_b12: { value: 3.2, unit: 'mcg' },
+          selenium: { value: 45, unit: 'mcg' },
+          vitamin_a: { value: 300, unit: 'mcg' }
+        },
+        mealType: 'Dinner',
+        time: '7:00 PM',
+        date: today,
+        longCovidAdjust: userProfile.hasLongCovid,
+        longCovidBenefits: ['Omega-3 fatty acids', 'High vitamin D', 'Anti-inflammatory'],
+        longCovidCautions: [],
+        longCovidRelevance: { 
+          antiInflammatory: 'high',
+          brainFogImpact: 'positive',
+          energyImpact: 'positive'
+        },
+        metabolicEfficiency: 90,
+        createdAt: Timestamp.now()
+      },
+      {
+        name: 'Oatmeal with Walnuts and Cinnamon',
+        protein: 12,
+        carbs: 52,
+        fat: 14,
+        calories: 380,
+        serving: 200,
+        micronutrients: {
+          magnesium: { value: 45, unit: 'mg' },
+          vitamin_e: { value: 8, unit: 'mg' },
+          zinc: { value: 2.5, unit: 'mg' }
+        },
+        mealType: 'Breakfast',
+        time: '8:15 AM',
+        date: yesterdayStr,
+        longCovidAdjust: userProfile.hasLongCovid,
+        longCovidBenefits: ['Heart healthy', 'Sustained energy'],
+        longCovidCautions: [],
+        longCovidRelevance: { antiInflammatory: 'moderate' },
+        metabolicEfficiency: 82,
+        createdAt: Timestamp.now()
+      }
+    ];
+
+    try {
+      // Add sample entries to Firestore
+      const promises = sampleEntries.map(entry => 
+        addDoc(collection(db, 'users', currentUser.id, 'food_journal'), entry)
+      );
+      
+      await Promise.all(promises);
+      
+      // Update local state with the sample data
+      setFoodLog(sampleEntries.map((entry, index) => ({
+        id: `sample_${index}`, // Temporary IDs
+        ...entry
+      })));
+      
+      console.log('Sample food data created successfully');
+      
+    } catch (error) {
+      console.error('Error creating sample data:', error);
+      
+      // If we can't save to Firestore, at least set local state
+      setFoodLog(sampleEntries.map((entry, index) => ({
+        id: `sample_${index}`,
+        ...entry
+      })));
+    }
+  }, [currentUser, userProfile.hasLongCovid]); // Include userProfile.hasLongCovid as dependency
+
+  // Memoize the initialization function
+  const initializeFoodLogData = useCallback(async () => {
+    if (!currentUser || !currentUser.id) return;
+    
+    try {
+      // First, try to fetch existing data from Firestore
+      const q = query(
+        collection(db, 'users', currentUser.id, 'food_journal'),
+        orderBy('date', 'desc'),
+        orderBy('createdAt', 'desc'),
+        limit(20) // Load recent entries
+      );
+      
+      const snap = await getDocs(q);
+      const entries = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      
+      if (entries.length > 0) {
+        // User has existing data, use it
+        setFoodLog(entries);
+      } else {
+        // No existing data, create sample data for demonstration
+        await createSampleFoodData();
+      }
+      
+    } catch (error) {
+      console.error('Error initializing food log data:', error);
+      // If there's an error fetching from Firestore, create sample data
+      await createSampleFoodData();
+    }
+  }, [currentUser, createSampleFoodData]); // Include createSampleFoodData as dependency
+
+  // Add this useEffect RIGHT AFTER your existing useEffect for authentication
+  useEffect(() => {
+    // Initialize food log data when component mounts and user is authenticated
+    if (currentUser && currentUser.id && !authLoading) {
+      initializeFoodLogData();
+    }
+  }, [currentUser, authLoading, initializeFoodLogData]);
+
 // Long COVID Food Information Component - Using Your Database Structure
 const LongCovidFoodInfo = ({ foodName, mealData }) => {
   // If we have meal data from the database, use that
@@ -305,7 +506,6 @@ const LongCovidFoodInfo = ({ foodName, mealData }) => {
   );
 };
 
-// Long COVID Side Panel Component
 // Long COVID Side Panel Component - Enhanced with Database Integration
 const LongCovidSidePanel = ({ selectedFood, selectedMeal, foodLog = [], isSearching = false, searchTerm = '' }) => {
   // If a food is selected, show custom info from database instead of general guide
@@ -330,9 +530,6 @@ const LongCovidSidePanel = ({ selectedFood, selectedMeal, foodLog = [], isSearch
   }
 
   // If user is searching, show database analysis in the guide section
-  // If user is searching, show database analysis in the guide section
-
-  // If user is searching, show database analysis in the guide section
   if (isSearching && searchTerm.length >= 2) {
     return (
       <div className="long-covid-side-panel">
@@ -351,15 +548,13 @@ const LongCovidSidePanel = ({ selectedFood, selectedMeal, foodLog = [], isSearch
           </p>
         </div>
         
-        return (
-          <div className="nutrition-categories">
-            {/* Abbreviated guide during search */}
-            <div className="category-section beneficial">
-              <h4>✅ Quick Anti-Inflammatory Guide</h4>
-              <p>Focus on omega-3 rich fish, berries, leafy greens, and anti-inflammatory spices.</p>
-            </div>
+        <div className="nutrition-categories">
+          {/* Abbreviated guide during search */}
+          <div className="category-section beneficial">
+            <h4>✅ Quick Anti-Inflammatory Guide</h4>
+            <p>Focus on omega-3 rich fish, berries, leafy greens, and anti-inflammatory spices.</p>
           </div>
-        );
+        </div>
       </div>
     );
   }
@@ -603,272 +798,6 @@ const getCovidFoodRating = (foodName) => {
   return 'neutral';
 };
 
-const getLongCovidFoodInfo = (foodName) => {
-  if (!foodName) return null;
-  
-  const foodLower = foodName.toLowerCase();
-  
-  // Anti-inflammatory/beneficial foods with detailed database info
-  if (foodLower.includes('salmon') || foodLower.includes('mackerel') || foodLower.includes('sardines')) {
-    return {
-      category: 'beneficial',
-      title: 'Omega-3 Rich Fatty Fish - Excellent Choice',
-      description: 'Fatty fish are among the most potent anti-inflammatory foods, containing high levels of EPA and DHA omega-3 fatty acids that directly counteract the inflammatory processes seen in Long COVID.',
-      nutritionalProperties: [
-        { name: 'EPA (Eicosapentaenoic acid)', value: '1.2-2.3g per 100g' },
-        { name: 'DHA (Docosahexaenoic acid)', value: '0.8-1.8g per 100g' },
-        { name: 'Vitamin D', value: '360-700 IU per 100g' },
-        { name: 'High-quality protein', value: '20-25g per 100g' }
-      ],
-      mechanisms: [
-        'EPA/DHA reduce pro-inflammatory cytokines (IL-6, TNF-α)',
-        'Vitamin D modulates immune response and reduces inflammation',
-        'Omega-3s support neurological recovery and may help with brain fog',
-        'Protein supports tissue repair and immune function'
-      ],
-      benefits: [
-        'Significantly reduces inflammatory markers within 2-4 weeks',
-        'May improve cognitive symptoms and brain fog',
-        'Supports cardiovascular health affected by Long COVID',
-        'Enhances immune system regulation'
-      ],
-      recommendations: {
-        serving: '100-150g (3.5-5 oz)',
-        frequency: '2-3 times per week',
-        timing: 'Any meal, better absorption with other fats',
-        notes: 'Wild-caught preferred over farmed for higher omega-3 content'
-      },
-      evidenceLevel: 'Strong Evidence',
-      evidenceDescription: 'Multiple RCTs show omega-3s reduce inflammation and support post-viral recovery'
-    };
-  }
-  
-  if (foodLower.includes('blueberries') || foodLower.includes('strawberries') || foodLower.includes('berries')) {
-    return {
-      category: 'beneficial',
-      title: 'Antioxidant-Rich Berries - Powerful Anti-inflammatory',
-      description: 'Berries contain the highest concentration of flavonoids and anthocyanins among common fruits, providing potent antioxidant and anti-inflammatory effects crucial for Long COVID recovery.',
-      nutritionalProperties: [
-        { name: 'Anthocyanins', value: '200-400mg per 100g' },
-        { name: 'Quercetin', value: '15-30mg per 100g' },
-        { name: 'Vitamin C', value: '50-85mg per 100g' },
-        { name: 'Fiber', value: '6-8g per 100g' }
-      ],
-      mechanisms: [
-        'Anthocyanins inhibit NF-κB inflammatory pathway',
-        'Quercetin acts as natural antihistamine and reduces cytokine storm',
-        'Vitamin C supports immune function and collagen synthesis',
-        'Antioxidants protect against oxidative stress from viral damage'
-      ],
-      benefits: [
-        'Reduces inflammatory markers within 1-2 weeks of regular consumption',
-        'May help with histamine intolerance common in Long COVID',
-        'Supports cognitive function and memory',
-        'Protects blood vessels from inflammatory damage'
-      ],
-      recommendations: {
-        serving: '1/2 to 1 cup (75-150g)',
-        frequency: 'Daily',
-        timing: 'Morning or as snack, frozen varieties retain nutrients',
-        notes: 'Organic preferred to avoid pesticide residues that may worsen inflammation'
-      },
-      evidenceLevel: 'Moderate Evidence',
-      evidenceDescription: 'Studies show flavonoid-rich foods reduce post-viral inflammation'
-    };
-  }
-  
-  if (foodLower.includes('spinach') || foodLower.includes('kale') || foodLower.includes('leafy greens')) {
-    return {
-      category: 'beneficial',
-      title: 'Nutrient-Dense Leafy Greens - Comprehensive Support',
-      description: 'Dark leafy greens provide a unique combination of anti-inflammatory compounds, essential nutrients for energy production, and nitrates that may help with circulation issues in Long COVID.',
-      nutritionalProperties: [
-        { name: 'Folate', value: '150-250μg per 100g' },
-        { name: 'Iron', value: '2.7-3.6mg per 100g' },
-        { name: 'Magnesium', value: '80-160mg per 100g' },
-        { name: 'Nitrates', value: '250-2500mg per 100g' }
-      ],
-      mechanisms: [
-        'Folate supports energy metabolism and reduces fatigue',
-        'Iron prevents anemia and supports oxygen transport',
-        'Magnesium aids in muscle function and reduces cramping',
-        'Nitrates improve blood flow and may help with exercise intolerance'
-      ],
-      benefits: [
-        'Combats fatigue through improved energy metabolism',
-        'Supports cardiovascular function affected by Long COVID',
-        'Provides essential nutrients often depleted in chronic illness',
-        'May improve exercise tolerance over time'
-      ],
-      recommendations: {
-        serving: '1-2 cups raw or 1/2 cup cooked',
-        frequency: 'Daily',
-        timing: 'With meals to enhance iron absorption',
-        notes: 'Pair with vitamin C sources for better iron absorption'
-      },
-      evidenceLevel: 'Moderate Evidence',
-      evidenceDescription: 'Nutrient density supports recovery in post-viral syndromes'
-    };
-  }
-  
-  if (foodLower.includes('turmeric')) {
-    return {
-      category: 'beneficial',
-      title: 'Turmeric - Potent Natural Anti-inflammatory',
-      description: 'Turmeric contains curcumin, one of the most studied natural anti-inflammatory compounds, with specific benefits for reducing the chronic inflammation characteristic of Long COVID.',
-      nutritionalProperties: [
-        { name: 'Curcumin', value: '2-8% by weight (higher in supplements)' },
-        { name: 'Volatile oils', value: '3-7%' },
-        { name: 'Turmerone', value: '25-30% of volatile oils' }
-      ],
-      mechanisms: [
-        'Curcumin inhibits COX-2 and LOX inflammatory enzymes',
-        'Blocks NF-κB transcription factor (master inflammation regulator)',
-        'Reduces IL-1β, IL-6, and TNF-α cytokines elevated in Long COVID',
-        'Provides neuroprotective effects for brain fog symptoms'
-      ],
-      benefits: [
-        'Significant reduction in inflammatory markers within 4-6 weeks',
-        'May improve joint pain and muscle aches',
-        'Supports liver detoxification processes',
-        'Potential cognitive benefits for brain fog'
-      ],
-      recommendations: {
-        serving: '1/2 to 1 teaspoon fresh ground or 1/4 teaspoon powder',
-        frequency: 'Daily',
-        timing: 'With meals containing fat and black pepper for absorption',
-        notes: 'Combine with black pepper (piperine) to increase absorption by 2000%'
-      },
-      evidenceLevel: 'Strong Evidence',
-      evidenceDescription: 'Extensive research on curcumin\'s anti-inflammatory effects in chronic conditions'
-    };
-  }
-  
-  // Foods to be cautious with - enhanced info
-  if (foodLower.includes('processed') || foodLower.includes('fried') || foodLower.includes('fast food')) {
-    return {
-      category: 'caution',
-      title: 'Highly Processed Foods - Inflammation Risk',
-      description: 'Ultra-processed foods contain multiple compounds that promote inflammation and may worsen Long COVID symptoms by triggering inflammatory pathways.',
-      nutritionalProperties: [
-        { name: 'Trans fats', value: 'Variable, often 0.5-2g per serving' },
-        { name: 'Omega-6 fatty acids', value: 'High ratio vs omega-3' },
-        { name: 'Advanced glycation end products', value: 'Elevated from processing' },
-        { name: 'Sodium', value: 'Often >800mg per serving' }
-      ],
-      mechanisms: [
-        'Trans fats directly increase inflammatory cytokines',
-        'High omega-6:omega-3 ratio promotes inflammation',
-        'AGEs trigger inflammatory responses in blood vessels',
-        'Excess sodium may worsen cardiovascular symptoms'
-      ],
-      cautions: [
-        'May increase fatigue and worsen brain fog within hours',
-        'Can trigger inflammatory flares in sensitive individuals',
-        'May interfere with sleep quality',
-        'Often displaces nutrient-dense foods from diet'
-      ],
-      recommendations: {
-        serving: 'Minimize or avoid completely',
-        frequency: 'Limit to special occasions if at all',
-        timing: 'If consumed, pair with anti-inflammatory foods',
-        notes: 'Read labels carefully - "natural flavors" can hide inflammatory compounds'
-      },
-      evidenceLevel: 'Strong Evidence',
-      evidenceDescription: 'Consistent research links ultra-processed foods to increased inflammation'
-    };
-  }
-  
-  if (foodLower.includes('sugar') || foodLower.includes('candy') || foodLower.includes('soda')) {
-    return {
-      category: 'caution',
-      title: 'High Sugar Foods - Inflammatory Response Risk',
-      description: 'High sugar intake triggers rapid inflammatory responses that can worsen Long COVID symptoms and contribute to the chronic inflammation cycle.',
-      nutritionalProperties: [
-        { name: 'Added sugars', value: '>25g per serving (typical)' },
-        { name: 'Glycemic index', value: 'High (>70)' },
-        { name: 'Fructose content', value: 'Variable, often 50%+' }
-      ],
-      mechanisms: [
-        'Rapid blood sugar spikes trigger inflammatory cytokine release',
-        'Fructose metabolism produces inflammatory byproducts',
-        'Sugar feeds harmful gut bacteria linked to inflammation',
-        'Glycation reactions create inflammatory compounds'
-      ],
-      cautions: [
-        'Can cause energy crashes that worsen fatigue',
-        'May trigger mood swings and worsen depression/anxiety',
-        'Can disrupt sleep patterns',
-        'May worsen brain fog and cognitive symptoms'
-      ],
-      recommendations: {
-        serving: 'Limit to <25g added sugar per day (WHO recommendation)',
-        frequency: 'Occasional treats only',
-        timing: 'If consumed, pair with protein/fiber to slow absorption',
-        notes: 'Natural fruit sugars with fiber are better alternatives'
-      },
-      evidenceLevel: 'Strong Evidence',
-      evidenceDescription: 'Multiple studies link high sugar intake to increased inflammation markers'
-    };
-  }
-  
-  // Neutral/general foods
-  return {
-    category: 'neutral',
-    title: 'General Nutrition Information',
-    description: 'This food can be part of a balanced anti-inflammatory diet when prepared properly and consumed as part of a varied eating pattern.',
-    nutritionalProperties: [
-      { name: 'Preparation method', value: 'Key factor in inflammatory potential' },
-      { name: 'Processing level', value: 'Less processed = better' },
-      { name: 'Nutrient density', value: 'Focus on vitamins/minerals per calorie' }
-    ],
-    mechanisms: [
-      'Whole foods generally provide better nutrient profiles',
-      'Minimal processing preserves beneficial compounds',
-      'Proper preparation can enhance nutrient availability'
-    ],
-    benefits: [
-      'Can contribute to overall nutrient intake',
-      'May provide specific beneficial compounds',
-      'Part of a varied, balanced eating pattern'
-    ],
-    recommendations: {
-      serving: 'Moderate portions as part of balanced meals',
-      frequency: 'As fits into overall eating pattern',
-      timing: 'No specific timing restrictions',
-      notes: 'Focus on preparation methods that preserve nutrients'
-    },
-    evidenceLevel: 'Limited Specific Evidence',
-    evidenceDescription: 'General nutrition principles apply - whole foods and minimal processing preferred'
-  };
-};
-  // Fetch user profile from Firestore
-  const fetchUserProfile = async (uid) => {
-    try {
-      const userDocRef = doc(db, 'users', uid);
-      const userDoc = await getDoc(userDocRef);
-      
-      if (userDoc.exists()) {
-        const userData = userDoc.data();
-        setUserProfile({
-          age: userData.age || 30,
-          gender: userData.gender || 'female',
-          weight: userData.weight || 65,
-          height: userData.height || 165,
-          activityLevel: userData.activityLevel || 'moderate',
-          hasLongCovid: userData.hasLongCovid || false,
-          longCovidSeverity: userData.longCovidSeverity || 'moderate',
-          ...userData
-        });
-      } else {
-        console.log('No user profile found, using defaults');
-      }
-    } catch (err) {
-      console.error("Error fetching user profile:", err);
-      setError('Failed to load user profile');
-    }
-  };
-
   // Utility functions
   const convertTo24Hour = (time12h) => {
     if (!time12h) return '';
@@ -1016,17 +945,8 @@ const getLongCovidFoodInfo = (foodName) => {
 
   const debouncedSearch = useDebounce(search, 300);
 
-  // Fetch suggestions from Firestore
-  useEffect(() => {
-    if (debouncedSearch.length < 2) {
-      setSuggestions([]);
-      return;
-    }
-    
-    fetchSuggestions();
-  }, [debouncedSearch]);
-
-  const fetchSuggestions = async () => {
+  // Memoize fetchSuggestions function
+  const fetchSuggestions = useCallback(async () => {
     const normalizedSearch = search.toLowerCase();
     
     if (suggestionCache[normalizedSearch]) {
@@ -1057,7 +977,17 @@ const getLongCovidFoodInfo = (foodName) => {
       console.error('Error fetching food suggestions:', err);
       setSuggestions([]);
     }
-  };
+  }, [search, suggestionCache]);
+
+  // Fetch suggestions from Firestore
+  useEffect(() => {
+    if (debouncedSearch.length < 2) {
+      setSuggestions([]);
+      return;
+    }
+    
+    fetchSuggestions();
+  }, [debouncedSearch, fetchSuggestions]);
 
   // Handle meal selection
   const handleSelectMeal = (meal) => {
@@ -1160,8 +1090,8 @@ const getLongCovidFoodInfo = (foodName) => {
     }
   };
 
-  // Fetch food log
-  const fetchFoodLog = async (page = 1) => {
+  // Memoize fetchFoodLog function
+  const fetchFoodLog = useCallback(async (page = 1) => {
     if (!currentUser || !currentUser.id) return;
     
     setLogLoading(true);
@@ -1188,14 +1118,14 @@ const getLongCovidFoodInfo = (foodName) => {
     } finally {
       setLogLoading(false);
     }
-  };
+  }, [currentUser]);
 
   // Fetch food log when tab changes to Food Journal
   useEffect(() => {
     if (tab === 'Food Journal' && currentUser) {
       fetchFoodLog(1);
     }
-  }, [tab, currentUser]);
+  }, [tab, currentUser, fetchFoodLog]);
 
   // Add back navigation function
   const handleBack = () => {
@@ -1297,8 +1227,6 @@ const getLongCovidFoodInfo = (foodName) => {
           </ul>
         )}
       </div>
-
-     
 
       {/* Rest of your existing form fields... */}
       <div className="form-row">

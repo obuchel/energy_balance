@@ -1,7 +1,7 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { db, auth } from '../../firebase-config';
-import { doc, getDoc, collection, query, where, getDocs } from 'firebase/firestore';
+import { doc, getDoc } from 'firebase/firestore';
 import { signOut } from 'firebase/auth';
 import * as d3 from 'd3';
 import './Dashboard.css';
@@ -13,12 +13,8 @@ function Dashboard() {
   
   const forecastChartRef = useRef(null);
   
-  // Check authentication state using localStorage (matching your FitbitCallback flow)
-  useEffect(() => {
-    checkUserAuthentication();
-  }, [navigate]);
-  
-  const checkUserAuthentication = async () => {
+  // Use useCallback to memoize the function and fix the dependency warning
+  const checkUserAuthentication = useCallback(async () => {
     try {
       // Get user data from localStorage (set by FitbitCallback)
       const storedUserData = localStorage.getItem('userData');
@@ -59,7 +55,12 @@ function Dashboard() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [navigate]);
+  
+  // Check authentication state using localStorage (matching your FitbitCallback flow)
+  useEffect(() => {
+    checkUserAuthentication();
+  }, [checkUserAuthentication]);
   
   // Create the forecast chart using D3
   useEffect(() => {

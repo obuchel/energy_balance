@@ -1,11 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ChevronRight, ChevronLeft, Check, AlertCircle, Heart, Activity, Smartphone, Watch, User, Mail, Lock, Calendar, Scale, Ruler } from 'lucide-react';
 import './RegistrationPage.css'; // Import CSS file
 
 import { createUserWithEmailAndPassword } from 'firebase/auth';
 import { auth, db } from '../../firebase-config';
-import { collection, addDoc, query, where, getDocs, doc, setDoc } from 'firebase/firestore';
+import { collection, query, where, getDocs, doc, setDoc } from 'firebase/firestore';
 
 // Updated StepIndicator component
 const StepIndicator = ({ step }) => (
