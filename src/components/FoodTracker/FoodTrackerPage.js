@@ -1,6 +1,5 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-//import { collection, query, where, getDocs, addDoc, Timestamp, orderBy, limit, doc, getDoc } from 'firebase/firestore';
 import { 
   collection, 
   query, 
@@ -11,7 +10,6 @@ import {
   limit, 
   doc, 
   getDoc
-    // Add this for the migration function
 } from 'firebase/firestore';
 import { db } from '../../firebase-config';
 import './FoodTrackerPage.css';
@@ -24,7 +22,12 @@ const ENTRIES_PER_PAGE = 20;
 function FoodTrackerPage() {
   const navigate = useNavigate();
   
-  // User and authentication state - Updated to use localStorage
+  // State declarations
+  const [allFoodsCache, setAllFoodsCache] = useState([]);
+  const [pyodideStatus, setPyodideStatus] = useState('loading');
+  const [searchIndexBuilt, setSearchIndexBuilt] = useState(false);
+  
+  // User and authentication state
   const [currentUser, setCurrentUser] = useState(null);
   const [userProfile, setUserProfile] = useState({
     age: 30,
@@ -89,28 +92,22 @@ function FoodTrackerPage() {
     }
   };
 
-  // Memoize the authentication check function
+  // Authentication check function
   const checkUserAuthentication = useCallback(async () => {
     try {
-      // Get user data from localStorage (same as Dashboard.js)
       const storedUserData = localStorage.getItem('userData');
       
       if (!storedUserData) {
-        // No user data found, redirect to login
         navigate('/login');
         return;
       }
       
       const parsedUserData = JSON.parse(storedUserData);
-      
-      // Set the current user from localStorage
       setCurrentUser(parsedUserData);
       
-      // Fetch full user data from Firestore if user ID exists
       if (parsedUserData.id) {
         await fetchUserProfile(parsedUserData.id);
       } else {
-        // Use localStorage data as fallback
         setUserProfile(prevProfile => ({
           ...prevProfile,
           ...parsedUserData
@@ -123,14 +120,14 @@ function FoodTrackerPage() {
     } finally {
       setAuthLoading(false);
     }
-  }, [navigate]); // Only include navigate as dependency
+  }, [navigate]);
 
-  // Updated authentication check using localStorage (matching Dashboard pattern)
+  // Authentication effect
   useEffect(() => {
     checkUserAuthentication();
   }, [checkUserAuthentication]);
 
-  // Add this function to create sample data - moved outside useCallback to avoid dependency issues
+  // Create sample food data
   const createSampleFoodData = useCallback(async () => {
     if (!currentUser || !currentUser.id) return;
     
@@ -211,42 +208,18 @@ function FoodTrackerPage() {
         },
         metabolicEfficiency: 90,
         createdAt: Timestamp.now()
-      },
-      {
-        name: 'Oatmeal with Walnuts and Cinnamon',
-        protein: 12,
-        carbs: 52,
-        fat: 14,
-        calories: 380,
-        serving: 200,
-        micronutrients: {
-          magnesium: { value: 45, unit: 'mg' },
-          vitamin_e: { value: 8, unit: 'mg' },
-          zinc: { value: 2.5, unit: 'mg' }
-        },
-        mealType: 'Breakfast',
-        time: '8:15 AM',
-        date: yesterdayStr,
-        longCovidAdjust: userProfile.hasLongCovid,
-        longCovidBenefits: ['Heart healthy', 'Sustained energy'],
-        longCovidCautions: [],
-        longCovidRelevance: { antiInflammatory: 'moderate' },
-        metabolicEfficiency: 82,
-        createdAt: Timestamp.now()
       }
     ];
 
     try {
-      // Add sample entries to Firestore
       const promises = sampleEntries.map(entry => 
         addDoc(collection(db, 'users', currentUser.id, 'food_journal'), entry)
       );
       
       await Promise.all(promises);
       
-      // Update local state with the sample data
       setFoodLog(sampleEntries.map((entry, index) => ({
-        id: `sample_${index}`, // Temporary IDs
+        id: `sample_${index}`,
         ...entry
       })));
       
@@ -255,560 +228,262 @@ function FoodTrackerPage() {
     } catch (error) {
       console.error('Error creating sample data:', error);
       
-      // If we can't save to Firestore, at least set local state
       setFoodLog(sampleEntries.map((entry, index) => ({
         id: `sample_${index}`,
         ...entry
       })));
     }
-  }, [currentUser, userProfile.hasLongCovid]); // Include userProfile.hasLongCovid as dependency
+  }, [currentUser, userProfile.hasLongCovid]);
 
-  // Memoize the initialization function
+  // Initialize food log data
   const initializeFoodLogData = useCallback(async () => {
     if (!currentUser || !currentUser.id) return;
     
     try {
-      // First, try to fetch existing data from Firestore
       const q = query(
         collection(db, 'users', currentUser.id, 'food_journal'),
         orderBy('date', 'desc'),
         orderBy('createdAt', 'desc'),
-        limit(20) // Load recent entries
+        limit(20)
       );
       
       const snap = await getDocs(q);
       const entries = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
       
       if (entries.length > 0) {
-        // User has existing data, use it
         setFoodLog(entries);
       } else {
-        // No existing data, create sample data for demonstration
         await createSampleFoodData();
       }
       
     } catch (error) {
       console.error('Error initializing food log data:', error);
-      // If there's an error fetching from Firestore, create sample data
       await createSampleFoodData();
     }
-  }, [currentUser, createSampleFoodData]); // Include createSampleFoodData as dependency
+  }, [currentUser, createSampleFoodData]);
 
-  // Add this useEffect RIGHT AFTER your existing useEffect for authentication
+  // Initialize food log when user is authenticated
   useEffect(() => {
-    // Initialize food log data when component mounts and user is authenticated
     if (currentUser && currentUser.id && !authLoading) {
       initializeFoodLogData();
     }
   }, [currentUser, authLoading, initializeFoodLogData]);
 
-// Long COVID Food Information Component - Using Your Database Structure
-const LongCovidFoodInfo = ({ foodName, mealData }) => {
-  // If we have meal data from the database, use that
-  if (mealData && (mealData.longCovidRelevance || mealData.longCovidBenefits || mealData.longCovidCautions)) {
-    const covidRelevance = mealData.longCovidRelevance || {};
-    const benefits = mealData.longCovidBenefits || [];
-    const cautions = mealData.longCovidCautions || [];
-    const functionalCompounds = mealData.functionalCompounds || {};
-    const properties = mealData.properties || {};
-    
-    // Determine category based on database data
-    let category = 'neutral';
-    if (benefits.length > cautions.length) category = 'beneficial';
-    if (cautions.length > benefits.length) category = 'caution';
-    
-    // Get anti-inflammatory level
-    const antiInflammatoryLevel = covidRelevance.antiInflammatory || 'unknown';
-    
-    return (
-      <div className={`long-covid-food-info ${category}`}>
-        <div className="food-info-header">
-          <span className={`category-icon ${category}`}>
-            {category === 'beneficial' ? '✅' : 
-             category === 'caution' ? '⚠️' : 'ℹ️'}
-          </span>
-          <strong>Database Analysis: {foodName}</strong>
-        </div>
-        
-        {/* Anti-inflammatory level from database */}
-        <div className="inflammatory-level">
-          <h5>🔥 Anti-Inflammatory Level</h5>
-          <div className={`level-indicator level-${antiInflammatoryLevel}`}>
-            <span className="level-value">{antiInflammatoryLevel.toUpperCase()}</span>
-            <span className="level-description">
-              {antiInflammatoryLevel === 'high' ? 'Excellent for reducing inflammation' :
-               antiInflammatoryLevel === 'moderate' ? 'Moderately helpful for inflammation' :
-               antiInflammatoryLevel === 'low' ? 'Limited anti-inflammatory effects' :
-               antiInflammatoryLevel === 'neutral' ? 'No significant inflammatory impact' : 'Not assessed'}
-            </span>
-          </div>
-        </div>
-
-        {/* Long COVID Impact Assessment */}
-        <div className="covid-impact-grid">
-          <h5>🎯 Long COVID Impact Assessment</h5>
-          <div className="impact-categories">
-            {covidRelevance.brainFogImpact && (
-              <div className="impact-item">
-                <span className="impact-label">Brain Fog:</span>
-                <span className={`impact-value impact-${covidRelevance.brainFogImpact}`}>
-                  {covidRelevance.brainFogImpact}
-                </span>
-              </div>
-            )}
-            {covidRelevance.energyImpact && (
-              <div className="impact-item">
-                <span className="impact-label">Energy Levels:</span>
-                <span className={`impact-value impact-${covidRelevance.energyImpact}`}>
-                  {covidRelevance.energyImpact}
-                </span>
-              </div>
-            )}
-            {covidRelevance.gutHealthImpact && (
-              <div className="impact-item">
-                <span className="impact-label">Gut Health:</span>
-                <span className={`impact-value impact-${covidRelevance.gutHealthImpact}`}>
-                  {covidRelevance.gutHealthImpact}
-                </span>
-              </div>
-            )}
-            {covidRelevance.immuneModulating && (
-              <div className="impact-item">
-                <span className="impact-label">Immune Support:</span>
-                <span className={`impact-value impact-${covidRelevance.immuneModulating}`}>
-                  {covidRelevance.immuneModulating}
-                </span>
-              </div>
-            )}
-            {covidRelevance.histamineResponse && (
-              <div className="impact-item">
-                <span className="impact-label">Histamine Response:</span>
-                <span className={`impact-value impact-${covidRelevance.histamineResponse}`}>
-                  {covidRelevance.histamineResponse}
-                </span>
-              </div>
-            )}
-            {covidRelevance.mastCellActivation && (
-              <div className="impact-item">
-                <span className="impact-label">Mast Cell Activation:</span>
-                <span className={`impact-value impact-${covidRelevance.mastCellActivation}`}>
-                  {covidRelevance.mastCellActivation}
-                </span>
-              </div>
-            )}
-            {covidRelevance.mitochondrialSupport && (
-              <div className="impact-item">
-                <span className="impact-label">Mitochondrial Support:</span>
-                <span className={`impact-value impact-${covidRelevance.mitochondrialSupport}`}>
-                  {covidRelevance.mitochondrialSupport}
-                </span>
-              </div>
-            )}
-            {covidRelevance.nerveSupportive && (
-              <div className="impact-item">
-                <span className="impact-label">Nerve Support:</span>
-                <span className={`impact-value impact-${covidRelevance.nerveSupportive}`}>
-                  {covidRelevance.nerveSupportive}
-                </span>
-              </div>
-            )}
-            {covidRelevance.oxidativeStressReduction && (
-              <div className="impact-item">
-                <span className="impact-label">Oxidative Stress:</span>
-                <span className={`impact-value impact-${covidRelevance.oxidativeStressReduction}`}>
-                  {covidRelevance.oxidativeStressReduction}
-                </span>
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* Functional compounds from database */}
-        {Object.keys(functionalCompounds).length > 0 && (
-          <div className="functional-compounds">
-            <h5>🧬 Functional Compounds</h5>
-            <div className="compounds-grid">
-              {Object.entries(functionalCompounds).map(([compound, level]) => (
-                <div key={compound} className="compound-item">
-                  <span className="compound-name">{compound.replace(/_/g, ' ')}</span>
-                  <span className={`compound-level level-${level}`}>{level}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-        
-        {/* Benefits from database */}
-        {benefits.length > 0 && (
-          <div className="benefits-list">
-            <h5>✨ Benefits for Long COVID Recovery</h5>
-            <ul>
-              {benefits.map((benefit, i) => (
-                <li key={i}>{benefit}</li>
-              ))}
-            </ul>
-          </div>
-        )}
-        
-        {/* Cautions from database */}
-        {cautions.length > 0 && (
-          <div className="cautions-list">
-            <h5>⚠️ Important Considerations</h5>
-            <ul>
-              {cautions.map((caution, i) => (
-                <li key={i}>{caution}</li>
-              ))}
-            </ul>
-          </div>
-        )}
-
-        {/* Safety properties for sensitive individuals */}
-        {Object.keys(properties).length > 0 && (
-          <div className="safety-properties">
-            <h5>🛡️ Safety Profile</h5>
-            <div className="properties-grid">
-              {properties.dairyFree && (
-                <div className="property-badge safe">Dairy Free</div>
-              )}
-              {properties.glutenFree && (
-                <div className="property-badge safe">Gluten Free</div>
-              )}
-              {properties.safeForMCAS && (
-                <div className="property-badge safe">MCAS Safe</div>
-              )}
-              {properties.fodmap && (
-                <div className={`property-badge ${properties.fodmap === 'low' ? 'safe' : 'caution'}`}>
-                  {properties.fodmap.toUpperCase()} FODMAP
-                </div>
-              )}
-              {properties.oxalates && (
-                <div className={`property-badge ${properties.oxalates === 'none' || properties.oxalates === 'low' ? 'safe' : 'caution'}`}>
-                  {properties.oxalates.toUpperCase()} Oxalates
-                </div>
-              )}
-            </div>
-          </div>
-        )}
-
-        {/* Category information */}
-        {mealData.category && (
-          <div className="food-category">
-            <h5>📂 Food Category</h5>
-            <span className="category-tag">{mealData.category}</span>
-          </div>
-        )}
-      </div>
-    );
-  }
-
-  // Fallback when no database data is available
-  return (
-    <div className="no-food-info">
-      <div className="no-data-icon">📊</div>
-      <h4>No Long COVID Data Available</h4>
-      <p>This food doesn't have specific Long COVID information in our database yet.</p>
-      <p>Consider general anti-inflammatory principles:</p>
-      <ul className="general-tips">
-        <li>Choose whole, unprocessed versions when possible</li>
-        <li>Pay attention to how it affects your symptoms</li>
-        <li>Consider portion sizes and frequency</li>
-        <li>Pair with known anti-inflammatory foods</li>
-      </ul>
-    </div>
-  );
-};
-
-// Long COVID Side Panel Component - Enhanced with Database Integration
-const LongCovidSidePanel = ({ selectedFood, selectedMeal, foodLog = [], isSearching = false, searchTerm = '' }) => {
-  // If a food is selected, show custom info from database instead of general guide
-  if (selectedFood && selectedMeal) {
-    return (
-      <div className="long-covid-side-panel">
-        <h3>🦠 Long COVID Nutrition Guide</h3>
-        <div className="selected-food-analysis">
-          {/* Database Analysis for selected food */}
-    
-          <LongCovidFoodInfo foodName={selectedFood} mealData={selectedMeal} />
-          
-          {/* Back to guide button */}
-          <div className="back-to-guide">
-            <p className="guide-hint">
-              <em>Clear selection to see the full nutrition guide</em>
-            </p>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  // If user is searching, show database analysis in the guide section
-  if (isSearching && searchTerm.length >= 2) {
-    return (
-      <div className="long-covid-side-panel">
-        <h3>🦠 Long COVID Nutrition Guide</h3>
-        
-        {/* Database Analysis during search */}
-        <div className="database-analysis-section">
-
+  // Long COVID Food Information Component
+  const LongCovidFoodInfo = ({ foodName, mealData }) => {
+    if (mealData && (mealData.longCovidRelevance || mealData.longCovidBenefits || mealData.longCovidCautions)) {
+      const covidRelevance = mealData.longCovidRelevance || {};
+      const benefits = mealData.longCovidBenefits || [];
+      const cautions = mealData.longCovidCautions || [];
+      const functionalCompounds = mealData.functionalCompounds || {};
+      const properties = mealData.properties || {};
       
-        </div>
-
-        {/* Search status */}
-        <div className="search-status">
-          <p className="search-hint">
-            <em>Searching for "{searchTerm}"... Select a food above to see its specific analysis.</em>
-          </p>
-        </div>
-        
-        <div className="nutrition-categories">
-          {/* Abbreviated guide during search */}
-          <div className="category-section beneficial">
-            <h4>✅ Quick Anti-Inflammatory Guide</h4>
-            <p>Focus on omega-3 rich fish, berries, leafy greens, and anti-inflammatory spices.</p>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  // Extract database information from food log for dynamic categories
-  const extractFoodsFromDatabase = () => {
-    const beneficial = [];
-    const neutral = [];
-    const caution = [];
-    
-    // Get unique foods from food log with their database info
-    const uniqueFoods = {};
-    foodLog.forEach(entry => {
-      if (!uniqueFoods[entry.name] && entry.longCovidRelevance) {
-        uniqueFoods[entry.name] = entry;
-      }
-    });
-    
-    Object.values(uniqueFoods).forEach(food => {
-      const benefits = food.longCovidBenefits || [];
-      const cautions = food.longCovidCautions || [];
-      const covidRelevance = food.longCovidRelevance || {};
-      
-      // Determine category based on database data
       let category = 'neutral';
       if (benefits.length > cautions.length) category = 'beneficial';
       if (cautions.length > benefits.length) category = 'caution';
       
-      // Also consider anti-inflammatory level
-      if (covidRelevance.antiInflammatory === 'high') category = 'beneficial';
-      if (covidRelevance.antiInflammatory === 'low') category = 'caution';
+      const antiInflammatoryLevel = covidRelevance.antiInflammatory || 'unknown';
       
-      const foodInfo = {
-        name: food.name,
-        antiInflammatory: covidRelevance.antiInflammatory || 'unknown',
-        benefits: benefits.slice(0, 2), // Show first 2 benefits
-        cautions: cautions.slice(0, 2), // Show first 2 cautions
-        category: food.category || 'General'
-      };
-      
-      if (category === 'beneficial') beneficial.push(foodInfo);
-      else if (category === 'caution') caution.push(foodInfo);
-      else neutral.push(foodInfo);
-    });
-    
-    return { beneficial, neutral, caution };
-  };
-
-  const { beneficial: dbBeneficial, neutral: dbNeutral, caution: dbCaution } = extractFoodsFromDatabase();
-
-  // Default: Show the general Long COVID nutrition guide with database integration
-  return (
-    <div className="long-covid-side-panel">
-      <h3>🦠 Long COVID Nutrition Guide</h3>
-      
-      <div className="nutrition-categories">
-        {/* Database-derived beneficial foods */}
-        {dbBeneficial.length > 0 && (
-          <div className="category-section beneficial">
-            <h4>✅ Your Anti-Inflammatory Foods (From Database)</h4>
-            <div className="database-foods">
-              {dbBeneficial.map((food, index) => (
-                <div key={index} className="database-food-item">
-                  <div className="food-header">
-                    <strong>{food.name}</strong>
-                    <span className={`anti-inflammatory-badge level-${food.antiInflammatory}`}>
-                      {food.antiInflammatory.toUpperCase()}
-                    </span>
-                  </div>
-                  {food.benefits.length > 0 && (
-                    <ul className="food-benefits">
-                      {food.benefits.map((benefit, i) => (
-                        <li key={i}>{benefit}</li>
-                      ))}
-                    </ul>
-                  )}
-                  <div className="food-category-tag">{food.category}</div>
-                </div>
-              ))}
+      return (
+        <div className={`long-covid-food-info ${category}`}>
+          <div className="food-info-header">
+            <span className={`category-icon ${category}`}>
+              {category === 'beneficial' ? '✅' : 
+               category === 'caution' ? '⚠️' : 'ℹ️'}
+            </span>
+            <strong>Database Analysis: {foodName}</strong>
+          </div>
+          
+          <div className="inflammatory-level">
+            <h5>🔥 Anti-Inflammatory Level</h5>
+            <div className={`level-indicator level-${antiInflammatoryLevel}`}>
+              <span className="level-value">{antiInflammatoryLevel.toUpperCase()}</span>
+              <span className="level-description">
+                {antiInflammatoryLevel === 'high' ? 'Excellent for reducing inflammation' :
+                 antiInflammatoryLevel === 'moderate' ? 'Moderately helpful for inflammation' :
+                 antiInflammatoryLevel === 'low' ? 'Limited anti-inflammatory effects' :
+                 antiInflammatoryLevel === 'neutral' ? 'No significant inflammatory impact' : 'Not assessed'}
+              </span>
             </div>
           </div>
-        )}
 
-        {/* Standard beneficial foods */}
-        <div className="category-section beneficial">
-          <h4>✅ Anti-Inflammatory Foods {dbBeneficial.length > 0 ? '(General Recommendations)' : ''}</h4>
-          <ul>
-            <li><strong>Fatty Fish:</strong> Salmon, mackerel, sardines (omega-3s)</li>
-            <li><strong>Berries:</strong> Blueberries, strawberries (antioxidants)</li>
-            <li><strong>Leafy Greens:</strong> Spinach, kale (vitamins, minerals)</li>
-            <li><strong>Nuts:</strong> Walnuts, almonds (healthy fats)</li>
-            <li><strong>Turmeric:</strong> Contains curcumin (anti-inflammatory)</li>
-            <li><strong>Ginger:</strong> Natural anti-inflammatory</li>
-            <li><strong>Green Tea:</strong> Polyphenols reduce inflammation</li>
-          </ul>
-        </div>
-
-        {/* Database-derived neutral foods */}
-        {dbNeutral.length > 0 && (
-          <div className="category-section neutral">
-            <h4>ℹ️ Your Neutral Foods (From Database)</h4>
-            <div className="database-foods">
-              {dbNeutral.map((food, index) => (
-                <div key={index} className="database-food-item">
-                  <div className="food-header">
-                    <strong>{food.name}</strong>
-                    <span className={`anti-inflammatory-badge level-${food.antiInflammatory}`}>
-                      {food.antiInflammatory.toUpperCase()}
-                    </span>
+          {Object.keys(functionalCompounds).length > 0 && (
+            <div className="functional-compounds">
+              <h5>🧬 Functional Compounds</h5>
+              <div className="compounds-grid">
+                {Object.entries(functionalCompounds).map(([compound, level]) => (
+                  <div key={compound} className="compound-item">
+                    <span className="compound-name">{compound.replace(/_/g, ' ')}</span>
+                    <span className={`compound-level level-${level}`}>{level}</span>
                   </div>
-                  <div className="food-category-tag">{food.category}</div>
-                </div>
-              ))}
+                ))}
+              </div>
             </div>
-          </div>
-        )}
-
-        {/* Standard recommended foods */}
-        <div className="category-section neutral">
-          <h4>ℹ️ Recommended Foods {dbNeutral.length > 0 ? '(General Recommendations)' : ''}</h4>
-          <ul>
-            <li><strong>Whole Grains:</strong> Oats, quinoa, brown rice</li>
-            <li><strong>Lean Proteins:</strong> Chicken, turkey, legumes</li>
-            <li><strong>Citrus Fruits:</strong> High in vitamin C</li>
-            <li><strong>Olive Oil:</strong> Monounsaturated fats</li>
-            <li><strong>Garlic & Onions:</strong> Immune support</li>
-          </ul>
-        </div>
-
-        {/* Database-derived caution foods */}
-        {dbCaution.length > 0 && (
-          <div className="category-section caution">
-            <h4>⚠️ Your Foods to Monitor (From Database)</h4>
-            <div className="database-foods">
-              {dbCaution.map((food, index) => (
-                <div key={index} className="database-food-item">
-                  <div className="food-header">
-                    <strong>{food.name}</strong>
-                    <span className={`anti-inflammatory-badge level-${food.antiInflammatory}`}>
-                      {food.antiInflammatory.toUpperCase()}
-                    </span>
-                  </div>
-                  {food.cautions.length > 0 && (
-                    <ul className="food-cautions">
-                      {food.cautions.map((caution, i) => (
-                        <li key={i}>{caution}</li>
-                      ))}
-                    </ul>
-                  )}
-                  <div className="food-category-tag">{food.category}</div>
-                </div>
-              ))}
+          )}
+          
+          {benefits.length > 0 && (
+            <div className="benefits-list">
+              <h5>✨ Benefits for Long COVID Recovery</h5>
+              <ul>
+                {benefits.map((benefit, i) => (
+                  <li key={i}>{benefit}</li>
+                ))}
+              </ul>
             </div>
-          </div>
-        )}
-
-        {/* Standard foods to limit */}
-        <div className="category-section caution">
-          <h4>⚠️ Foods to Limit {dbCaution.length > 0 ? '(General Guidelines)' : ''}</h4>
-          <ul>
-            <li><strong>Processed Foods:</strong> High in inflammation-promoting ingredients</li>
-            <li><strong>Refined Sugars:</strong> Can worsen inflammation</li>
-            <li><strong>Red/Processed Meat:</strong> May increase inflammatory markers</li>
-            <li><strong>Trans Fats:</strong> Found in margarine, processed foods</li>
-            <li><strong>Refined Carbs:</strong> White bread, pastries</li>
-            <li><strong>Fried Foods:</strong> High in inflammatory compounds</li>
-          </ul>
+          )}
+          
+          {cautions.length > 0 && (
+            <div className="cautions-list">
+              <h5>⚠️ Important Considerations</h5>
+              <ul>
+                {cautions.map((caution, i) => (
+                  <li key={i}>{caution}</li>
+                ))}
+              </ul>
+            </div>
+          )}
         </div>
-      </div>
+      );
+    }
 
-      {/* Database insights summary */}
-      {(dbBeneficial.length > 0 || dbNeutral.length > 0 || dbCaution.length > 0) && (
-        <div className="database-insights">
-          <h4>📊 Your Personal Insights</h4>
-          <div className="insights-summary">
-            {dbBeneficial.length > 0 && (
-              <div className="insight-item beneficial">
-                <span className="insight-number">{dbBeneficial.length}</span>
-                <span className="insight-label">Anti-inflammatory foods in your log</span>
-              </div>
-            )}
-            {dbNeutral.length > 0 && (
-              <div className="insight-item neutral">
-                <span className="insight-number">{dbNeutral.length}</span>
-                <span className="insight-label">Neutral foods tracked</span>
-              </div>
-            )}
-            {dbCaution.length > 0 && (
-              <div className="insight-item caution">
-                <span className="insight-number">{dbCaution.length}</span>
-                <span className="insight-label">Foods to monitor</span>
-              </div>
-            )}
-          </div>
-          <p className="insights-note">
-            <em>Based on {foodLog.length} logged meals with Long COVID database information</em>
-          </p>
-        </div>
-      )}
-
-      <div className="additional-tips">
-        <h4>💡 General Tips</h4>
-        <ul>
-          <li>Stay well hydrated (8+ glasses water daily)</li>
-          <li>Consider vitamin D supplementation</li>
-          <li>Eat regular, smaller meals to maintain energy</li>
-          <li>Focus on nutrient-dense, whole foods</li>
-          <li>Limit alcohol and caffeine if they worsen symptoms</li>
+    return (
+      <div className="no-food-info">
+        <div className="no-data-icon">📊</div>
+        <h4>No Long COVID Data Available</h4>
+        <p>This food doesn't have specific Long COVID information in our database yet.</p>
+        <p>Consider general anti-inflammatory principles:</p>
+        <ul className="general-tips">
+          <li>Choose whole, unprocessed versions when possible</li>
+          <li>Pay attention to how it affects your symptoms</li>
+          <li>Consider portion sizes and frequency</li>
+          <li>Pair with known anti-inflammatory foods</li>
         </ul>
       </div>
-    </div>
-  );
-};
+    );
+  };
 
-// Helper Functions
-const getCovidFoodRating = (foodName) => {
-  const foodLower = foodName.toLowerCase();
-  
-  // Beneficial foods (anti-inflammatory)
-  const beneficial = [
-    'salmon', 'mackerel', 'sardines', 'tuna', 'trout',
-    'blueberries', 'strawberries', 'raspberries', 'blackberries',
-    'spinach', 'kale', 'broccoli', 'brussels sprouts',
-    'walnuts', 'almonds', 'chia seeds', 'flax seeds',
-    'turmeric', 'ginger', 'garlic', 'onion',
-    'olive oil', 'avocado', 'sweet potato',
-    'green tea', 'dark chocolate'
-  ];
-  
-  // Foods to be cautious with
-  const caution = [
-    'processed meat', 'bacon', 'sausage', 'hot dog',
-    'french fries', 'fried chicken', 'fried',
-    'white bread', 'white rice', 'pastry',
-    'candy', 'soda', 'sugar', 'margarine',
-    'ice cream', 'chips'
-  ];
-  
-  if (beneficial.some(food => foodLower.includes(food))) return 'beneficial';
-  if (caution.some(food => foodLower.includes(food))) return 'caution';
-  return 'neutral';
-};
+  // Long COVID Side Panel Component
+  const LongCovidSidePanel = ({ selectedFood, selectedMeal, foodLog = [], isSearching = false, searchTerm = '' }) => {
+    if (selectedFood && selectedMeal) {
+      return (
+        <div className="long-covid-side-panel">
+          <h3>🦠 Long COVID Nutrition Guide</h3>
+          <div className="selected-food-analysis">
+            <LongCovidFoodInfo foodName={selectedFood} mealData={selectedMeal} />
+            
+            <div className="back-to-guide">
+              <p className="guide-hint">
+                <em>Clear selection to see the full nutrition guide</em>
+              </p>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    if (isSearching && searchTerm.length >= 2) {
+      return (
+        <div className="long-covid-side-panel">
+          <h3>🦠 Long COVID Nutrition Guide</h3>
+          
+          <div className="search-status">
+            <p className="search-hint">
+              <em>Searching for "{searchTerm}"... Select a food above to see its specific analysis.</em>
+            </p>
+          </div>
+          
+          <div className="nutrition-categories">
+            <div className="category-section beneficial">
+              <h4>✅ Quick Anti-Inflammatory Guide</h4>
+              <p>Focus on omega-3 rich fish, berries, leafy greens, and anti-inflammatory spices.</p>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    return (
+      <div className="long-covid-side-panel">
+        <h3>🦠 Long COVID Nutrition Guide</h3>
+        
+        <div className="nutrition-categories">
+          <div className="category-section beneficial">
+            <h4>✅ Anti-Inflammatory Foods</h4>
+            <ul>
+              <li><strong>Fatty Fish:</strong> Salmon, mackerel, sardines (omega-3s)</li>
+              <li><strong>Berries:</strong> Blueberries, strawberries (antioxidants)</li>
+              <li><strong>Leafy Greens:</strong> Spinach, kale (vitamins, minerals)</li>
+              <li><strong>Nuts:</strong> Walnuts, almonds (healthy fats)</li>
+              <li><strong>Turmeric:</strong> Contains curcumin (anti-inflammatory)</li>
+              <li><strong>Ginger:</strong> Natural anti-inflammatory</li>
+              <li><strong>Green Tea:</strong> Polyphenols reduce inflammation</li>
+            </ul>
+          </div>
+
+          <div className="category-section neutral">
+            <h4>ℹ️ Recommended Foods</h4>
+            <ul>
+              <li><strong>Whole Grains:</strong> Oats, quinoa, brown rice</li>
+              <li><strong>Lean Proteins:</strong> Chicken, turkey, legumes</li>
+              <li><strong>Citrus Fruits:</strong> High in vitamin C</li>
+              <li><strong>Olive Oil:</strong> Monounsaturated fats</li>
+              <li><strong>Garlic & Onions:</strong> Immune support</li>
+            </ul>
+          </div>
+
+          <div className="category-section caution">
+            <h4>⚠️ Foods to Limit</h4>
+            <ul>
+              <li><strong>Processed Foods:</strong> High in inflammation-promoting ingredients</li>
+              <li><strong>Refined Sugars:</strong> Can worsen inflammation</li>
+              <li><strong>Red/Processed Meat:</strong> May increase inflammatory markers</li>
+              <li><strong>Trans Fats:</strong> Found in margarine, processed foods</li>
+              <li><strong>Refined Carbs:</strong> White bread, pastries</li>
+              <li><strong>Fried Foods:</strong> High in inflammatory compounds</li>
+            </ul>
+          </div>
+        </div>
+
+        <div className="additional-tips">
+          <h4>💡 General Tips</h4>
+          <ul>
+            <li>Stay well hydrated (8+ glasses water daily)</li>
+            <li>Consider vitamin D supplementation</li>
+            <li>Eat regular, smaller meals to maintain energy</li>
+            <li>Focus on nutrient-dense, whole foods</li>
+            <li>Limit alcohol and caffeine if they worsen symptoms</li>
+          </ul>
+        </div>
+      </div>
+    );
+  };
+
+  // Helper function for COVID food rating
+  const getCovidFoodRating = (foodName) => {
+    const foodLower = foodName.toLowerCase();
+    
+    const beneficial = [
+      'salmon', 'mackerel', 'sardines', 'tuna', 'trout',
+      'blueberries', 'strawberries', 'raspberries', 'blackberries',
+      'spinach', 'kale', 'broccoli', 'brussels sprouts',
+      'walnuts', 'almonds', 'chia seeds', 'flax seeds',
+      'turmeric', 'ginger', 'garlic', 'onion',
+      'olive oil', 'avocado', 'sweet potato',
+      'green tea', 'dark chocolate'
+    ];
+    
+    const caution = [
+      'processed meat', 'bacon', 'sausage', 'hot dog',
+      'french fries', 'fried chicken', 'fried',
+      'white bread', 'white rice', 'pastry',
+      'candy', 'soda', 'sugar', 'margarine',
+      'ice cream', 'chips'
+    ];
+    
+    if (beneficial.some(food => foodLower.includes(food))) return 'beneficial';
+    if (caution.some(food => foodLower.includes(food))) return 'caution';
+    return 'neutral';
+  };
 
   // Utility functions
   const convertTo24Hour = (time12h) => {
@@ -827,7 +502,6 @@ const getCovidFoodRating = (foodName) => {
       hours = String(parseInt(hours, 10) + 12);
     }
     
-    // Ensure hours is a string before using padStart
     hours = String(hours);
     
     return `${hours.padStart(2, '0')}:${minutes}`;
@@ -843,72 +517,63 @@ const getCovidFoodRating = (foodName) => {
     setTime(time12);
   };
 
-  // Calculate metabolic efficiency - Enhanced version
- // Calculate metabolic efficiency - Enhanced version with FIXED Long COVID adjustments
-const calculateMetabolicEfficiency = (mealData) => {
-  const timeStr = mealData.time;
-  const hourMatch = timeStr.match(/(\d+):/);
-  const hour = hourMatch ? parseInt(hourMatch[1], 10) : 12;
-  const isPM = timeStr.toLowerCase().includes('pm');
-  
-  let hour24 = hour;
-  if (isPM && hour !== 12) hour24 += 12;
-  if (!isPM && hour === 12) hour24 = 0;
-  
-  // Macronutrient factors
-  const proteinFactor = (parseFloat(mealData.protein) || 0) * 0.2;
-  const carbFactor = (parseFloat(mealData.carbs) || 0) * 0.1;
-  const fatFactor = (parseFloat(mealData.fat) || 0) * 0.15;
-  
-  // Circadian rhythm factors
-  let timeFactor = 1.0;
-  if (hour24 < 6 || hour24 > 20) {
-    timeFactor = 0.7;
-  } else if (hour24 >= 7 && hour24 <= 10) {
-    timeFactor = 1.2;
-  } else if (hour24 >= 17 && hour24 <= 19) {
-    timeFactor = 0.9;
-  }
-  
-  // Meal type factors
-  const mealTypeFactors = {
-    'Breakfast': 1.3,
-    'Lunch': 1.1,
-    'Dinner': 0.9,
-    'Snack': 0.8
-  };
-  const mealTypeFactor = mealTypeFactors[mealData.mealType] || 1.0;
-  
-  // Base efficiency calculation
-  const macroBalance = Math.min(100, (proteinFactor + carbFactor + fatFactor) * 10);
-  let efficiency = macroBalance * timeFactor * mealTypeFactor;
-  
-  // FIXED: Long COVID adjustments using metabolic efficiency factors (< 1.0)
-  if (mealData.longCovidAdjust && userProfile?.hasLongCovid) {
-    // Use factors that REDUCE efficiency (< 1.0) - this is correct for metabolic efficiency
-    const severityFactors = {
-      'mild': 0.95,
-      'moderate': 0.85,
-      'severe': 0.75,
-      'very severe': 0.65
+  // Calculate metabolic efficiency
+  const calculateMetabolicEfficiency = (mealData) => {
+    const timeStr = mealData.time;
+    const hourMatch = timeStr.match(/(\d+):/);
+    const hour = hourMatch ? parseInt(hourMatch[1], 10) : 12;
+    const isPM = timeStr.toLowerCase().includes('pm');
+    
+    let hour24 = hour;
+    if (isPM && hour !== 12) hour24 += 12;
+    if (!isPM && hour === 12) hour24 = 0;
+    
+    const proteinFactor = (parseFloat(mealData.protein) || 0) * 0.2;
+    const carbFactor = (parseFloat(mealData.carbs) || 0) * 0.1;
+    const fatFactor = (parseFloat(mealData.fat) || 0) * 0.15;
+    
+    let timeFactor = 1.0;
+    if (hour24 < 6 || hour24 > 20) {
+      timeFactor = 0.7;
+    } else if (hour24 >= 7 && hour24 <= 10) {
+      timeFactor = 1.2;
+    } else if (hour24 >= 17 && hour24 <= 19) {
+      timeFactor = 0.9;
+    }
+    
+    const mealTypeFactors = {
+      'Breakfast': 1.3,
+      'Lunch': 1.1,
+      'Dinner': 0.9,
+      'Snack': 0.8
     };
+    const mealTypeFactor = mealTypeFactors[mealData.mealType] || 1.0;
     
-    const severityFactor = severityFactors[userProfile.longCovidSeverity] || 0.85;
-    efficiency *= severityFactor;
+    const macroBalance = Math.min(100, (proteinFactor + carbFactor + fatFactor) * 10);
+    let efficiency = macroBalance * timeFactor * mealTypeFactor;
     
-    // Boost for beneficial foods
-    if (mealData.longCovidBenefits && mealData.longCovidBenefits.length > 0) {
-      efficiency *= 1.1;
+    if (mealData.longCovidAdjust && userProfile?.hasLongCovid) {
+      const severityFactors = {
+        'mild': 0.95,
+        'moderate': 0.85,
+        'severe': 0.75,
+        'very severe': 0.65
+      };
+      
+      const severityFactor = severityFactors[userProfile.longCovidSeverity] || 0.85;
+      efficiency *= severityFactor;
+      
+      if (mealData.longCovidBenefits && mealData.longCovidBenefits.length > 0) {
+        efficiency *= 1.1;
+      }
+      
+      if (mealData.longCovidCautions && mealData.longCovidCautions.length > 0) {
+        efficiency *= 0.9;
+      }
     }
     
-    // Reduce for problematic foods
-    if (mealData.longCovidCautions && mealData.longCovidCautions.length > 0) {
-      efficiency *= 0.9;
-    }
-  }
-  
-  return Math.min(100, Math.max(0, efficiency));
-};
+    return Math.min(100, Math.max(0, efficiency));
+  };
 
   // Recalculate nutrients when serving size changes
   const recalculateNutrients = (newServing) => {
@@ -921,13 +586,11 @@ const calculateMetabolicEfficiency = (mealData) => {
       const updatedFields = { ...prevFields };
       const nutrients = selectedMeal.nutrients.per100g;
       
-      // Update macronutrients
       updatedFields.protein = (nutrients.protein?.value * ratio).toFixed(1);
       updatedFields.carbs = (nutrients.carbs?.value * ratio).toFixed(1);
       updatedFields.fat = (nutrients.fat?.value * ratio).toFixed(1);
       updatedFields.calories = (nutrients.calories?.value * ratio).toFixed(0);
       
-      // Update micronutrients
       updatedFields.micronutrients = {};
       Object.entries(nutrients).forEach(([key, value]) => {
         if (!['protein', 'carbs', 'fat', 'calories', 'name', 'unit'].includes(key)) {
@@ -959,127 +622,281 @@ const calculateMetabolicEfficiency = (mealData) => {
 
   const debouncedSearch = useDebounce(search, 300);
 
-  // Memoize fetchSuggestions function
-// WORKING SOLUTION: Replace your fetchSuggestions function with this
-const fetchSuggestions = useCallback(async () => {
-  const normalizedSearch = search.toLowerCase().trim();
-  
-  // Don't search for very short terms
-  if (normalizedSearch.length < 2) {
-    setSuggestions([]);
-    return;
-  }
-  
-  // Check cache first
-  if (suggestionCache[normalizedSearch]) {
-    setSuggestions(suggestionCache[normalizedSearch]);
-    return;
-  }
-  
-  try {
-    console.log(`Searching for: "${normalizedSearch}"`);
+  // Enhanced fallback search function
+  const performFallbackSearch = (normalizedSearch, allFoods) => {
+    return allFoods
+      .filter(meal => {
+        if (!meal.name) return false;
+        
+        const mealNameLower = meal.name.toLowerCase();
+        const category = (meal.category || '').toLowerCase();
+        const description = (meal.description || '').toLowerCase();
+        const benefits = (meal.longCovidBenefits || []).join(' ').toLowerCase();
+        
+        return mealNameLower.includes(normalizedSearch) ||
+               mealNameLower.startsWith(normalizedSearch) ||
+               category.includes(normalizedSearch) ||
+               description.includes(normalizedSearch) ||
+               benefits.includes(normalizedSearch) ||
+               mealNameLower.split(' ').some(word => word.startsWith(normalizedSearch));
+      })
+      .map(meal => ({
+        ...meal,
+        searchMethod: 'javascript',
+        searchScore: calculateJavaScriptScore(meal, normalizedSearch)
+      }))
+      .sort((a, b) => {
+        const aName = (a.name || '').toLowerCase();
+        const bName = (b.name || '').toLowerCase();
+        
+        if (aName === normalizedSearch && bName !== normalizedSearch) return -1;
+        if (bName === normalizedSearch && aName !== normalizedSearch) return 1;
+        
+        if (aName.startsWith(normalizedSearch) && !bName.startsWith(normalizedSearch)) return -1;
+        if (bName.startsWith(normalizedSearch) && !aName.startsWith(normalizedSearch)) return 1;
+        
+        return (b.searchScore || 0) - (a.searchScore || 0);
+      })
+      .slice(0, 15);
+  };
+
+  // Calculate search score for JavaScript fallback
+  const calculateJavaScriptScore = (meal, searchTerm) => {
+    const name = (meal.name || '').toLowerCase();
+    const category = (meal.category || '').toLowerCase();
+    const description = (meal.description || '').toLowerCase();
     
-    // STRATEGY: Get a reasonable number of documents and filter client-side
-    // This works with any existing database structure
-    const q = query(
-      collection(db, 'meals'),
-      limit(100) // Adjust this based on your database size
-    );
+    let score = 0;
     
-    const snap = await getDocs(q);
-    console.log(`Retrieved ${snap.docs.length} total documents from database`);
+    if (name === searchTerm) score += 1.0;
+    else if (name.startsWith(searchTerm)) score += 0.8;
+    else if (name.includes(searchTerm)) score += 0.6;
     
-    // Client-side case-insensitive filtering
-    const allMeals = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    if (category.includes(searchTerm)) score += 0.3;
+    if (description.includes(searchTerm)) score += 0.2;
     
-    const filteredResults = allMeals.filter(meal => {
-      if (!meal.name) return false;
-      
-      const mealNameLower = meal.name.toLowerCase();
-      
-      // Multiple matching strategies for better results
-      return mealNameLower.includes(normalizedSearch) ||
-             mealNameLower.startsWith(normalizedSearch) ||
-             // Also check if any word in the name starts with the search term
-             mealNameLower.split(' ').some(word => word.startsWith(normalizedSearch));
+    const nameWords = name.split(' ');
+    const searchWords = searchTerm.split(' ');
+    let wordMatches = 0;
+    
+    searchWords.forEach(searchWord => {
+      nameWords.forEach(nameWord => {
+        if (nameWord.startsWith(searchWord)) wordMatches++;
+      });
     });
     
-    console.log(`Filtered to ${filteredResults.length} matching results`);
+    score += (wordMatches / Math.max(searchWords.length, 1)) * 0.4;
     
-    // Sort results by relevance
-    const sortedResults = filteredResults.sort((a, b) => {
-      const aName = (a.name || '').toLowerCase();
-      const bName = (b.name || '').toLowerCase();
+    return score;
+  };
+
+  // Fetch suggestions function
+  const fetchSuggestions = useCallback(async () => {
+    const normalizedSearch = search.toLowerCase().trim();
+    
+    if (normalizedSearch.length < 2) {
+      setSuggestions([]);
+      return;
+    }
+    
+    if (suggestionCache[normalizedSearch]) {
+      setSuggestions(suggestionCache[normalizedSearch]);
+      return;
+    }
+    
+    try {
+      console.log(`🔍 Enhanced search for: "${normalizedSearch}"`);
       
-      // Exact match gets highest priority
-      if (aName === normalizedSearch && bName !== normalizedSearch) return -1;
-      if (bName === normalizedSearch && aName !== normalizedSearch) return 1;
+      let allFoods = allFoodsCache;
+      if (allFoods.length === 0) {
+        console.log('📥 Fetching food database...');
+        const q = query(
+          collection(db, 'meals'),
+          limit(500)
+        );
+        
+        const snap = await getDocs(q);
+        allFoods = snap.docs.map(doc => ({ 
+          id: doc.id, 
+          ...doc.data()
+        }));
+        
+        setAllFoodsCache(allFoods);
+        console.log(`📊 Loaded ${allFoods.length} foods into cache`);
+        
+        if (window.pyodideReady && !searchIndexBuilt) {
+          try {
+            console.log('🏗️ Building search index...');
+            const result = await window.pyodide.runPython(`
+              result = search_engine.build_index('${JSON.stringify(allFoods).replace(/'/g, "\\'")}')
+              result
+            `);
+            setSearchIndexBuilt(true);
+            window.searchIndexBuilt = true;
+            console.log('✅ Search index built:', result);
+          } catch (error) {
+            console.error('❌ Error building Python index:', error);
+          }
+        }
+      }
       
-      // Starts with gets second priority
-      if (aName.startsWith(normalizedSearch) && !bName.startsWith(normalizedSearch)) return -1;
-      if (bName.startsWith(normalizedSearch) && !aName.startsWith(normalizedSearch)) return 1;
+      let results = [];
       
-      // Word starts with gets third priority
-      const aWordStartsMatch = aName.split(' ').some(word => word.startsWith(normalizedSearch));
-      const bWordStartsMatch = bName.split(' ').some(word => word.startsWith(normalizedSearch));
+      if (window.pyodideReady && searchIndexBuilt) {
+        try {
+          console.log('🚀 Using AI-powered search');
+          const pythonResults = await window.pyodide.runPython(`
+            results = search_engine.search("${normalizedSearch.replace(/"/g, '\\"')}", 15)
+            json.dumps(results)
+          `);
+          
+          results = JSON.parse(pythonResults);
+          console.log(`🎯 AI search returned ${results.length} results`);
+          
+          results = results.map(food => ({
+            ...food,
+            searchMethod: 'ai',
+            searchScore: food.search_score || 0
+          }));
+          
+        } catch (error) {
+          console.error('❌ Python search failed, using fallback:', error);
+          results = performFallbackSearch(normalizedSearch, allFoods);
+        }
+      } else {
+        console.log('📝 Using fallback JavaScript search');
+        results = performFallbackSearch(normalizedSearch, allFoods);
+      }
       
-      if (aWordStartsMatch && !bWordStartsMatch) return -1;
-      if (bWordStartsMatch && !aWordStartsMatch) return 1;
+      setSuggestionCache(prev => ({
+        ...prev,
+        [normalizedSearch]: results
+      }));
       
-      // Alphabetical for everything else
-      return aName.localeCompare(bName);
-    });
+      setSuggestions(results);
+      
+    } catch (err) {
+      console.error('❌ Search error:', err);
+      setSuggestions([]);
+    }
+  }, [search, suggestionCache, allFoodsCache, searchIndexBuilt]);
+
+  // Monitor Pyodide status
+  useEffect(() => {
+    const checkPyodideStatus = () => {
+      if (window.pyodideReady) {
+        setPyodideStatus('ready');
+      } else if (window.pyodide) {
+        setPyodideStatus('loading');
+      } else {
+        setPyodideStatus('unavailable');
+      }
+    };
     
-    // Limit final results
-    const finalResults = sortedResults.slice(0, 15);
+    checkPyodideStatus();
     
-    console.log(`Final results:`, finalResults.map(r => r.name));
+    const handlePyodideReady = () => {
+      setPyodideStatus('ready');
+      console.log('🎉 Pyodide ready event received');
+    };
     
-    // Cache the results
-    setSuggestionCache(prev => ({
-      ...prev,
-      [normalizedSearch]: finalResults
-    }));
+    const handlePyodideError = () => {
+      setPyodideStatus('unavailable');
+      console.log('⚠️ Pyodide error event received');
+    };
     
-    setSuggestions(finalResults);
+    window.addEventListener('pyodideReady', handlePyodideReady);
+    window.addEventListener('pyodideError', handlePyodideError);
     
-  } catch (err) {
-    console.error('Error fetching food suggestions:', err);
-    setSuggestions([]);
-  }
-}, [search, suggestionCache]);
-
-// ALTERNATIVE: If your database is very large, use this paginated approach
-
-// DEBUG FUNCTION: Check what's in your database
-
-
-// TEST FUNCTION: Call this to see what's in your database
-
-
-// ADD THIS TO YOUR COMPONENT TO DEBUG
-// Call these functions in your browser console or add them temporarily to useEffect:
-
-/*
-// Add this temporarily to your component to debug
-useEffect(() => {
-  if (currentUser && !authLoading) {
-    // Debug your database
-    debugDatabase();
+    const interval = setInterval(checkPyodideStatus, 2000);
     
-    // Test search
-    testSearch('chicken').then(results => {
-      console.log('Test search results:', results);
-    });
-  }
-}, [currentUser, authLoading]);
-*/
+    return () => {
+      window.removeEventListener('pyodideReady', handlePyodideReady);
+      window.removeEventListener('pyodideError', handlePyodideError);
+      clearInterval(interval);
+    };
+  }, []);
 
+  // Search input component
+  const renderSearchInput = () => (
+    <div className="form-group search-group">
+      <label>Search Food</label>
+      <div className="search-input-container">
+        <input
+          type="text"
+          value={search}
+          onChange={e => { 
+            setSearch(e.target.value); 
+            setSelectedMeal(null); 
+          }}
+          placeholder={
+            pyodideStatus === 'ready' ? "AI-powered search ready..." :
+            pyodideStatus === 'loading' ? "Loading AI search..." :
+            "Search foods..."
+          }
+          autoComplete="off"
+          className="search-input enhanced-search"
+        />
+        
+        <div className={`search-status ${pyodideStatus}`}>
+          {pyodideStatus === 'ready' && searchIndexBuilt && (
+            <span className="status-ready">🚀 AI Search Active</span>
+          )}
+          {pyodideStatus === 'ready' && !searchIndexBuilt && (
+            <span className="status-indexing">⚡ Building Index...</span>
+          )}
+          {pyodideStatus === 'loading' && (
+            <span className="status-loading">🔄 Loading AI...</span>
+          )}
+          {pyodideStatus === 'unavailable' && (
+            <span className="status-basic">📝 Basic Search</span>
+          )}
+          {suggestions.length > 0 && (
+            <span className="result-count">({suggestions.length} results)</span>
+          )}
+        </div>
+      </div>
+      
+      {suggestions.length > 0 && (
+        <ul className="suggestions-list enhanced">
+          {suggestions.map((s, index) => (
+            <li key={s.id || index} onClick={() => handleSelectMeal(s)}>
+              <div className="suggestion-main">
+                <div className="suggestion-name">{s.name}</div>
+                {s.category && (
+                  <div className="suggestion-category">{s.category}</div>
+                )}
+                <div className="suggestion-meta">
+                  {s.searchScore && (
+                    <span className="search-score">
+                      {(s.searchScore * 100).toFixed(0)}% match
+                    </span>
+                  )}
+                  {s.searchMethod === 'ai' && (
+                    <span className="ai-badge">AI</span>
+                  )}
+                  {s.match_type && (
+                    <span className="match-type">{s.match_type}</span>
+                  )}
+                </div>
+              </div>
+              
+              <div className="suggestion-indicators">
+                {longCovidAdjust && (
+                  <span className={`covid-indicator ${getCovidFoodRating(s.name)}`}>
+                    {getCovidFoodRating(s.name) === 'beneficial' ? '✅' : 
+                     getCovidFoodRating(s.name) === 'caution' ? '⚠️' : 'ℹ️'}
+                  </span>
+                )}
+              </div>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
 
-
-
-
-  // Fetch suggestions from Firestore
+  // Fetch suggestions effect
   useEffect(() => {
     if (debouncedSearch.length < 2) {
       setSuggestions([]);
@@ -1136,12 +953,10 @@ useEffect(() => {
     setSuccess('');
     
     try {
-      // Validate required fields
       if (!fields.name) {
         throw new Error('Food name is required');
       }
       
-      // Prepare entry data
       const entryData = {
         name: fields.name,
         protein: parseFloat(fields.protein) || 0,
@@ -1161,10 +976,8 @@ useEffect(() => {
         mealId: selectedMeal?.id || null
       };
       
-      // Calculate metabolic efficiency
       entryData.metabolicEfficiency = calculateMetabolicEfficiency(entryData);
       
-      // Save to Firestore using currentUser.id
       await addDoc(
         collection(db, 'users', currentUser.id, 'food_journal'), 
         entryData
@@ -1172,12 +985,10 @@ useEffect(() => {
       
       setSuccess('Food logged successfully!');
       
-      // Reset form
       setFields({});
       setSelectedMeal(null);
       setSearch('');
       
-      // Refresh food log if on that tab
       if (tab === 'Food Journal') {
         fetchFoodLog(1);
       }
@@ -1190,7 +1001,7 @@ useEffect(() => {
     }
   };
 
-  // Memoize fetchFoodLog function
+  // Fetch food log function
   const fetchFoodLog = useCallback(async (page = 1) => {
     if (!currentUser || !currentUser.id) return;
     
@@ -1220,19 +1031,19 @@ useEffect(() => {
     }
   }, [currentUser]);
 
-  // Fetch food log when tab changes to Food Journal
+  // Fetch food log when tab changes
   useEffect(() => {
     if (tab === 'Food Journal' && currentUser) {
       fetchFoodLog(1);
     }
   }, [tab, currentUser, fetchFoodLog]);
 
-  // Add back navigation function
+  // Back navigation
   const handleBack = () => {
     navigate('/dashboard');
   };
 
-  // Show loading while checking authentication
+  // Loading state
   if (authLoading) {
     return (
       <div className="food-tracker-container">
@@ -1241,7 +1052,7 @@ useEffect(() => {
     );
   }
 
-  // Show login prompt if not authenticated
+  // Authentication required state
   if (!currentUser) {
     return (
       <div className="food-tracker-container">
@@ -1258,7 +1069,6 @@ useEffect(() => {
 
   return (
     <div className="food-tracker-container">
-      {/* Add back button */}
       <div className="tracker-header">
         <button onClick={handleBack} className="back-button">
           ← Back to Dashboard
@@ -1279,171 +1089,146 @@ useEffect(() => {
       </div>
 
       {tab === 'Add Food' && (
-  <div className="food-form-section">
-    <div className="food-form-left">
-      {/* Long COVID Checkbox - prominently placed at top */}
-      <div className="form-group long-covid-checkbox-group">
-        <label className="long-covid-checkbox-label">
-          <input 
-            type="checkbox" 
-            checked={longCovidAdjust} 
-            onChange={e => setLongCovidAdjust(e.target.checked)} 
-            className="long-covid-checkbox"
-          /> 
-          <span className="checkbox-text">
-            I have Long COVID - Show food recommendations and adjustments
-          </span>
-        </label>
-        {longCovidAdjust && (
-          <div className="long-covid-info-banner">
-            <p>🔬 <strong>Long COVID Mode:</strong> Food recommendations will be adjusted to focus on anti-inflammatory options that may help manage symptoms and support recovery.</p>
+        <div className="food-form-section">
+          <div className="food-form-left">
+            {/* Long COVID Checkbox */}
+            <div className="form-group long-covid-checkbox-group">
+              <label className="long-covid-checkbox-label">
+                <input 
+                  type="checkbox" 
+                  checked={longCovidAdjust} 
+                  onChange={e => setLongCovidAdjust(e.target.checked)} 
+                  className="long-covid-checkbox"
+                /> 
+                <span className="checkbox-text">
+                  I have Long COVID - Show food recommendations and adjustments
+                </span>
+              </label>
+              {longCovidAdjust && (
+                <div className="long-covid-info-banner">
+                  <p>🔬 <strong>Long COVID Mode:</strong> Food recommendations will be adjusted to focus on anti-inflammatory options that may help manage symptoms and support recovery.</p>
+                </div>
+              )}
+            </div>
+
+            {renderSearchInput()}
+
+            {/* Nutrition fields */}
+            <div className="form-row">
+              <div className="form-group">
+                <label>Protein (g)</label>
+                <input 
+                  name="protein" 
+                  value={fields.protein || ''} 
+                  onChange={handleFieldChange} 
+                  type="number"
+                  step="0.1"
+                />
+              </div>
+              <div className="form-group">
+                <label>Carbs (g)</label>
+                <input 
+                  name="carbs" 
+                  value={fields.carbs || ''} 
+                  onChange={handleFieldChange} 
+                  type="number"
+                  step="0.1"
+                />
+              </div>
+              <div className="form-group">
+                <label>Fat (g)</label>
+                <input 
+                  name="fat" 
+                  value={fields.fat || ''} 
+                  onChange={handleFieldChange} 
+                  type="number"
+                  step="0.1"
+                />
+              </div>
+              <div className="form-group">
+                <label>Serving (g)</label>
+                <input 
+                  name="serving" 
+                  value={fields.serving || ''} 
+                  onChange={handleFieldChange}
+                  type="number"
+                  step="1"
+                  className="serving-input"
+                />
+              </div>
+            </div>
+
+            {/* Meal details */}
+            <div className="form-row">
+              <div className="form-group">
+                <label>Meal Type</label>
+                <select value={mealType} onChange={e => setMealType(e.target.value)}>
+                  {mealTypes.map(type => (
+                    <option key={type} value={type}>{type}</option>
+                  ))}
+                </select>
+              </div>
+              <div className="form-group">
+                <label>Time</label>
+                <input 
+                  type="time" 
+                  value={convertTo24Hour(time)} 
+                  onChange={handleTimeChange} 
+                />
+              </div>
+              <div className="form-group">
+                <label>Date</label>
+                <input 
+                  type="date" 
+                  value={date} 
+                  onChange={e => setDate(e.target.value)} 
+                />
+              </div>
+            </div>
+
+            <div className="form-group">
+              <label>Calories</label>
+              <input 
+                name="calories" 
+                value={fields.calories || ''} 
+                onChange={handleFieldChange} 
+                type="number"
+                step="1"
+              />
+            </div>
+
+            <div className="form-group">
+              <button 
+                className="submit-button"
+                onClick={handleLogFood}
+                disabled={loading || !fields.name}
+              >
+                {loading ? 'Logging...' : 'Log Food'}
+              </button>
+              {success && <div className="success-message">{success}</div>}
+              {error && <div className="error-message">{error}</div>}
+            </div>
           </div>
-        )}
-      </div>
 
-      <div className="form-group search-group">
-        <label>Search Food</label>
-        <input
-          type="text"
-          value={search}
-          onChange={e => { setSearch(e.target.value); setSelectedMeal(null); }}
-          placeholder="Type to search foods..."
-          autoComplete="off"
-          className="search-input"
-        />
-        {suggestions.length > 0 && (
-          <ul className="suggestions-list">
-            {suggestions.map(s => (
-              <li key={s.id} onClick={() => handleSelectMeal(s)}>
-                {s.name}
-                {longCovidAdjust && (
-                  <span className={`covid-indicator ${getCovidFoodRating(s.name)}`}>
-                    {getCovidFoodRating(s.name) === 'beneficial' ? '✓' : 
-                     getCovidFoodRating(s.name) === 'caution' ? '⚠' : ''}
-                  </span>
-                )}
-              </li>
-            ))}
-          </ul>
-        )}
-      </div>
-
-      {/* Rest of your existing form fields... */}
-      <div className="form-row">
-        <div className="form-group">
-          <label>Protein (g)</label>
-          <input 
-            name="protein" 
-            value={fields.protein || ''} 
-            onChange={handleFieldChange} 
-            type="number"
-            step="0.1"
-          />
+          <div className="food-form-right">
+            {longCovidAdjust && (
+              <LongCovidSidePanel 
+                selectedFood={fields.name} 
+                selectedMeal={selectedMeal}
+                foodLog={foodLog}
+                isSearching={search.length >= 2 && !selectedMeal}
+                searchTerm={search}
+              />
+            )}
+            {!longCovidAdjust && (
+              <div className="general-nutrition-info">
+                <h3>📊 Nutrition Tips</h3>
+                <p>Enable Long COVID mode above to get personalized food recommendations and anti-inflammatory guidance.</p>
+              </div>
+            )}
+          </div>
         </div>
-        <div className="form-group">
-          <label>Carbs (g)</label>
-          <input 
-            name="carbs" 
-            value={fields.carbs || ''} 
-            onChange={handleFieldChange} 
-            type="number"
-            step="0.1"
-          />
-        </div>
-        <div className="form-group">
-          <label>Fat (g)</label>
-          <input 
-            name="fat" 
-            value={fields.fat || ''} 
-            onChange={handleFieldChange} 
-            type="number"
-            step="0.1"
-          />
-        </div>
-        <div className="form-group">
-          <label>Serving (g)</label>
-          <input 
-            name="serving" 
-            value={fields.serving || ''} 
-            onChange={handleFieldChange}
-            type="number"
-            step="1"
-            className="serving-input"
-          />
-        </div>
-      </div>
-
-      {/* Rest of existing form... */}
-      <div className="form-row">
-        <div className="form-group">
-          <label>Meal Type</label>
-          <select value={mealType} onChange={e => setMealType(e.target.value)}>
-            {mealTypes.map(type => (
-              <option key={type} value={type}>{type}</option>
-            ))}
-          </select>
-        </div>
-        <div className="form-group">
-          <label>Time</label>
-          <input 
-            type="time" 
-            value={convertTo24Hour(time)} 
-            onChange={handleTimeChange} 
-          />
-        </div>
-        <div className="form-group">
-          <label>Date</label>
-          <input 
-            type="date" 
-            value={date} 
-            onChange={e => setDate(e.target.value)} 
-          />
-        </div>
-      </div>
-
-      <div className="form-group">
-        <label>Calories</label>
-        <input 
-          name="calories" 
-          value={fields.calories || ''} 
-          onChange={handleFieldChange} 
-          type="number"
-          step="1"
-        />
-      </div>
-
-      <div className="form-group">
-        <button 
-          className="submit-button"
-          onClick={handleLogFood}
-          disabled={loading || !fields.name}
-        >
-          {loading ? 'Logging...' : 'Log Food'}
-        </button>
-        {success && <div className="success-message">{success}</div>}
-        {error && <div className="error-message">{error}</div>}
-      </div>
-    </div>
-
-    <div className="food-form-right">
-  {longCovidAdjust && (
-    <LongCovidSidePanel 
-      selectedFood={fields.name} 
-      selectedMeal={selectedMeal}
-      foodLog={foodLog}
-      isSearching={search.length >= 2 && !selectedMeal} // Pass search state
-      searchTerm={search} // Pass current search term
-    />
-  )}
-  {!longCovidAdjust && (
-    <div className="general-nutrition-info">
-      <h3>📊 Nutrition Tips</h3>
-      <p>Enable Long COVID mode above to get personalized food recommendations and anti-inflammatory guidance.</p>
-    </div>
-  )}
-</div>
-</div>
-)}
+      )}
 
       {tab === 'Food Journal' && (
         <div className="food-journal-section">

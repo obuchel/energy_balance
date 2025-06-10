@@ -1,12 +1,258 @@
+
 <!DOCTYPE html>
 <html lang="en">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Energy Balance Calculator</title>
+    
+    <!-- Pyodide for enhanced food search -->
+    <script src="https://cdn.jsdelivr.net/pyodide/v0.24.1/full/pyodide.js"></script>
+    <script type="text/javascript">
+      // Global variables for search state
+      window.pyodideReady = false;
+      window.searchIndexBuilt = false;
+      
+      async function loadPyodide() {
+        try {
+          console.log("🔄 Loading Pyodide for enhanced food search...");
+          
+          // Load Pyodide
+          window.pyodide = await loadPyodide({
+            indexURL: "https://cdn.jsdelivr.net/pyodide/v0.24.1/full/"
+          });
+          
+          console.log("📦 Installing Python packages...");
+          // Install required packages
+          await pyodide.loadPackage(['numpy', 'scikit-learn']);
+          
+          console.log("🧠 Setting up AI search engine...");
+          // Setup the search engine
+          await pyodide.runPython(`
+            import numpy as np
+            from sklearn.feature_extraction.text import TfidfVectorizer
+            from sklearn.metrics.pairwise import cosine_similarity
+            import json
+            import re
+            
+            class ClientSideSearch:
+                def __init__(self):
+                    # Advanced TF-IDF configuration for food search
+                    self.vectorizer = TfidfVectorizer(
+                        stop_words='english',
+                        ngram_range=(1, 3),  # Include trigrams for better matching
+                        max_features=5000,
+                        lowercase=True,
+                        token_pattern=r'\\\\b\\\\w+\\\\b',
+                        min_df=1,  # Include rare terms
+                        max_df=0.95  # Exclude very common terms
+                    )
+                    self.food_vectors = None
+                    self.foods = []
+                    self.search_texts = []
+                
+                def build_index(self, foods_json):
+                    """Build the search index from food data"""
+                    try:
+                        self.foods = json.loads(foods_json)
+                        self.search_texts = []
+                        
+                        for food in self.foods:
+                            text_parts = []
+                            
+                            # Primary name (weighted heavily by duplication)
+                            name = food.get('name', '')
+                            if name:
+                                text_parts.extend([name, name, name])  # Triple weight for name
+                            
+                            # Category
+                            category = food.get('category', '')
+                            if category:
+                                text_parts.append(category)
+                            
+                            # Description
+                            description = food.get('description', '')
+                            if description:
+                                text_parts.append(description)
+                            
+                            # Add Long COVID benefits for relevant searches
+                            benefits = food.get('longCovidBenefits', [])
+                            if benefits:
+                                text_parts.extend(benefits)
+                            
+                            # Add individual words for partial matching
+                            name_words = re.findall(r'\\\\b\\\\w+\\\\b', name.lower())
+                            for word in name_words:
+                                if len(word) > 2:  # Skip very short words
+                                    text_parts.append(word)
+                                    # Add common food variations
+                                    if word.endswith('s'):
+                                        text_parts.append(word[:-1])  # Singular form
+                            
+                            # Combine all text parts
+                            search_text = ' '.join(text_parts)
+                            self.search_texts.append(search_text)
+                        
+                        # Build TF-IDF vectors
+                        if self.search_texts:
+                            self.food_vectors = self.vectorizer.fit_transform(self.search_texts)
+                            return f"✅ Search index built for {len(self.foods)} foods"
+                        else:
+                            return "❌ No valid food data provided"
+                            
+                    except Exception as e:
+                        return f"❌ Error building index: {str(e)}"
+                
+                def search(self, query, limit=20):
+                    """Perform intelligent multi-strategy search"""
+                    if self.food_vectors is None or not query.strip():
+                        return []
+                    
+                    try:
+                        # Clean and prepare query
+                        clean_query = query.lower().strip()
+                        
+                        # Strategy 1: TF-IDF semantic similarity search
+                        query_vector = self.vectorizer.transform([clean_query])
+                        similarities = cosine_similarity(query_vector, self.food_vectors)[0]
+                        
+                        results = []
+                        
+                        # Collect semantic matches
+                        for i, score in enumerate(similarities):
+                            if score > 0.05:  # Lower threshold for more inclusive results
+                                food = self.foods[i].copy()
+                                food['search_score'] = float(score)
+                                food['match_type'] = 'semantic'
+                                results.append(food)
+                        
+                        # Strategy 2: Exact substring matching (boost scores)
+                        for i, food in enumerate(self.foods):
+                            name_lower = food.get('name', '').lower()
+                            if clean_query in name_lower:
+                                # Check if already in results
+                                existing = next((r for r in results if r.get('id') == food.get('id')), None)
+                                if existing:
+                                    # Boost existing semantic score
+                                    existing['search_score'] += 0.6
+                                    existing['match_type'] = 'exact_substring'
+                                else:
+                                    # Add new exact match
+                                    food_copy = food.copy()
+                                    food_copy['search_score'] = 0.8
+                                    food_copy['match_type'] = 'exact_substring'
+                                    results.append(food_copy)
+                        
+                        # Strategy 3: Word prefix matching
+                        query_words = clean_query.split()
+                        for i, food in enumerate(self.foods):
+                            name_lower = food.get('name', '').lower()
+                            name_words = name_lower.split()
+                            
+                            word_matches = 0
+                            for q_word in query_words:
+                                if len(q_word) > 1:  # Skip single letters
+                                    for n_word in name_words:
+                                        if n_word.startswith(q_word):
+                                            word_matches += 1
+                                            break
+                            
+                            if word_matches > 0:
+                                match_ratio = word_matches / len(query_words)
+                                existing = next((r for r in results if r.get('id') == food.get('id')), None)
+                                if existing:
+                                    existing['search_score'] += match_ratio * 0.4
+                                else:
+                                    food_copy = food.copy()
+                                    food_copy['search_score'] = match_ratio * 0.6
+                                    food_copy['match_type'] = 'word_prefix'
+                                    results.append(food_copy)
+                        
+                        # Strategy 4: Category matching
+                        for i, food in enumerate(self.foods):
+                            category_lower = food.get('category', '').lower()
+                            if category_lower and clean_query in category_lower:
+                                existing = next((r for r in results if r.get('id') == food.get('id')), None)
+                                if existing:
+                                    existing['search_score'] += 0.3
+                                else:
+                                    food_copy = food.copy()
+                                    food_copy['search_score'] = 0.5
+                                    food_copy['match_type'] = 'category'
+                                    results.append(food_copy)
+                        
+                        # Sort by relevance score and return top results
+                        results.sort(key=lambda x: x['search_score'], reverse=True)
+                        return results[:limit]
+                        
+                    except Exception as e:
+                        print(f"Search error: {str(e)}")
+                        return []
+            
+            # Create global search engine instance
+            search_engine = ClientSideSearch()
+            print("🚀 Python search engine initialized")
+          `);
+          
+          // Mark as ready
+          window.pyodideReady = true;
+          console.log("✅ Enhanced AI food search is ready!");
+          
+          // Dispatch custom event to notify React components
+          window.dispatchEvent(new CustomEvent('pyodideReady', {
+            detail: { ready: true }
+          }));
+          
+        } catch (error) {
+          console.error("❌ Failed to load Pyodide:", error);
+          window.pyodideReady = false;
+          
+          // Dispatch error event
+          window.dispatchEvent(new CustomEvent('pyodideError', {
+            detail: { error: error.message }
+          }));
+        }
+      }
+
+      // Start loading Pyodide when the page loads
+      document.addEventListener('DOMContentLoaded', () => {
+        console.log("🎯 Starting enhanced search system...");
+        loadPyodide();
+      });
+
+      // Utility function for React components to check readiness
+      window.isPyodideReady = function() {
+        return window.pyodideReady === true;
+      };
+
+      // Utility function to get search engine status
+      window.getSearchStatus = function() {
+        if (window.pyodideReady && window.searchIndexBuilt) {
+          return 'ready';
+        } else if (window.pyodideReady) {
+          return 'indexing';
+        } else if (window.pyodide) {
+          return 'loading';
+        } else {
+          return 'unavailable';
+        }
+      };
+    </script>
   </head>
   <body>
     <noscript>You need to enable JavaScript to run this app.</noscript>
     <div id="root"></div>
+    
+    <!-- Status indicator for development (you can remove this in production) -->
+    <script>
+      // Optional: Add a small status indicator
+      window.addEventListener('pyodideReady', () => {
+        console.log('🎉 Enhanced food search is now available!');
+      });
+      
+      window.addEventListener('pyodideError', (event) => {
+        console.warn('⚠️ Enhanced search unavailable, using basic search:', event.detail.error);
+      });
+    </script>
   </body>
 </html>
