@@ -1,6 +1,18 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { collection, query, where, getDocs, addDoc, Timestamp, orderBy, limit, doc, getDoc } from 'firebase/firestore';
+//import { collection, query, where, getDocs, addDoc, Timestamp, orderBy, limit, doc, getDoc } from 'firebase/firestore';
+import { 
+  collection, 
+  query, 
+  getDocs, 
+  addDoc, 
+  Timestamp, 
+  orderBy, 
+  limit, 
+  doc, 
+  getDoc
+    // Add this for the migration function
+} from 'firebase/firestore';
 import { db } from '../../firebase-config';
 import './FoodTrackerPage.css';
 import { AnalysisTab } from './FoodTrackerAnalysis';
@@ -832,69 +844,71 @@ const getCovidFoodRating = (foodName) => {
   };
 
   // Calculate metabolic efficiency - Enhanced version
-  const calculateMetabolicEfficiency = (mealData) => {
-    const timeStr = mealData.time;
-    const hourMatch = timeStr.match(/(\d+):/);
-    const hour = hourMatch ? parseInt(hourMatch[1], 10) : 12;
-    const isPM = timeStr.toLowerCase().includes('pm');
-    
-    let hour24 = hour;
-    if (isPM && hour !== 12) hour24 += 12;
-    if (!isPM && hour === 12) hour24 = 0;
-    
-    // Macronutrient factors
-    const proteinFactor = (parseFloat(mealData.protein) || 0) * 0.2;
-    const carbFactor = (parseFloat(mealData.carbs) || 0) * 0.1;
-    const fatFactor = (parseFloat(mealData.fat) || 0) * 0.15;
-    
-    // Circadian rhythm factors
-    let timeFactor = 1.0;
-    if (hour24 < 6 || hour24 > 20) {
-      timeFactor = 0.7;
-    } else if (hour24 >= 7 && hour24 <= 10) {
-      timeFactor = 1.2;
-    } else if (hour24 >= 17 && hour24 <= 19) {
-      timeFactor = 0.9;
-    }
-    
-    // Meal type factors
-    const mealTypeFactors = {
-      'Breakfast': 1.3,
-      'Lunch': 1.1,
-      'Dinner': 0.9,
-      'Snack': 0.8
-    };
-    const mealTypeFactor = mealTypeFactors[mealData.mealType] || 1.0;
-    
-    // Base efficiency calculation
-    const macroBalance = Math.min(100, (proteinFactor + carbFactor + fatFactor) * 10);
-    let efficiency = macroBalance * timeFactor * mealTypeFactor;
-    
-    // Long COVID adjustments
-    if (mealData.longCovidAdjust && userProfile?.hasLongCovid) {
-      const severityFactors = {
-        'mild': 0.95,
-        'moderate': 0.85,
-        'severe': 0.75,
-        'very severe': 0.65
-      };
-      
-      const severityFactor = severityFactors[userProfile.longCovidSeverity] || 0.85;
-      efficiency *= severityFactor;
-      
-      // Boost for beneficial foods
-      if (mealData.longCovidBenefits && mealData.longCovidBenefits.length > 0) {
-        efficiency *= 1.1;
-      }
-      
-      // Reduce for problematic foods
-      if (mealData.longCovidCautions && mealData.longCovidCautions.length > 0) {
-        efficiency *= 0.9;
-      }
-    }
-    
-    return Math.min(100, Math.max(0, efficiency));
+ // Calculate metabolic efficiency - Enhanced version with FIXED Long COVID adjustments
+const calculateMetabolicEfficiency = (mealData) => {
+  const timeStr = mealData.time;
+  const hourMatch = timeStr.match(/(\d+):/);
+  const hour = hourMatch ? parseInt(hourMatch[1], 10) : 12;
+  const isPM = timeStr.toLowerCase().includes('pm');
+  
+  let hour24 = hour;
+  if (isPM && hour !== 12) hour24 += 12;
+  if (!isPM && hour === 12) hour24 = 0;
+  
+  // Macronutrient factors
+  const proteinFactor = (parseFloat(mealData.protein) || 0) * 0.2;
+  const carbFactor = (parseFloat(mealData.carbs) || 0) * 0.1;
+  const fatFactor = (parseFloat(mealData.fat) || 0) * 0.15;
+  
+  // Circadian rhythm factors
+  let timeFactor = 1.0;
+  if (hour24 < 6 || hour24 > 20) {
+    timeFactor = 0.7;
+  } else if (hour24 >= 7 && hour24 <= 10) {
+    timeFactor = 1.2;
+  } else if (hour24 >= 17 && hour24 <= 19) {
+    timeFactor = 0.9;
+  }
+  
+  // Meal type factors
+  const mealTypeFactors = {
+    'Breakfast': 1.3,
+    'Lunch': 1.1,
+    'Dinner': 0.9,
+    'Snack': 0.8
   };
+  const mealTypeFactor = mealTypeFactors[mealData.mealType] || 1.0;
+  
+  // Base efficiency calculation
+  const macroBalance = Math.min(100, (proteinFactor + carbFactor + fatFactor) * 10);
+  let efficiency = macroBalance * timeFactor * mealTypeFactor;
+  
+  // FIXED: Long COVID adjustments using metabolic efficiency factors (< 1.0)
+  if (mealData.longCovidAdjust && userProfile?.hasLongCovid) {
+    // Use factors that REDUCE efficiency (< 1.0) - this is correct for metabolic efficiency
+    const severityFactors = {
+      'mild': 0.95,
+      'moderate': 0.85,
+      'severe': 0.75,
+      'very severe': 0.65
+    };
+    
+    const severityFactor = severityFactors[userProfile.longCovidSeverity] || 0.85;
+    efficiency *= severityFactor;
+    
+    // Boost for beneficial foods
+    if (mealData.longCovidBenefits && mealData.longCovidBenefits.length > 0) {
+      efficiency *= 1.1;
+    }
+    
+    // Reduce for problematic foods
+    if (mealData.longCovidCautions && mealData.longCovidCautions.length > 0) {
+      efficiency *= 0.9;
+    }
+  }
+  
+  return Math.min(100, Math.max(0, efficiency));
+};
 
   // Recalculate nutrients when serving size changes
   const recalculateNutrients = (newServing) => {
@@ -946,38 +960,124 @@ const getCovidFoodRating = (foodName) => {
   const debouncedSearch = useDebounce(search, 300);
 
   // Memoize fetchSuggestions function
-  const fetchSuggestions = useCallback(async () => {
-    const normalizedSearch = search.toLowerCase();
+// WORKING SOLUTION: Replace your fetchSuggestions function with this
+const fetchSuggestions = useCallback(async () => {
+  const normalizedSearch = search.toLowerCase().trim();
+  
+  // Don't search for very short terms
+  if (normalizedSearch.length < 2) {
+    setSuggestions([]);
+    return;
+  }
+  
+  // Check cache first
+  if (suggestionCache[normalizedSearch]) {
+    setSuggestions(suggestionCache[normalizedSearch]);
+    return;
+  }
+  
+  try {
+    console.log(`Searching for: "${normalizedSearch}"`);
     
-    if (suggestionCache[normalizedSearch]) {
-      setSuggestions(suggestionCache[normalizedSearch]);
-      return;
-    }
+    // STRATEGY: Get a reasonable number of documents and filter client-side
+    // This works with any existing database structure
+    const q = query(
+      collection(db, 'meals'),
+      limit(100) // Adjust this based on your database size
+    );
     
-    try {
-      const q = query(
-        collection(db, 'meals'), 
-        where('name', ">=", search), 
-        where('name', "<=", search + '\uf8ff'),
-        limit(20)
-      );
+    const snap = await getDocs(q);
+    console.log(`Retrieved ${snap.docs.length} total documents from database`);
+    
+    // Client-side case-insensitive filtering
+    const allMeals = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    
+    const filteredResults = allMeals.filter(meal => {
+      if (!meal.name) return false;
       
-      const snap = await getDocs(q);
-      const results = snap.docs
-        .map(doc => ({ id: doc.id, ...doc.data() }))
-        .filter(item => item.name.toLowerCase().includes(normalizedSearch));
+      const mealNameLower = meal.name.toLowerCase();
       
-      setSuggestionCache(prev => ({
-        ...prev,
-        [normalizedSearch]: results
-      }));
+      // Multiple matching strategies for better results
+      return mealNameLower.includes(normalizedSearch) ||
+             mealNameLower.startsWith(normalizedSearch) ||
+             // Also check if any word in the name starts with the search term
+             mealNameLower.split(' ').some(word => word.startsWith(normalizedSearch));
+    });
+    
+    console.log(`Filtered to ${filteredResults.length} matching results`);
+    
+    // Sort results by relevance
+    const sortedResults = filteredResults.sort((a, b) => {
+      const aName = (a.name || '').toLowerCase();
+      const bName = (b.name || '').toLowerCase();
       
-      setSuggestions(results);
-    } catch (err) {
-      console.error('Error fetching food suggestions:', err);
-      setSuggestions([]);
-    }
-  }, [search, suggestionCache]);
+      // Exact match gets highest priority
+      if (aName === normalizedSearch && bName !== normalizedSearch) return -1;
+      if (bName === normalizedSearch && aName !== normalizedSearch) return 1;
+      
+      // Starts with gets second priority
+      if (aName.startsWith(normalizedSearch) && !bName.startsWith(normalizedSearch)) return -1;
+      if (bName.startsWith(normalizedSearch) && !aName.startsWith(normalizedSearch)) return 1;
+      
+      // Word starts with gets third priority
+      const aWordStartsMatch = aName.split(' ').some(word => word.startsWith(normalizedSearch));
+      const bWordStartsMatch = bName.split(' ').some(word => word.startsWith(normalizedSearch));
+      
+      if (aWordStartsMatch && !bWordStartsMatch) return -1;
+      if (bWordStartsMatch && !aWordStartsMatch) return 1;
+      
+      // Alphabetical for everything else
+      return aName.localeCompare(bName);
+    });
+    
+    // Limit final results
+    const finalResults = sortedResults.slice(0, 15);
+    
+    console.log(`Final results:`, finalResults.map(r => r.name));
+    
+    // Cache the results
+    setSuggestionCache(prev => ({
+      ...prev,
+      [normalizedSearch]: finalResults
+    }));
+    
+    setSuggestions(finalResults);
+    
+  } catch (err) {
+    console.error('Error fetching food suggestions:', err);
+    setSuggestions([]);
+  }
+}, [search, suggestionCache]);
+
+// ALTERNATIVE: If your database is very large, use this paginated approach
+
+// DEBUG FUNCTION: Check what's in your database
+
+
+// TEST FUNCTION: Call this to see what's in your database
+
+
+// ADD THIS TO YOUR COMPONENT TO DEBUG
+// Call these functions in your browser console or add them temporarily to useEffect:
+
+/*
+// Add this temporarily to your component to debug
+useEffect(() => {
+  if (currentUser && !authLoading) {
+    // Debug your database
+    debugDatabase();
+    
+    // Test search
+    testSearch('chicken').then(results => {
+      console.log('Test search results:', results);
+    });
+  }
+}, [currentUser, authLoading]);
+*/
+
+
+
+
 
   // Fetch suggestions from Firestore
   useEffect(() => {

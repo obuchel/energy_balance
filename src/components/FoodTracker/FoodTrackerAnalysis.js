@@ -6,9 +6,31 @@ import './FoodTrackerAnalysis.css';
 import { 
   estimateMicronutrientEnhancement, 
   estimateStandardMicronutrientEnhancement,
-  calculateFoodEfficiency,
-  getSeverityFactor
+  calculateFoodEfficiency
 } from './enhanced-efficiency-functions';
+
+// Local getSeverityFactor function with correct logic
+const getSeverityFactor = (severity) => {
+  console.log('getSeverityFactor called with:', severity);
+  
+  if (!severity || severity === 'None' || severity === null || severity === undefined) {
+    console.log('Returning 1.0 for None/null severity');
+    return 1.0; // No COVID = normal factor
+  }
+  
+  const severityMap = {
+    'mild': 1.1,        // 10% increase in RDA needs
+    'moderate': 1.3,    // 30% increase in RDA needs  
+    'severe': 1.5,      // 50% increase in RDA needs
+    'very severe': 1.7  // 70% increase in RDA needs
+  };
+  
+  const normalizedSeverity = severity.toString().toLowerCase();
+  const factor = severityMap[normalizedSeverity] || 1.0;
+  
+  console.log(`Severity "${severity}" normalized to "${normalizedSeverity}" -> factor: ${factor}`);
+  return factor;
+};
 
 // Debug version of calculateFoodEfficiency with detailed logging
 const calculateFoodEfficiencyDebug = (mealData, userProfile) => {
@@ -86,7 +108,8 @@ const calculateFoodEfficiencyDebug = (mealData, userProfile) => {
       'very severe': 0.65
     };
     
-    const severityFactor = severityFactors[userProfile.longCovidSeverity?.toLowerCase()] || 0.85;
+    const severityKey = userProfile.longCovidSeverity?.toLowerCase() || 'moderate';
+    const severityFactor = severityFactors[severityKey] || 0.85;
     console.log('Severity factor:', severityFactor);
     
     efficiency *= severityFactor;
@@ -1078,105 +1101,6 @@ const prepareChartData = (rawMealData) => {
   }
 };
 
-const baseRDAData1 = {
-vitamin_a: {
-  value: 0,
-  unit: 'mcg',
-  femaleAdjust: 0.78,
-  description: "Supports vision, immune function, and cell growth"
-},
-vitamin_c: {
-  value: 0,
-  unit: 'mg',
-  femaleAdjust: 0.83,
-  description: "Antioxidant that supports immune function and collagen production"
-},
-vitamin_d: {
-  value: 0,
-  unit: 'mcg',
-  femaleAdjust: 1.0,
-  description: "Crucial for calcium absorption and bone health"
-},
-vitamin_e: {
-  value: 0,
-  unit: 'mg',
-  femaleAdjust: 1.0,
-  description: "Antioxidant that protects cells from damage"
-},
-vitamin_b6: {
-  value: 0,
-  unit: 'mg',
-  femaleAdjust: 1.0,
-  description: "Important for metabolism and brain development"
-},
-vitamin_b12: {
-  value: 0,
-  unit: 'mcg',
-  femaleAdjust: 1.0,
-  description: "Essential for nerve function and blood cell formation"
-},
-folate: {
-  value: 0,
-  unit: 'mcg',
-  femaleAdjust: 1.0,
-  description: "Critical for cell division and DNA synthesis"
-},
-iron: {
-  value: 0,
-  unit: 'mg',
-  femaleAdjust: 2.25,
-  description: "Essential for oxygen transport in the blood"
-},
-calcium: {
-  value: 0,
-  unit: 'mg',
-  femaleAdjust: 1.0,
-  description: "Critical for bone health and muscle function"
-},
-magnesium: {
-  value: 0,
-  unit: 'mg',
-  femaleAdjust: 0.76,
-  description: "Involved in over 300 biochemical reactions in the body"
-},
-zinc: {
-  value: 0,
-  unit: 'mg',
-  femaleAdjust: 0.73,
-  description: "Important for immune function and wound healing"
-},
-selenium: {
-  value: 0,
-  unit: 'mcg',
-  femaleAdjust: 1.0,
-  description: "Antioxidant that helps protect cells from damage"
-},
-copper: {
-  value: 0,
-  unit: 'mg',
-  femaleAdjust: 1.0,
-  description: "Important for red blood cell formation and nerve function"
-},
-vitamin_b1: {
-  value: 0,
-  unit: 'mg',
-  femaleAdjust: 0.92,
-  description: "Essential for energy metabolism"
-},
-vitamin_b2: {
-  value: 0,
-  unit: 'mg',
-  femaleAdjust: 0.85,
-  description: "Important for energy production and cell function"
-},
-vitamin_b3: {
-  value: 0,
-  unit: 'mg',
-  femaleAdjust: 0.88,
-  description: "Helps convert food into energy"
-}
-};
-
 const BulletChart = ({ data, maxPercent }) => {
 const actualWidth = Math.min(100, (data.value / data.rda) * 100);
 const optimalWidth = Math.min(100, 100);
@@ -1247,8 +1171,8 @@ const baseRDAData10 = {
     description: "Antioxidant that supports immune function and collagen production"
   },
   vitamin_d: {
-    value: 600,
-    unit: 'UI',
+    value: 15, // Changed from 600 UI to 15 mcg
+    unit: 'mcg',
     femaleAdjust: 1.0,
     description: "Crucial for calcium absorption and bone health"
   },
@@ -1327,123 +1251,136 @@ const baseRDAData10 = {
   vitamin_b3: {
     value: 16,
     unit: 'mg',
-    femaleAdjust: 0.88,
+    femaleAdjust: 0.875, // 14mg / 16mg = 0.875 for correct female adjustment
     description: "Helps convert food into energy"
   }
 };
 
 function MicronutrientChart({ data, userData }) {
-
-
+  // ✅ TEMPORARY: Add some test micronutrient data
+  const testData = {
+    vitamin_a: { value: 450, unit: 'mcg' },
+    vitamin_c: { value: 45, unit: 'mg' },
+    vitamin_d: { value: 8, unit: 'mcg' },
+    vitamin_e: { value: 7, unit: 'mg' },
+    vitamin_b6: { value: 0.8, unit: 'mg' },
+    vitamin_b12: { value: 1.5, unit: 'mcg' },
+    folate: { value: 200, unit: 'mcg' },
+    iron: { value: 12, unit: 'mg' },
+    calcium: { value: 800, unit: 'mg' },
+    magnesium: { value: 200, unit: 'mg' },
+    zinc: { value: 6, unit: 'mg' },
+    selenium: { value: 35, unit: 'mcg' },
+    copper: { value: 0.5, unit: 'mg' },
+    vitamin_b1: { value: 0.9, unit: 'mg' },
+    vitamin_b2: { value: 1.0, unit: 'mg' },
+    vitamin_b3: { value: 12, unit: 'mg' }
+  };
+  
+  console.log('Using test data:', testData);
+  
 const [userInfo, setUserInfo] = useState(userData);
 const [chartData, setChartData] = useState([]);
-const [nutrientIntake] = useState(ensureCompleteNutrientData(data, baseRDAData1));
+const [nutrientIntake] = useState(ensureCompleteNutrientData(testData, baseRDAData10));
 const [personalizedRDA, setPersonalizedRDA] = useState({});
 const [displayMode, setDisplayMode] = useState('all');
 const [isLoading, setIsLoading] = useState(true);
 const [selectedCategory, setSelectedCategory] = useState('all');
 
 const calculatePersonalizedRDA = useCallback((baseRDAData_, userData) => {
+  console.log('=== DEBUGGING calculatePersonalizedRDA ===');
+  console.log('Input baseRDAData_:', baseRDAData_);
+  console.log('Input userData:', userData);
+  
+  if (!baseRDAData_ || Object.keys(baseRDAData_).length === 0) {
+    console.error('❌ baseRDAData_ is empty or invalid!');
+    return {};
+  }
+  
   const personalRDA = JSON.parse(JSON.stringify(baseRDAData_));
   
   Object.keys(personalRDA).forEach(nutrient => {
-    let adjustedValue = 0;
-    try {
-      adjustedValue = personalRDA[nutrient].value;
-    } catch (e) {
-      console.log(e);
+    console.log(`\n--- Processing ${nutrient} ---`);
+    console.log(`Initial data:`, personalRDA[nutrient]);
+    
+    if (!personalRDA[nutrient] || typeof personalRDA[nutrient].value !== 'number') {
+      console.error(`❌ Invalid data structure for ${nutrient}:`, personalRDA[nutrient]);
+      return;
     }
     
+    let adjustedValue = personalRDA[nutrient].value;
+    console.log(`Starting value: ${adjustedValue}`);
+    
+    // Apply gender adjustment
     if (userData.gender && userData.gender.toLowerCase() === 'female') {
-      adjustedValue *= personalRDA[nutrient].femaleAdjust;
+      const femaleAdjust = personalRDA[nutrient].femaleAdjust || 1.0;
+      adjustedValue *= femaleAdjust;
+      console.log(`After female adjust (${femaleAdjust}): ${adjustedValue}`);
+    } else {
+      console.log(`No female adjustment applied (gender: ${userData.gender})`);
     }
     
+    // Apply age adjustments
     if (userData.age) {
+      let ageMultiplier = 1.0;
       if (userData.age >= 70) {
-        if (nutrient === 'vitamin_d') adjustedValue *= 1.2;
-        if (nutrient === 'vitamin_b12') adjustedValue *= 1.1;
-        if (nutrient === 'calcium') adjustedValue *= 1.15;
+        if (nutrient === 'vitamin_d') ageMultiplier = 1.2;
+        if (nutrient === 'vitamin_b12') ageMultiplier = 1.1;
+        if (nutrient === 'calcium') ageMultiplier = 1.15;
       } else if (userData.age >= 50) {
-        if (nutrient === 'vitamin_d') adjustedValue *= 1.1;
-        if (nutrient === 'vitamin_b12') adjustedValue *= 1.05;
+        if (nutrient === 'vitamin_d') ageMultiplier = 1.1;
+        if (nutrient === 'vitamin_b12') ageMultiplier = 1.05;
       } else if (userData.age <= 18) {
-        if (nutrient === 'calcium') adjustedValue *= 1.15;
-        if (nutrient === 'iron') adjustedValue *= 1.1;
+        if (nutrient === 'calcium') ageMultiplier = 1.15;
+        if (nutrient === 'iron') ageMultiplier = 1.1;
       }
-    }
-    
-    if (userData.weight && userData.height) {
-      const heightInM = userData.height / 100;
-      const bmi = userData.weight / (heightInM * heightInM);
       
-      if (bmi < 18.5) {
-        if (['vitamin_a', 'vitamin_c', 'vitamin_d', 'iron', 'zinc'].includes(nutrient)) {
-          adjustedValue *= 1.15;
-        }
-      } else if (bmi > 30) {
-        if (['vitamin_d', 'magnesium', 'vitamin_e'].includes(nutrient)) {
-          adjustedValue *= 1.2;
-        }
+      if (ageMultiplier !== 1.0) {
+        adjustedValue *= ageMultiplier;
+        console.log(`After age adjust (${ageMultiplier}): ${adjustedValue}`);
+      } else {
+        console.log(`No age adjustment applied for ${nutrient} at age ${userData.age}`);
       }
     }
     
-    if (userData.gender && userData.gender.toLowerCase() === 'female') {
-      if (userData.pregnancy) {
-        if (['folate', 'iron', 'calcium', 'vitamin_d'].includes(nutrient)) {
-          adjustedValue *= 1.5;
-        } else {
-          adjustedValue *= 1.2;
-        }
-      } else if (userData.lactating) {
-        if (['calcium', 'vitamin_a', 'vitamin_c', 'vitamin_b6'].includes(nutrient)) {
-          adjustedValue *= 1.4;
-        } else {
-          adjustedValue *= 1.2;
-        }
-      }
-    }
+    // Apply COVID severity adjustments
+    const severity = userData.covid_severity || userData.longCovidSeverity;
+    const hasCovidCondition = severity && severity !== 'None' && severity !== null && severity !== undefined;
     
-    if (userData.activity_level) {
-      const activityMultipliers = {
-        'Very High': 1.2,
-        'High': 1.15,
-        'Moderate': 1.1,
-        'Low': 1.05,
-        'Sedentary': 1.0
-      };
+    console.log(`COVID check - severity: "${severity}", hasCovidCondition: ${hasCovidCondition}`);
+    
+    if (hasCovidCondition) {
+      console.log(`Applying COVID adjustments for severity: "${severity}"`);
       
-      const activityLevel = userData.activity_level || 'Moderate';
-      const multiplier = activityMultipliers[activityLevel] || 1.0;
-      
-      if (['magnesium', 'iron', 'vitamin_b1', 'vitamin_b2', 'vitamin_b3', 'vitamin_b6'].includes(nutrient)) {
-        adjustedValue *= multiplier;
-      }
-    }
-    
-    if (userData.medical_conditions && userData.medical_conditions.length > 0) {
-      if (userData.medical_conditions.includes('anemia') && 
-          ['iron', 'vitamin_b12', 'folate', 'vitamin_c'].includes(nutrient)) {
-        adjustedValue *= 1.5;
-      }
-    }
-
-    if (userData.covid_severity) {
-      const severityFactor = getSeverityFactor(userData.covid_severity);
+      const severityFactor = getSeverityFactor(severity);
+      console.log(`Severity factor: ${severityFactor}`);
       
       if (['vitamin_c', 'vitamin_d', 'zinc', 'selenium'].includes(nutrient)) {
-        adjustedValue *= severityFactor * 1.5;
+        const covidMultiplier = Math.min(severityFactor * 1.5, 2.5); // Cap at 2.5x
+        adjustedValue *= covidMultiplier;
+        console.log(`After COVID high-priority adjust (${covidMultiplier}): ${adjustedValue}`);
+      } else if (['vitamin_a', 'vitamin_e', 'vitamin_b6', 'vitamin_b12', 'folate', 'iron'].includes(nutrient)) {
+        const covidMultiplier = Math.min(severityFactor * 1.3, 2.0); // Cap at 2x
+        adjustedValue *= covidMultiplier;
+        console.log(`After COVID medium-priority adjust (${covidMultiplier}): ${adjustedValue}`);
+      } else if (['magnesium', 'copper', 'vitamin_b1', 'vitamin_b2', 'vitamin_b3'].includes(nutrient)) {
+        const covidMultiplier = Math.min(severityFactor * 1.1, 1.5); // Cap at 1.5x
+        adjustedValue *= covidMultiplier;
+        console.log(`After COVID low-priority adjust (${covidMultiplier}): ${adjustedValue}`);
       }
-      
-      if (['vitamin_a', 'vitamin_e', 'vitamin_b6', 'vitamin_b12', 'folate', 'iron'].includes(nutrient)) {
-        adjustedValue *= severityFactor * 1.3;
-      }
-      
-      if (['magnesium', 'copper', 'vitamin_b1', 'vitamin_b2', 'vitamin_b3'].includes(nutrient)) {
-        adjustedValue *= severityFactor;
-      }
+    } else {
+      console.log('No COVID adjustments applied - using baseline RDA');
+    }
+    
+    // Final safety check
+    if (isNaN(adjustedValue) || !isFinite(adjustedValue) || adjustedValue <= 0) {
+      console.error(`❌ Invalid final value for ${nutrient}: ${adjustedValue}, resetting to base`);
+      adjustedValue = personalRDA[nutrient].value;
     }
     
     const roundedValue = Math.round(adjustedValue * 10) / 10;
+    console.log(`Final rounded value: ${roundedValue}`);
+    
     personalRDA[nutrient] = {
       ...personalRDA[nutrient],
       value: roundedValue,
@@ -1451,30 +1388,55 @@ const calculatePersonalizedRDA = useCallback((baseRDAData_, userData) => {
     };
   });
   
+  console.log('Final personalRDA:', personalRDA);
+  console.log('=== END calculatePersonalizedRDA DEBUG ===\n');
+  
   return personalRDA;
 }, []);
 
 const processNutrientData = useCallback((intake, rdaValues) => {
+  console.log('=== DEBUGGING processNutrientData ===');
+  console.log('Input intake:', intake);
+  console.log('Input rdaValues:', rdaValues);
+  
+  if (!rdaValues || Object.keys(rdaValues).length === 0) {
+    console.error('No RDA values provided to processNutrientData');
+    return;
+  }
+  
   let enhancedIntake = intake;
-  if (userData.covid_severity) {
-    enhancedIntake = estimateMicronutrientEnhancement(intake, userData.covid_severity);
+  if (userData.covid_severity || userData.longCovidSeverity) {
+    const severity = userData.covid_severity || userData.longCovidSeverity;
+    enhancedIntake = estimateMicronutrientEnhancement(intake, severity);
   } else {
     enhancedIntake = estimateStandardMicronutrientEnhancement(intake, userData);
   }
   
   let processedData = Object.entries(enhancedIntake).map(([key, details]) => {
-    if (!rdaValues[key]) return null;
+    console.log(`Processing ${key}:`, details, 'RDA:', rdaValues[key]);
     
-    const intakeValue = typeof details === 'object' ? details.value || details.recommendedValue : details;
+    if (!rdaValues[key]) {
+      console.warn(`No RDA data for ${key}`);
+      return null;
+    }
+    
+    const intakeValue = typeof details === 'object' ? (details.value || details.recommendedValue || 0) : (details || 0);
     const rdaValue = rdaValues[key].value;
+    
+    // ✅ Add safety checks
+    if (isNaN(intakeValue) || isNaN(rdaValue) || rdaValue === 0) {
+      console.warn(`Invalid values for ${key}: intake=${intakeValue}, rda=${rdaValue}`);
+      return null;
+    }
+    
     const unit = rdaValues[key].unit || 'mg';
     const percentOfRDA = (intakeValue / rdaValue) * 100;
     const formattedName = key.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
     const isAdjusted = rdaValues[key].isAdjusted || (details.isEnhanced && details.isEnhanced);
-    const standardRDA = baseRDAData1[key]?.value || rdaValue;
+    const standardRDA = baseRDAData10[key]?.value || rdaValue;
     const category = key.includes('vitamin') ? 'vitamins' : 'minerals';
     
-    return {
+    const result = {
       name: formattedName,
       key: key,
       percentOfRDA: Math.min(percentOfRDA, 150),
@@ -1488,8 +1450,12 @@ const processNutrientData = useCallback((intake, rdaValues) => {
       category: category,
       enhancementReason: details.reason || null
     };
+    
+    console.log(`${key} result:`, result);
+    return result;
   }).filter(item => item !== null);
   
+  // Apply display filters
   if (displayMode === 'deficient') {
     processedData = processedData.filter(item => item.percentOfRDA < 90);
   } else if (displayMode === 'optimal') {
@@ -1501,15 +1467,46 @@ const processNutrientData = useCallback((intake, rdaValues) => {
   }
   
   processedData.sort((a, b) => a.percentOfRDA - b.percentOfRDA);
+  
+  console.log('Final processedData:', processedData);
+  console.log('=== END processNutrientData DEBUG ===');
+  
   setChartData(processedData);
 }, [displayMode, selectedCategory, userData]);
 
+// 4. Add this debug function to check your userData structure
+const debugUserData = (userData) => {
+  console.log('=== USER DATA STRUCTURE ===');
+  console.log('userData:', userData);
+  console.log('covid_severity:', userData.covid_severity, typeof userData.covid_severity);
+  console.log('longCovidSeverity:', userData.longCovidSeverity);
+  console.log('hasLongCovid:', userData.hasLongCovid);
+  console.log('age:', userData.age);
+  console.log('gender:', userData.gender);
+  console.log('weight:', userData.weight);
+  console.log('height:', userData.height);
+  console.log('=== END USER DATA ===');
+};
+
 useEffect(() => {
+  debugUserData(userInfo); // Add this debug call
+  
   setTimeout(() => {
-    const calculatedRDA = calculatePersonalizedRDA(baseRDAData10, userInfo);
-    setPersonalizedRDA(calculatedRDA);
-    processNutrientData(nutrientIntake, calculatedRDA);
-    setIsLoading(false);
+    try {
+      const calculatedRDA = calculatePersonalizedRDA(baseRDAData10, userInfo);
+      
+      if (!calculatedRDA || Object.keys(calculatedRDA).length === 0) {
+        console.error('Failed to calculate RDA values');
+        return;
+      }
+      
+      setPersonalizedRDA(calculatedRDA);
+      processNutrientData(nutrientIntake, calculatedRDA);
+      setIsLoading(false);
+    } catch (error) {
+      console.error('Error in useEffect:', error);
+      setIsLoading(false);
+    }
   }, 500);
 }, [userInfo, calculatePersonalizedRDA, processNutrientData, nutrientIntake]);
 
@@ -1524,18 +1521,41 @@ const getCovidSeverityClass = (severity) => {
 };
 
 const toggleCovidSeverity = () => {
-  const severities = [null, 'Mild', 'Moderate', 'Severe', 'Very Severe'];
-  const currentIndex = severities.indexOf(userInfo.covid_severity);
+  const severities = [null, 'mild', 'moderate', 'severe', 'very severe'];
+  
+  // Check both possible property names for current severity
+  const currentSeverity = userInfo.covid_severity || userInfo.longCovidSeverity || null;
+  const currentIndex = severities.indexOf(currentSeverity);
   const nextIndex = (currentIndex + 1) % severities.length;
+  
+  const newSeverity = severities[nextIndex];
+  console.log(`Toggling COVID severity from "${currentSeverity}" to "${newSeverity}"`);
   
   const updatedUserInfo = {
     ...userInfo,
-    covid_severity: severities[nextIndex]
+    // Update BOTH properties to ensure consistency
+    covid_severity: newSeverity,
+    longCovidSeverity: newSeverity,
+    hasLongCovid: newSeverity !== null // Set hasLongCovid based on severity
   };
   
+  // Remove covid properties entirely if severity is null
+  if (newSeverity === null) {
+    delete updatedUserInfo.covid_severity;
+    delete updatedUserInfo.longCovidSeverity;
+    updatedUserInfo.hasLongCovid = false;
+  }
+  
+  console.log('Updated user info:', updatedUserInfo);
   setUserInfo(updatedUserInfo);
 };
-
+const getCurrentCovidSeverity = () => {
+  const severity = userInfo.covid_severity || userInfo.longCovidSeverity;
+  if (!severity || severity === null) return 'None';
+  
+  // Capitalize first letter for display
+  return severity.charAt(0).toUpperCase() + severity.slice(1);
+};
 const changeDisplayMode = (mode) => {
   setDisplayMode(mode);
   processNutrientData(nutrientIntake, personalizedRDA);
@@ -1693,11 +1713,32 @@ return (
         <div className="profile-item">
           <p className="profile-label">COVID Status</p>
           <button 
-            onClick={toggleCovidSeverity} 
-            className="covid-toggle-button"
-          >
-            {userInfo.covid_severity || 'None'} (Click to change)
-          </button>
+  onClick={toggleCovidSeverity} 
+  className="covid-toggle-button"
+  style={{
+    padding: '8px 12px',
+    backgroundColor: '#e3f2fd',
+    border: '2px solid #2196f3',
+    borderRadius: '6px',
+    cursor: 'pointer',
+    fontSize: '14px',
+    fontWeight: '500',
+    color: '#1976d2',
+    transition: 'all 0.2s ease',
+    minWidth: '120px'
+  }}
+  onMouseEnter={(e) => {
+    e.target.style.backgroundColor = '#bbdefb';
+    e.target.style.transform = 'scale(1.02)';
+  }}
+  onMouseLeave={(e) => {
+    e.target.style.backgroundColor = '#e3f2fd';
+    e.target.style.transform = 'scale(1)';
+  }}
+>
+  {getCurrentCovidSeverity()} (Click to change)
+</button>
+            
         </div>
       </div>
     </div>
@@ -1725,46 +1766,59 @@ if (!userProfile) {
 }
 
 const getChartData = () => {
-  if (foodLog.length === 0) return { calorieData: [], macroSums: {}, microSums: {}, efficiencyData: [] };
+  if (foodLog.length === 0) return { macroSums: {}, microSums: {}, efficiencyData: [] };
 
   const lastDate = foodLog[0].date;
   const lastDayEntries = foodLog.filter(e => e.date === lastDate);
   
-  const efficiencyData = foodLog.map(entry => ({
-    date: entry.date,
-    time: entry.time,
-    mealType: entry.mealType,
-    name: entry.name,
-    efficiency: +entry.metabolicEfficiency || 50,
-    calories: +entry.calories || 0
-  }));
+  console.log('=== DEBUGGING getChartData ===');
+  console.log('lastDayEntries:', lastDayEntries);
   
-  const calorieData = foodLog.map(entry => ({
-    date: entry.date,
-    mealType: entry.mealType,
-    calories: +entry.calories || 0,
-    metabolicEfficiency: +entry.metabolicEfficiency || 50
-  }));
-
+  // Calculate macro sums
   const macroSums = lastDayEntries.reduce((acc, e) => {
-    acc.protein = (acc.protein || 0) + (+e.protein || 0);
-    acc.carbs = (acc.carbs || 0) + (+e.carbs || 0);
-    acc.fat = (acc.fat || 0) + (+e.fat || 0);
+    acc.protein = (acc.protein || 0) + (parseFloat(e.protein) || 0);
+    acc.carbs = (acc.carbs || 0) + (parseFloat(e.carbs) || 0);
+    acc.fat = (acc.fat || 0) + (parseFloat(e.fat) || 0);
+    acc.calories = (acc.calories || 0) + (parseFloat(e.calories) || 0);
     return acc;
   }, {});
+  
+  // Debug each entry's micronutrients
+  lastDayEntries.forEach((entry, index) => {
+    console.log(`\nEntry ${index}: ${entry.name}`);
+    console.log(`micronutrients:`, entry.micronutrients);
+    
+    if (entry.micronutrients) {
+      Object.entries(entry.micronutrients).forEach(([key, value]) => {
+        console.log(`  ${key}:`, value);
+      });
+    } else {
+      console.warn(`❌ No micronutrients data for ${entry.name}`);
+    }
+  });
 
   const microSums = lastDayEntries.reduce((acc, e) => {
     if (e.micronutrients) {
       Object.entries(e.micronutrients).forEach(([k, v]) => {
         if (!['protein','carbs','fat','calories','name','unit'].includes(k)) {
-          acc[k] = (acc[k] || 0) + (+v.value || 0);
+          const value = typeof v === 'object' ? (v.value || 0) : v;
+          const numValue = parseFloat(value) || 0;
+          acc[k] = (acc[k] || 0) + numValue;
+          console.log(`Adding ${k}: ${numValue}, running total: ${acc[k]}`);
         }
       });
     }
     return acc;
   }, {});
 
-  return { calorieData, macroSums, microSums, efficiencyData };
+  console.log('Final macroSums:', macroSums);
+  console.log('Final microSums:', microSums);
+  console.log('=== END getChartData DEBUG ===\n');
+  
+  // Prepare efficiency data (use the entire food log for trend analysis)
+  const efficiencyData = foodLog;
+  
+  return { macroSums, microSums, efficiencyData };
 };
 
 const today = new Date().toISOString().slice(0, 10);
