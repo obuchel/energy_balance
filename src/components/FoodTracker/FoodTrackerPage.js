@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
   collection, 
@@ -166,7 +166,7 @@ const handleLogout = async () => {
     const today = new Date().toISOString().split('T')[0];
     const yesterday = new Date();
     yesterday.setDate(yesterday.getDate() - 1);
-    const yesterdayStr = yesterday.toISOString().split('T')[0];
+    //const yesterdayStr = yesterday.toISOString().split('T')[0];
 
     const sampleEntries = [
       {
@@ -308,7 +308,7 @@ const handleLogout = async () => {
       const benefits = mealData.longCovidBenefits || [];
       const cautions = mealData.longCovidCautions || [];
       const functionalCompounds = mealData.functionalCompounds || {};
-      const properties = mealData.properties || {};
+      //const properties = mealData.properties || {};
       
       let category = 'neutral';
       if (benefits.length > cautions.length) category = 'beneficial';
@@ -329,7 +329,7 @@ const handleLogout = async () => {
           <div className="inflammatory-level">
             <h5>🔥 Anti-Inflammatory Level</h5>
             <div className={`level-indicator level-${antiInflammatoryLevel}`}>
-              <span className="level-value">{antiInflammatoryLevel.toUpperCase()}</span>
+              <span className="level-value"> {antiInflammatoryLevel.toUpperCase()}</span>
               <span className="level-description">
                 {antiInflammatoryLevel === 'high' ? 'Excellent for reducing inflammation' :
                  antiInflammatoryLevel === 'moderate' ? 'Moderately helpful for inflammation' :
@@ -346,7 +346,7 @@ const handleLogout = async () => {
                 {Object.entries(functionalCompounds).map(([compound, level]) => (
                   <div key={compound} className="compound-item">
                     <span className="compound-name">{compound.replace(/_/g, ' ')}</span>
-                    <span className={`compound-level level-${level}`}>{level}</span>
+                    <span className={`compound-level level-${level}`}> {level}</span>
                   </div>
                 ))}
               </div>
@@ -655,6 +655,54 @@ const handleLogout = async () => {
   const debouncedSearch = useDebounce(search, 300);
 
   // Enhanced fallback search function
+// Move the performFallbackSearch and calculateJavaScriptScore functions inside the useCallback
+// to fix the dependency issue
+
+// Fetch suggestions function
+const fetchSuggestions = useCallback(async () => {
+  const normalizedSearch = search.toLowerCase().trim();
+  
+  if (normalizedSearch.length < 2) {
+    setSuggestions([]);
+    return;
+  }
+  
+  if (suggestionCache[normalizedSearch]) {
+    setSuggestions(suggestionCache[normalizedSearch]);
+    return;
+  }
+  
+  // Move calculateJavaScriptScore inside the callback
+  const calculateJavaScriptScore = (meal, searchTerm) => {
+    const name = (meal.name || '').toLowerCase();
+    const category = (meal.category || '').toLowerCase();
+    const description = (meal.description || '').toLowerCase();
+    
+    let score = 0;
+    
+    if (name === searchTerm) score += 1.0;
+    else if (name.startsWith(searchTerm)) score += 0.8;
+    else if (name.includes(searchTerm)) score += 0.6;
+    
+    if (category.includes(searchTerm)) score += 0.3;
+    if (description.includes(searchTerm)) score += 0.2;
+    
+    const nameWords = name.split(' ');
+    const searchWords = searchTerm.split(' ');
+    let wordMatches = 0;
+    
+    searchWords.forEach(searchWord => {
+      nameWords.forEach(nameWord => {
+        if (nameWord.startsWith(searchWord)) wordMatches++;
+      });
+    });
+    
+    score += (wordMatches / Math.max(searchWords.length, 1)) * 0.4;
+    
+    return score;
+  };
+
+  // Move performFallbackSearch inside the callback
   const performFallbackSearch = (normalizedSearch, allFoods) => {
     return allFoods
       .filter(meal => {
@@ -691,127 +739,85 @@ const handleLogout = async () => {
       })
       .slice(0, 15);
   };
-
-  // Calculate search score for JavaScript fallback
-  const calculateJavaScriptScore = (meal, searchTerm) => {
-    const name = (meal.name || '').toLowerCase();
-    const category = (meal.category || '').toLowerCase();
-    const description = (meal.description || '').toLowerCase();
+  
+  try {
+    console.log(`🔍 Enhanced search for: "${normalizedSearch}"`);
     
-    let score = 0;
-    
-    if (name === searchTerm) score += 1.0;
-    else if (name.startsWith(searchTerm)) score += 0.8;
-    else if (name.includes(searchTerm)) score += 0.6;
-    
-    if (category.includes(searchTerm)) score += 0.3;
-    if (description.includes(searchTerm)) score += 0.2;
-    
-    const nameWords = name.split(' ');
-    const searchWords = searchTerm.split(' ');
-    let wordMatches = 0;
-    
-    searchWords.forEach(searchWord => {
-      nameWords.forEach(nameWord => {
-        if (nameWord.startsWith(searchWord)) wordMatches++;
-      });
-    });
-    
-    score += (wordMatches / Math.max(searchWords.length, 1)) * 0.4;
-    
-    return score;
-  };
-
-  // Fetch suggestions function
-  const fetchSuggestions = useCallback(async () => {
-    const normalizedSearch = search.toLowerCase().trim();
-    
-    if (normalizedSearch.length < 2) {
-      setSuggestions([]);
-      return;
-    }
-    
-    if (suggestionCache[normalizedSearch]) {
-      setSuggestions(suggestionCache[normalizedSearch]);
-      return;
-    }
-    
-    try {
-      console.log(`🔍 Enhanced search for: "${normalizedSearch}"`);
+    let allFoods = allFoodsCache;
+    if (allFoods.length === 0) {
+      console.log('📥 Fetching food database...');
+      const q = query(
+        collection(db, 'meals'),
+        limit(500)
+      );
       
-      let allFoods = allFoodsCache;
-      if (allFoods.length === 0) {
-        console.log('📥 Fetching food database...');
-        const q = query(
-          collection(db, 'meals'),
-          limit(500)
-        );
-        
-        const snap = await getDocs(q);
-        allFoods = snap.docs.map(doc => ({ 
-          id: doc.id, 
-          ...doc.data()
-        }));
-        
-        setAllFoodsCache(allFoods);
-        console.log(`📊 Loaded ${allFoods.length} foods into cache`);
-        
-        if (window.pyodideReady && !searchIndexBuilt) {
-          try {
-            console.log('🏗️ Building search index...');
-            const result = await window.pyodide.runPython(`
-              result = search_engine.build_index('${JSON.stringify(allFoods).replace(/'/g, "\\'")}')
-              result
-            `);
-            setSearchIndexBuilt(true);
-            window.searchIndexBuilt = true;
-            console.log('✅ Search index built:', result);
-          } catch (error) {
-            console.error('❌ Error building Python index:', error);
-          }
-        }
-      }
-      
-      let results = [];
-      
-      if (window.pyodideReady && searchIndexBuilt) {
-        try {
-          console.log('🚀 Using AI-powered search');
-          const pythonResults = await window.pyodide.runPython(`
-            results = search_engine.search("${normalizedSearch.replace(/"/g, '\\"')}", 15)
-            json.dumps(results)
-          `);
-          
-          results = JSON.parse(pythonResults);
-          console.log(`🎯 AI search returned ${results.length} results`);
-          
-          results = results.map(food => ({
-            ...food,
-            searchMethod: 'ai',
-            searchScore: food.search_score || 0
-          }));
-          
-        } catch (error) {
-          console.error('❌ Python search failed, using fallback:', error);
-          results = performFallbackSearch(normalizedSearch, allFoods);
-        }
-      } else {
-        console.log('📝 Using fallback JavaScript search');
-        results = performFallbackSearch(normalizedSearch, allFoods);
-      }
-      
-      setSuggestionCache(prev => ({
-        ...prev,
-        [normalizedSearch]: results
+      const snap = await getDocs(q);
+      allFoods = snap.docs.map(doc => ({ 
+        id: doc.id, 
+        ...doc.data()
       }));
       
-      setSuggestions(results);
+      setAllFoodsCache(allFoods);
+      console.log(`📊 Loaded ${allFoods.length} foods into cache`);
       
-    } catch (err) {
-      console.error('❌ Search error:', err);
-      setSuggestions([]);
+      if (window.pyodideReady && !searchIndexBuilt) {
+        try {
+          console.log('🏗️ Building search index...');
+          const result = await window.pyodide.runPython(`
+            result = search_engine.build_index('${JSON.stringify(allFoods).replace(/'/g, "\\'")}')
+            result
+          `);
+          setSearchIndexBuilt(true);
+          window.searchIndexBuilt = true;
+          console.log('✅ Search index built:', result);
+        } catch (error) {
+          console.error('❌ Error building Python index:', error);
+        }
+      }
     }
-  }, [search, suggestionCache, allFoodsCache, searchIndexBuilt]);
+    
+    let results = [];
+    
+    if (window.pyodideReady && searchIndexBuilt) {
+      try {
+        console.log('🚀 Using AI-powered search');
+        const pythonResults = await window.pyodide.runPython(`
+          results = search_engine.search("${normalizedSearch.replace(/"/g, '\\"')}", 15)
+          json.dumps(results)
+        `);
+        
+        results = JSON.parse(pythonResults);
+        console.log(`🎯 AI search returned ${results.length} results`);
+        
+        results = results.map(food => ({
+          ...food,
+          searchMethod: 'ai',
+          searchScore: food.search_score || 0
+        }));
+        
+      } catch (error) {
+        console.error('❌ Python search failed, using fallback:', error);
+        results = performFallbackSearch(normalizedSearch, allFoods);
+      }
+    } else {
+      console.log('📝 Using fallback JavaScript search');
+      results = performFallbackSearch(normalizedSearch, allFoods);
+    }
+    
+    setSuggestionCache(prev => ({
+      ...prev,
+      [normalizedSearch]: results
+    }));
+    
+    setSuggestions(results);
+    
+  } catch (err) {
+    console.error('❌ Search error:', err);
+    setSuggestions([]);
+  }
+}, [search, suggestionCache, allFoodsCache, searchIndexBuilt]); // Now all dependencies are properly included
+
+  // Fetch suggestions function
 
   // Monitor Pyodide status
   useEffect(() => {
