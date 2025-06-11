@@ -34,6 +34,33 @@
   margin-bottom: 10px;
 }
 
+/* Header and Navigation */
+.tracker-header {
+  margin-bottom: 20px;
+}
+
+.back-button {
+  background: #6c757d;
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  transition: background-color 0.3s ease;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.back-button:hover {
+  background: #5a6268;
+  text-decoration: none;
+  color: white;
+}
+
 /* Tab Navigation */
 .food-tabs {
   display: flex;
@@ -100,6 +127,7 @@
   border-radius: 4px;
   font-size: 14px;
   transition: border-color 0.3s ease;
+  box-sizing: border-box;
 }
 
 .form-group input:focus,
@@ -119,50 +147,269 @@
   grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
   gap: 15px;
   margin-bottom: 20px;
+  position: relative;
+  z-index: 1; /* Lower than suggestions dropdown */
 }
 
-/* Search Functionality */
+/* Enhanced Search Group Positioning */
 .search-group {
   position: relative;
+  margin-bottom: 30px; /* Increased margin to provide more space */
+  z-index: 100;
+  isolation: isolate; /* Creates a new stacking context */
+}
+
+.search-input-container {
+  position: relative;
+  width: 100%;
 }
 
 .search-input {
   width: 100%;
+  padding: 12px 120px 12px 12px; /* Added right padding for status indicators */
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  font-size: 16px;
+  transition: border-color 0.2s, box-shadow 0.2s;
+  box-sizing: border-box;
 }
 
+.search-input:focus {
+  outline: none;
+  border-color: #4caf50;
+  box-shadow: 0 0 0 2px rgba(76, 175, 80, 0.2);
+}
+
+.search-input.enhanced-search {
+  background: linear-gradient(to right, #ffffff 0%, #f8fff9 100%);
+}
+
+.search-status {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 12px;
+  color: #666;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  pointer-events: none; /* Prevents interference with input focus */
+  max-width: 100px; /* Ensures it doesn't overlap with text */
+}
+
+/* Improved suggestions dropdown positioning */
 .suggestions-list {
   position: absolute;
-  top: 100%;
+  top: calc(100% + 1px); /* Small gap to prevent border overlap */
   left: 0;
   right: 0;
   background: white;
-  border: 1px solid #ddd;
-  border-top: none;
-  border-radius: 0 0 4px 4px;
-  max-height: 200px;
+  border: 1px solid #e0e0e0;
+  border-radius: 0 0 8px 8px;
+  max-height: 320px;
   overflow-y: auto;
-  z-index: 1000;
-  list-style: none;
-  padding: 0;
+  z-index: 9999; /* Very high z-index */
+  box-shadow: 
+    0 4px 12px rgba(0, 0, 0, 0.15),
+    0 0 0 1px rgba(0, 0, 0, 0.05);
   margin: 0;
+  padding: 0;
+  list-style: none;
+  backdrop-filter: blur(8px); /* Subtle blur effect */
+}
+
+/* Enhanced suggestions styling */
+.suggestions-list.enhanced {
+  border-color: #d0d0d0;
+  box-shadow: 
+    0 8px 24px rgba(0, 0, 0, 0.12),
+    0 2px 8px rgba(0, 0, 0, 0.08);
 }
 
 .suggestions-list li {
-  padding: 10px;
+  padding: 14px 16px;
+  border-bottom: 1px solid #f5f5f5;
   cursor: pointer;
-  border-bottom: 1px solid #eee;
-  transition: background-color 0.2s ease;
+  transition: all 0.2s ease;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  position: relative;
 }
 
 .suggestions-list li:hover {
-  background-color: #f8f9fa;
+  background: linear-gradient(to right, #f8f9fa 0%, #e8f5e8 100%);
+  border-left: 3px solid #4caf50;
+  padding-left: 13px; /* Adjust for border */
 }
 
 .suggestions-list li:last-child {
   border-bottom: none;
+  border-radius: 0 0 8px 8px;
+}
+
+.suggestions-list li:first-child {
+  border-top: 1px solid #e0e0e0;
+}
+
+.suggestion-main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0; /* Prevents text overflow issues */
+}
+
+.suggestion-name {
+  font-weight: 500;
+  color: #333;
+  font-size: 14px;
+  line-height: 1.3;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.suggestion-category {
+  font-size: 12px;
+  color: #666;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  opacity: 0.8;
+}
+
+.suggestion-meta {
+  display: flex;
+  gap: 6px;
+  font-size: 11px;
+  color: #888;
+  margin-top: 2px;
+  flex-wrap: wrap;
+}
+
+.search-score {
+  background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%);
+  color: #1976d2;
+  padding: 2px 6px;
+  border-radius: 10px;
+  font-weight: 500;
+  font-size: 10px;
+}
+
+.ai-badge {
+  background: linear-gradient(135deg, #4caf50 0%, #45a049 100%);
+  color: white;
+  padding: 2px 6px;
+  border-radius: 10px;
+  font-weight: 500;
+  font-size: 10px;
+}
+
+.match-type {
+  background: #f5f5f5;
+  color: #666;
+  padding: 2px 6px;
+  border-radius: 10px;
+  font-size: 10px;
+}
+
+.suggestion-indicators {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.covid-indicator {
+  font-size: 18px;
+  display: flex;
+  align-items: center;
+  filter: drop-shadow(0 1px 2px rgba(0,0,0,0.1));
+}
+
+.covid-indicator.beneficial {
+  color: #4caf50;
+}
+
+.covid-indicator.caution {
+  color: #ff9800;
+}
+
+.covid-indicator.neutral {
+  color: #666;
+}
+
+/* Status indicators with better styling */
+.status-ready {
+  color: #4caf50;
+  font-weight: 500;
+}
+
+.status-indexing {
+  color: #ff9800;
+  font-weight: 500;
+}
+
+.status-loading {
+  color: #2196f3;
+  font-weight: 500;
+}
+
+.status-basic {
+  color: #666;
+  font-weight: 500;
+}
+
+.result-count {
+  color: #888;
+  font-style: italic;
+  font-size: 11px;
 }
 
 /* Long COVID Section */
+.long-covid-checkbox-group {
+  margin-bottom: 25px;
+  padding: 18px;
+  background: linear-gradient(135deg, #f8f9fa 0%, #e3f2fd 100%);
+  border-radius: 8px;
+  border-left: 4px solid #2196f3;
+  position: relative;
+  z-index: 1;
+}
+
+.long-covid-checkbox-label {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  cursor: pointer;
+  font-weight: 500;
+  line-height: 1.4;
+}
+
+.long-covid-checkbox {
+  width: 20px;
+  height: 20px;
+  cursor: pointer;
+  margin-top: 2px;
+  flex-shrink: 0;
+}
+
+.checkbox-text {
+  color: #333;
+  font-size: 14px;
+}
+
+.long-covid-info-banner {
+  margin-top: 12px;
+  padding: 12px;
+  background: rgba(33, 150, 243, 0.1);
+  border-radius: 6px;
+  font-size: 13px;
+  color: #1565c0;
+  line-height: 1.4;
+}
+
 .long-covid-box {
   background: #e8f4fd;
   border: 1px solid #b8daff;
@@ -221,7 +468,7 @@
   margin-bottom: 0;
 }
 
-/* Buttons */
+/* Button Styles */
 .submit-button {
   background: #28a745;
   color: white;
@@ -231,17 +478,27 @@
   font-size: 16px;
   font-weight: 600;
   cursor: pointer;
-  transition: background-color 0.3s ease;
+  transition: all 0.3s ease;
   width: 100%;
+  box-shadow: 0 2px 4px rgba(40, 167, 69, 0.2);
 }
 
 .submit-button:hover:not(:disabled) {
   background: #218838;
+  box-shadow: 0 4px 8px rgba(40, 167, 69, 0.3);
+  transform: translateY(-1px);
+}
+
+.submit-button:active:not(:disabled) {
+  transform: translateY(0);
+  box-shadow: 0 2px 4px rgba(40, 167, 69, 0.2);
 }
 
 .submit-button:disabled {
   background: #6c757d;
   cursor: not-allowed;
+  box-shadow: none;
+  transform: none;
 }
 
 .refresh-button {
@@ -252,16 +509,27 @@
   border-radius: 4px;
   cursor: pointer;
   font-size: 14px;
-  transition: background-color 0.3s ease;
+  font-weight: 500;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 4px rgba(0, 123, 255, 0.2);
 }
 
 .refresh-button:hover:not(:disabled) {
   background: #0056b3;
+  box-shadow: 0 4px 8px rgba(0, 123, 255, 0.3);
+  transform: translateY(-1px);
+}
+
+.refresh-button:active:not(:disabled) {
+  transform: translateY(0);
+  box-shadow: 0 2px 4px rgba(0, 123, 255, 0.2);
 }
 
 .refresh-button:disabled {
   background: #6c757d;
   cursor: not-allowed;
+  box-shadow: none;
+  transform: none;
 }
 
 .load-more-button {
@@ -272,16 +540,27 @@
   border-radius: 4px;
   cursor: pointer;
   font-size: 14px;
-  transition: background-color 0.3s ease;
+  font-weight: 500;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 4px rgba(108, 117, 125, 0.2);
 }
 
 .load-more-button:hover:not(:disabled) {
   background: #5a6268;
+  box-shadow: 0 4px 8px rgba(108, 117, 125, 0.3);
+  transform: translateY(-1px);
+}
+
+.load-more-button:active:not(:disabled) {
+  transform: translateY(0);
+  box-shadow: 0 2px 4px rgba(108, 117, 125, 0.2);
 }
 
 .load-more-button:disabled {
   opacity: 0.6;
   cursor: not-allowed;
+  box-shadow: none;
+  transform: none;
 }
 
 /* Messages */
@@ -292,6 +571,7 @@
   padding: 10px;
   border-radius: 4px;
   margin-top: 10px;
+  font-weight: 500;
 }
 
 .error-message {
@@ -301,6 +581,7 @@
   padding: 10px;
   border-radius: 4px;
   margin-top: 10px;
+  font-weight: 500;
 }
 
 /* Food Journal Section */
@@ -383,130 +664,15 @@
   padding-top: 20px;
 }
 
-/* Analysis Tab Styles */
-.analysis-tab {
-  background: #f8f9fa;
-  min-height: 100vh;
-  padding: 25px;
-}
-
-.analysis-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 30px;
-  padding: 20px 0;
-  border-bottom: 2px solid #e9ecef;
-}
-
-.analysis-header h3 {
-  margin: 0;
-  color: #2c3e50;
-  font-size: 24px;
-  font-weight: 700;
-}
-
-.analysis-summary-cards {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-  gap: 20px;
-  margin-bottom: 30px;
-}
-
-.summary-card {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: white;
-  padding: 25px;
+/* Long COVID Side Panel Styles */
+.long-covid-side-panel {
+  background: linear-gradient(135deg, #f8f9fa 0%, #e3f2fd 100%);
   border-radius: 12px;
-  box-shadow: 0 4px 15px rgba(0,0,0,0.1);
-  transition: all 0.3s ease;
-  position: relative;
-  overflow: hidden;
+  padding: 20px;
+  border: 1px solid #dee2e6;
 }
 
-.summary-card::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: linear-gradient(45deg, rgba(255,255,255,0.1), transparent);
-  pointer-events: none;
-}
-
-.summary-card:hover {
-  transform: translateY(-5px);
-  box-shadow: 0 8px 25px rgba(0,0,0,0.15);
-}
-
-.summary-card.calories {
-  background: linear-gradient(135deg, #ff6b6b 0%, #ee5a24 100%);
-}
-
-.summary-card.protein {
-  background: linear-gradient(135deg, #4ecdc4 0%, #44a08d 100%);
-}
-
-.summary-card.efficiency {
-  background: linear-gradient(135deg, #45b7d1 0%, #096dd9 100%);
-}
-
-.summary-card.long-covid {
-  background: linear-gradient(135deg, #96ceb4 0%, #ffeaa7 100%);
-  color: #2d3436;
-}
-
-.card-icon {
-  font-size: 32px;
-  margin-bottom: 10px;
-  display: block;
-}
-
-.card-title {
-  font-size: 14px;
-  font-weight: 500;
-  margin: 0 0 5px 0;
-  opacity: 0.9;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-}
-
-.card-value {
-  font-size: 28px;
-  font-weight: 700;
-  margin: 0;
-  line-height: 1.2;
-}
-
-.card-subtitle {
-  font-size: 12px;
-  opacity: 0.8;
-  margin: 5px 0 0 0;
-}
-
-.analysis-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 25px;
-  margin-bottom: 30px;
-}
-
-.analysis-card {
-  background: white;
-  border-radius: 12px;
-  padding: 25px;
-  box-shadow: 0 2px 10px rgba(0,0,0,0.08);
-  border: 1px solid #e9ecef;
-  transition: all 0.3s ease;
-}
-
-.analysis-card:hover {
-  box-shadow: 0 4px 20px rgba(0,0,0,0.12);
-  transform: translateY(-2px);
-}
-
-.analysis-card h4 {
+.long-covid-side-panel h3 {
   color: #2c3e50;
   margin: 0 0 20px 0;
   font-size: 18px;
@@ -516,657 +682,162 @@
   gap: 10px;
 }
 
-.analysis-card h4::before {
-  content: '';
-  width: 4px;
-  height: 20px;
-  background: linear-gradient(45deg, #667eea, #764ba2);
-  border-radius: 2px;
-}
-
-.chart-container {
-  position: relative;
-  height: 300px;
-  margin: 20px 0;
-}
-
-.chart-placeholder {
+.nutrition-categories {
   display: flex;
-  align-items: center;
-  justify-content: center;
-  height: 100%;
-  background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
-  border-radius: 8px;
-  color: #6c757d;
-  font-style: italic;
-  border: 2px dashed #dee2e6;
-}
-
-.nutrition-breakdown {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
-  gap: 15px;
-  margin: 20px 0;
-}
-
-.nutrition-item {
-  text-align: center;
-  padding: 15px;
-  background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%);
-  border-radius: 8px;
-  border: 1px solid #e9ecef;
-  transition: all 0.3s ease;
-}
-
-.nutrition-item:hover {
-  background: linear-gradient(135deg, #e3f2fd 0%, #ffffff 100%);
-  border-color: #2196f3;
-}
-
-.nutrition-value {
-  font-size: 24px;
-  font-weight: 700;
-  color: #2c3e50;
-  margin: 0;
-}
-
-.nutrition-label {
-  font-size: 12px;
-  color: #6c757d;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  margin: 5px 0 0 0;
-}
-
-.trend-indicator {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  padding: 4px 8px;
-  border-radius: 12px;
-  font-size: 12px;
-  font-weight: 600;
-}
-
-.trend-up {
-  background: #d4edda;
-  color: #155724;
-}
-
-.trend-down {
-  background: #f8d7da;
-  color: #721c24;
-}
-
-.trend-stable {
-  background: #d1ecf1;
-  color: #0c5460;
-}
-
-.recommendations-section {
-  background: white;
-  border-radius: 12px;
-  padding: 25px;
-  box-shadow: 0 2px 10px rgba(0,0,0,0.08);
-  border-left: 4px solid #28a745;
-}
-
-.recommendations-section h4 {
-  color: #28a745;
-  margin: 0 0 20px 0;
-  font-size: 18px;
-  font-weight: 600;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.recommendations-list {
-  display: grid;
+  flex-direction: column;
   gap: 15px;
 }
 
-.recommendation-item {
+.category-section {
   padding: 15px;
-  background: linear-gradient(135deg, #f8fff9 0%, #ffffff 100%);
   border-radius: 8px;
-  border-left: 3px solid #28a745;
-  transition: all 0.3s ease;
+  border-left: 4px solid;
 }
 
-.recommendation-item:hover {
-  background: linear-gradient(135deg, #e8f5e8 0%, #ffffff 100%);
-  transform: translateX(5px);
+.category-section.beneficial {
+  background: rgba(76, 175, 80, 0.1);
+  border-left-color: #4caf50;
 }
 
-.recommendation-title {
-  font-weight: 600;
-  color: #2c3e50;
-  margin: 0 0 5px 0;
+.category-section.neutral {
+  background: rgba(255, 152, 0, 0.1);
+  border-left-color: #ff9800;
 }
 
-.recommendation-description {
-  color: #6c757d;
+.category-section.caution {
+  background: rgba(244, 67, 54, 0.1);
+  border-left-color: #f44336;
+}
+
+.category-section h4 {
+  margin: 0 0 10px 0;
   font-size: 14px;
+  font-weight: 600;
+}
+
+.category-section ul {
   margin: 0;
+  padding-left: 16px;
+}
+
+.category-section li {
+  margin-bottom: 4px;
+  font-size: 13px;
   line-height: 1.4;
 }
 
-.insights-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-  gap: 20px;
-  margin-top: 30px;
+.additional-tips {
+  margin-top: 20px;
+  padding: 15px;
+  background: rgba(33, 150, 243, 0.1);
+  border-radius: 8px;
+  border-left: 4px solid #2196f3;
 }
 
-.insight-card {
-  background: white;
-  border-radius: 12px;
-  padding: 20px;
-  box-shadow: 0 2px 10px rgba(0,0,0,0.08);
-  border: 1px solid #e9ecef;
-}
-
-.insight-header {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  margin-bottom: 15px;
-}
-
-.insight-icon {
-  width: 40px;
-  height: 40px;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 18px;
-  color: white;
-}
-
-.insight-icon.energy {
-  background: linear-gradient(135deg, #ffd93d 0%, #ff6b6b 100%);
-}
-
-.insight-icon.timing {
-  background: linear-gradient(135deg, #74b9ff 0%, #0984e3 100%);
-}
-
-.insight-icon.balance {
-  background: linear-gradient(135deg, #fd79a8 0%, #e84393 100%);
-}
-
-.insight-title {
+.additional-tips h4 {
+  margin: 0 0 10px 0;
+  font-size: 14px;
   font-weight: 600;
   color: #2c3e50;
+}
+
+.additional-tips ul {
   margin: 0;
-  font-size: 16px;
+  padding-left: 16px;
 }
 
-.insight-content {
-  color: #6c757d;
-  font-size: 14px;
-  line-height: 1.5;
+.additional-tips li {
+  margin-bottom: 4px;
+  font-size: 13px;
+  line-height: 1.4;
 }
 
-.progress-bar {
-  width: 100%;
-  height: 8px;
-  background: #e9ecef;
-  border-radius: 4px;
-  overflow: hidden;
-  margin: 10px 0;
-}
-
-.progress-fill {
-  height: 100%;
-  background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
-  border-radius: 4px;
-  transition: width 0.3s ease;
-}
-
-.empty-analysis {
-  text-align: center;
-  padding: 60px 20px;
+.long-covid-food-info {
   background: white;
-  border-radius: 12px;
-  box-shadow: 0 2px 10px rgba(0,0,0,0.08);
-}
-
-.empty-analysis-icon {
-  font-size: 64px;
-  color: #dee2e6;
-  margin-bottom: 20px;
-}
-
-.empty-analysis h3 {
-  color: #6c757d;
-  margin: 0 0 10px 0;
-  font-weight: 600;
-}
-
-.empty-analysis p {
-  color: #9ca3af;
-  margin: 0;
-  font-size: 14px;
-  max-width: 400px;
-  margin: 0 auto;
-}
-
-/* Long COVID Side Panel Styles */
-.database-analysis-section {
-  background: linear-gradient(135deg, rgba(76, 175, 80, 0.1), rgba(33, 150, 243, 0.1));
-  border: 1px solid rgba(76, 175, 80, 0.2);
-  border-radius: 12px;
+  border-radius: 8px;
   padding: 16px;
-  margin-bottom: 20px;
+  margin-bottom: 15px;
+  border: 1px solid #e0e0e0;
 }
 
-.database-analysis-header {
+.long-covid-food-info.beneficial {
+  border-left: 4px solid #4caf50;
+}
+
+.long-covid-food-info.caution {
+  border-left: 4px solid #ff9800;
+}
+
+.long-covid-food-info.neutral {
+  border-left: 4px solid #666;
+}
+
+.food-info-header {
   display: flex;
   align-items: center;
   gap: 8px;
-  margin-bottom: 16px;
-  font-size: 16px;
+  margin-bottom: 12px;
+  font-weight: 600;
 }
 
 .category-icon {
-  font-size: 18px;
+  font-size: 16px;
 }
 
-.category-icon.beneficial {
-  color: #4CAF50;
-}
-
-.inflammatory-level {
-  margin-bottom: 16px;
-}
-
-.inflammatory-level h5 {
-  margin: 0 0 8px 0;
-  font-size: 14px;
-  color: #333;
-}
-
-.level-indicator {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 8px 12px;
-  border-radius: 8px;
-  background: rgba(255, 255, 255, 0.1);
-}
-
-.level-indicator.level-moderate {
-  border-left: 4px solid #FF9800;
-}
-
-.level-value {
-  font-weight: bold;
-  font-size: 12px;
-}
-
-.level-description {
-  font-size: 12px;
-  opacity: 0.8;
-}
-
-.covid-impact-grid {
-  margin-bottom: 16px;
-}
-
-.covid-impact-grid h5 {
-  margin: 0 0 8px 0;
-  font-size: 14px;
-  color: #333;
-}
-
-.impact-categories {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 8px;
-}
-
-.impact-item {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 6px 8px;
-  background: rgba(255, 255, 255, 0.05);
-  border-radius: 6px;
-  font-size: 12px;
-}
-
-.impact-label {
-  font-weight: 500;
-}
-
-.impact-value {
-  font-weight: bold;
-  padding: 2px 6px;
-  border-radius: 4px;
-  font-size: 10px;
-  text-transform: uppercase;
-}
-
-.impact-value.impact-moderate {
-  background-color: #FF9800;
-  color: white;
-}
-
-.functional-compounds {
-  margin-bottom: 16px;
-}
-
-.functional-compounds h5 {
-  margin: 0 0 8px 0;
-  font-size: 14px;
-  color: #333;
-}
-
-.compounds-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 8px;
-}
-
-.compound-item {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 6px 8px;
-  background: rgba(255, 255, 255, 0.05);
-  border-radius: 6px;
-  font-size: 12px;
-}
-
-.compound-name {
-  font-weight: 500;
-}
-
-.compound-level {
-  font-weight: bold;
-  padding: 2px 6px;
-  border-radius: 4px;
-  font-size: 10px;
-  text-transform: uppercase;
-}
-
-.compound-level.level-high {
-  background-color: #4CAF50;
-  color: white;
-}
-
-.benefits-list, 
-.cautions-list {
-  margin-bottom: 16px;
-}
-
-.benefits-list h5, 
-.cautions-list h5 {
-  margin: 0 0 8px 0;
-  font-size: 14px;
-  color: #333;
-}
-
-.benefits-list ul,
-.cautions-list ul {
-  list-style: none;
-  padding: 0;
-  margin: 0;
-}
-
-.benefits-list li {
-  padding: 4px 0;
-  font-size: 12px;
-  color: #4CAF50;
-  position: relative;
-  padding-left: 16px;
-}
-
-.benefits-list li:before {
-  content: "✓";
-  position: absolute;
-  left: 0;
-  color: #4CAF50;
-  font-weight: bold;
-}
-
-.cautions-list li {
-  padding: 4px 0;
-  font-size: 12px;
-  color: #FF5722;
-  position: relative;
-  padding-left: 16px;
-}
-
-.cautions-list li:before {
-  content: "⚠";
-  position: absolute;
-  left: 0;
-  color: #FF5722;
-}
-
-.safety-properties {
-  margin-bottom: 16px;
-}
-
-.safety-properties h5 {
-  margin: 0 0 8px 0;
-  font-size: 14px;
-  color: #333;
-}
-
-.properties-grid {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-}
-
-.property-badge {
-  font-size: 10px;
-  font-weight: bold;
-  padding: 3px 8px;
-  border-radius: 12px;
-  text-transform: uppercase;
-}
-
-.property-badge.safe {
-  background-color: #4CAF50;
-  color: white;
-}
-
-.food-category h5 {
-  margin: 0 0 8px 0;
-  font-size: 14px;
-  color: #333;
-}
-
-.category-tag {
-  display: inline-block;
-  background-color: rgba(76, 175, 80, 0.2);
-  color: #4CAF50;
-  font-size: 11px;
-  font-weight: 500;
-  padding: 4px 8px;
-  border-radius: 6px;
-}
-
-.search-status {
-  background: rgba(33, 150, 243, 0.1);
-  border: 1px solid rgba(33, 150, 243, 0.2);
-  border-radius: 8px;
-  padding: 12px;
-  margin: 16px 0;
+.no-food-info {
   text-align: center;
+  padding: 20px;
+  color: #6c757d;
 }
 
-.search-hint {
-  margin: 0;
-  font-size: 12px;
-  color: #2196F3;
-  font-style: italic;
-}
-
-.selected-food-placeholder {
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 8px;
-  padding: 16px;
-  margin: 12px 0;
-  text-align: center;
-}
-
-.selected-food-placeholder p {
-  margin: 8px 0;
-  color: #B0BEC5;
-}
-
-.selected-food-placeholder strong {
-  color: #4CAF50;
-}
-
-.database-foods {
-  margin-bottom: 15px;
-}
-
-.database-food-item {
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 8px;
-  padding: 12px;
+.no-data-icon {
+  font-size: 32px;
   margin-bottom: 10px;
 }
 
-.food-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 8px;
+.general-tips {
+  text-align: left;
+  margin-top: 10px;
 }
 
-.anti-inflammatory-badge {
-  font-size: 10px;
-  font-weight: bold;
-  padding: 2px 6px;
-  border-radius: 4px;
-  text-transform: uppercase;
+.general-tips li {
+  margin-bottom: 5px;
+  font-size: 13px;
 }
 
-.anti-inflammatory-badge.level-high {
-  background-color: #4CAF50;
-  color: white;
+/* Scrollbar styling for suggestions */
+.suggestions-list::-webkit-scrollbar {
+  width: 6px;
 }
 
-.anti-inflammatory-badge.level-moderate {
-  background-color: #FF9800;
-  color: white;
-}
-
-.anti-inflammatory-badge.level-low {
-  background-color: #f44336;
-  color: white;
-}
-
-.anti-inflammatory-badge.level-neutral {
-  background-color: #9E9E9E;
-  color: white;
-}
-
-.anti-inflammatory-badge.level-unknown {
-  background-color: #607D8B;
-  color: white;
-}
-
-.food-benefits,
-.food-cautions {
-  margin: 8px 0;
-  padding-left: 16px;
-}
-
-.food-benefits li {
-  color: #4CAF50;
-  font-size: 12px;
-  margin-bottom: 2px;
-}
-
-.food-cautions li {
-  color: #FF5722;
-  font-size: 12px;
-  margin-bottom: 2px;
-}
-
-.food-category-tag {
-  display: inline-block;
-  background-color: rgba(255, 255, 255, 0.1);
-  color: #B0BEC5;
-  font-size: 11px;
-  padding: 2px 6px;
+.suggestions-list::-webkit-scrollbar-track {
+  background: #f1f1f1;
   border-radius: 3px;
-  margin-top: 5px;
 }
 
-.database-insights {
-  background: linear-gradient(135deg, rgba(76, 175, 80, 0.1), rgba(33, 150, 243, 0.1));
-  border: 1px solid rgba(76, 175, 80, 0.2);
-  border-radius: 12px;
-  padding: 16px;
-  margin: 20px 0;
+.suggestions-list::-webkit-scrollbar-thumb {
+  background: #c1c1c1;
+  border-radius: 3px;
 }
 
-.insights-summary {
-  display: flex;
-  gap: 15px;
-  margin: 12px 0;
-  flex-wrap: wrap;
+.suggestions-list::-webkit-scrollbar-thumb:hover {
+  background: #a8a8a8;
 }
 
-.insight-item {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  min-width: 80px;
+/* Animation for dropdown appearance */
+@keyframes dropdownFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
-.insight-number {
-  font-size: 24px;
-  font-weight: bold;
-  line-height: 1;
-}
-
-.insight-label {
-  font-size: 10px;
-  text-align: center;
-  margin-top: 4px;
-  opacity: 0.8;
-}
-
-.insight-item.beneficial .insight-number {
-  color: #4CAF50;
-}
-
-.insight-item.neutral .insight-number {
-  color: #FF9800;
-}
-
-.insight-item.caution .insight-number {
-  color: #f44336;
-}
-
-.insights-note {
-  font-size: 11px;
-  opacity: 0.7;
-  text-align: center;
-  margin-top: 12px;
-  font-style: italic;
-}
-
-/* Enhanced category sections */
-.category-section.beneficial h4,
-.category-section.neutral h4,
-.category-section.caution h4 {
-  margin-bottom: 12px;
+.suggestions-list {
+  animation: dropdownFadeIn 0.15s ease-out;
 }
 
 /* Responsive Design */
@@ -1182,6 +853,7 @@
   
   .form-row {
     grid-template-columns: 1fr;
+    gap: 12px;
   }
   
   .food-tabs {
@@ -1209,48 +881,23 @@
     padding: 8px;
   }
 
-  /* Analysis Tab Mobile Styles */
-  .analysis-grid {
-    grid-template-columns: 1fr;
+  .suggestions-list {
+    max-height: 250px;
   }
   
-  .analysis-summary-cards {
-    grid-template-columns: 1fr;
+  .search-input {
+    padding-right: 100px;
+    font-size: 16px; /* Prevents zoom on iOS */
   }
   
-  .nutrition-breakdown {
-    grid-template-columns: repeat(2, 1fr);
+  .suggestion-meta {
+    display: none; /* Hide on mobile for cleaner look */
   }
   
-  .insights-grid {
-    grid-template-columns: 1fr;
-  }
-  
-  .analysis-header {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 15px;
-  }
-  
-  .chart-container {
-    height: 250px;
-  }
-
-  /* Long COVID Side Panel Mobile */
-  .insights-summary {
-    justify-content: center;
-  }
-  
-  .insight-item {
-    min-width: 70px;
-  }
-  
-  .insight-number {
-    font-size: 20px;
-  }
-  
-  .insight-label {
-    font-size: 9px;
+  .search-status {
+    right: 8px;
+    font-size: 10px;
+    max-width: 80px;
   }
 }
 
@@ -1273,24 +920,63 @@
     font-size: 13px;
   }
 
-  /* Analysis Tab Small Mobile */
-  .analysis-tab {
+  .search-group {
+    margin-bottom: 25px;
+  }
+  
+  .suggestions-list {
+    max-height: 200px;
+  }
+  
+  .suggestions-list li {
+    padding: 12px;
+  }
+  
+  .suggestion-name {
+    font-size: 13px;
+  }
+  
+  .suggestion-category {
+    font-size: 11px;
+  }
+  
+  .long-covid-checkbox-group {
     padding: 15px;
   }
   
-  .summary-card {
-    padding: 20px;
+  .search-input {
+    padding-right: 80px;
   }
   
-  .card-value {
-    font-size: 24px;
+  .search-status {
+    font-size: 9px;
+    max-width: 60px;
   }
-  
-  .analysis-card {
-    padding: 20px;
-  }
-  
-  .nutrition-breakdown {
-    grid-template-columns: 1fr;
-  }
+}
+.tracker-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.logout-btn {
+  background-color: #e53e3e;
+  color: white;
+  border: none;
+  padding: 0.5rem 1rem;
+  border-radius: 0.375rem;
+  cursor: pointer;
+  font-size: 0.875rem;
+  font-weight: 500;
+  transition: background-color 0.2s ease;
+}
+
+.logout-btn:hover {
+  background-color: #c53030;
+}
+
+.logout-btn:focus {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(229, 62, 62, 0.3);
 }

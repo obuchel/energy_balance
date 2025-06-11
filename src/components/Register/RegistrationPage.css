@@ -1,6 +1,6 @@
-/* RegistrationPage.css */
+/* RegistrationPage.css - Modern Food Tracker Design */
 
-/* CSS Variables for consistent theming */
+/* CSS Variables for consistent theming - Updated to match food tracker */
 :root {
   --primary-color: #3b82f6;
   --primary-dark: #2563eb;
@@ -15,33 +15,33 @@
   --info-color: #06b6d4;
   --info-light: #cffafe;
   
-  --gray-50: #f9fafb;
-  --gray-100: #f3f4f6;
-  --gray-200: #e5e7eb;
-  --gray-300: #d1d5db;
-  --gray-400: #9ca3af;
-  --gray-500: #6b7280;
-  --gray-600: #4b5563;
-  --gray-700: #374151;
-  --gray-800: #1f2937;
-  --gray-900: #111827;
+  --gray-50: #f8fafc;
+  --gray-100: #f1f5f9;
+  --gray-200: #e2e8f0;
+  --gray-300: #cbd5e1;
+  --gray-400: #94a3b8;
+  --gray-500: #64748b;
+  --gray-600: #475569;
+  --gray-700: #334155;
+  --gray-800: #1e293b;
+  --gray-900: #0f172a;
   
   --white: #ffffff;
   --black: #000000;
   
-  --border-radius: 8px;
-  --border-radius-lg: 12px;
-  --border-radius-xl: 16px;
+  --border-radius: 0.375rem;
+  --border-radius-lg: 0.5rem;
+  --border-radius-xl: 0.75rem;
   
   --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
-  --shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
-  --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
-  --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
-  --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
+  --shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1);
+  --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1);
+  --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1);
+  --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.1);
   
-  --transition: all 0.2s ease-in-out;
-  --transition-fast: all 0.15s ease-in-out;
-  --transition-slow: all 0.3s ease-in-out;
+  --transition: all 0.2s ease;
+  --transition-fast: all 0.15s ease;
+  --transition-slow: all 0.3s ease;
 }
 
 /* Reset and base styles */
@@ -52,9 +52,9 @@
 /* Main page layout */
 .registration-page {
   min-height: 100vh;
-  background: linear-gradient(135deg, var(--primary-light) 0%, var(--gray-50) 50%, var(--success-light) 100%);
+  background: var(--gray-50);
   padding: 2rem 1rem;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   line-height: 1.5;
 }
 
@@ -71,7 +71,7 @@
 }
 
 .registration-title {
-  font-size: 2.5rem;
+  font-size: 2.25rem;
   font-weight: 700;
   color: var(--gray-900);
   margin: 0 0 0.5rem 0;
@@ -79,7 +79,7 @@
 }
 
 .registration-subtitle {
-  font-size: 1.125rem;
+  font-size: 1rem;
   color: var(--gray-600);
   margin: 0;
   font-weight: 400;
@@ -93,25 +93,36 @@
 .step-indicator-wrapper {
   display: flex;
   align-items: center;
-  justify-content: center;
-  gap: 1rem;
+  justify-content: space-between;
   padding: 2rem;
   background: var(--white);
   border-radius: var(--border-radius-xl);
   box-shadow: var(--shadow);
+  border: 1px solid var(--gray-200);
+  position: relative;
+  overflow: hidden;
+}
+
+.step-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  position: relative;
+  flex: 0 0 auto;
 }
 
 .step-circle {
-  width: 3rem;
-  height: 3rem;
+  width: 2.5rem;
+  height: 2.5rem;
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
   font-weight: 600;
-  font-size: 1rem;
+  font-size: 0.875rem;
   transition: var(--transition);
   position: relative;
+  z-index: 3;
 }
 
 .step-circle.inactive {
@@ -125,36 +136,67 @@
   color: var(--white);
   border: 2px solid var(--primary-color);
   box-shadow: 0 0 0 4px var(--primary-light);
+  transform: scale(1.05);
 }
 
 .step-circle.completed {
   background-color: var(--success-color);
   color: var(--white);
   border: 2px solid var(--success-color);
+  transform: scale(1.05);
 }
 
-.step-connector {
-  height: 2px;
-  width: 4rem;
-  transition: var(--transition);
-}
-
-.step-connector.inactive {
+/* Step connectors positioned between items */
+.step-item:not(:last-child)::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: calc(100% + 0.5rem);
+  width: 6rem;
+  height: 3px;
   background-color: var(--gray-300);
+  transform: translateY(-50%);
+  z-index: 1;
+  border-radius: 1.5px;
+  transition: var(--transition-slow);
 }
 
-.step-connector.completed {
-  background-color: var(--success-color);
+.step-item.completed:not(:last-child)::after {
+  background: var(--success-color);
+  box-shadow: 0 0 6px rgba(16, 185, 129, 0.3);
+}
+
+.step-item.active:not(:last-child)::after {
+  background: linear-gradient(90deg, var(--success-color) 0%, var(--primary-color) 60%, var(--gray-300) 60%);
+  animation: fillProgress 0.6s ease-out;
+}
+
+@keyframes fillProgress {
+  from {
+    background: linear-gradient(90deg, var(--success-color) 0%, var(--gray-300) 0%);
+  }
+  to {
+    background: linear-gradient(90deg, var(--success-color) 0%, var(--primary-color) 60%, var(--gray-300) 60%);
+  }
 }
 
 .step-label {
   margin-top: 0.75rem;
+  text-align: center;
+  min-height: 2rem;
+  display: flex;
+  align-items: center;
+  position: relative;
+  z-index: 2;
 }
 
 .step-label-text {
-  font-size: 0.875rem;
+  font-size: 0.75rem;
   font-weight: 500;
   transition: var(--transition);
+  text-align: center;
+  line-height: 1.2;
+  white-space: nowrap;
 }
 
 .step-label-text.inactive {
@@ -163,25 +205,27 @@
 
 .step-label-text.active {
   color: var(--primary-color);
+  font-weight: 600;
 }
 
 .step-label-text.completed {
   color: var(--success-color);
+  font-weight: 600;
 }
 
 /* Main card */
 .registration-card {
   background: var(--white);
   border-radius: var(--border-radius-xl);
-  padding: 3rem;
-  box-shadow: var(--shadow-lg);
+  padding: 2.5rem;
+  box-shadow: var(--shadow);
   margin-bottom: 2rem;
   border: 1px solid var(--gray-200);
 }
 
 .step-title {
-  font-size: 1.875rem;
-  font-weight: 700;
+  font-size: 1.5rem;
+  font-weight: 600;
   color: var(--gray-900);
   margin: 0 0 2rem 0;
   text-align: center;
@@ -189,8 +233,8 @@
 
 /* Info Box */
 .info-box {
-  background: linear-gradient(135deg, var(--info-light) 0%, var(--primary-light) 100%);
-  border: 1px solid var(--info-color);
+  background: var(--gray-50);
+  border: 1px solid var(--gray-200);
   border-radius: var(--border-radius-lg);
   padding: 1.5rem;
   margin-bottom: 2rem;
@@ -203,15 +247,15 @@
 }
 
 .info-box-icon {
-  width: 1.5rem;
-  height: 1.5rem;
+  width: 1.25rem;
+  height: 1.25rem;
   color: var(--info-color);
   flex-shrink: 0;
   margin-top: 0.125rem;
 }
 
 .info-box-title {
-  font-size: 1.125rem;
+  font-size: 1rem;
   font-weight: 600;
   color: var(--gray-900);
   margin: 0 0 0.5rem 0;
@@ -221,6 +265,7 @@
   color: var(--gray-700);
   margin: 0;
   line-height: 1.6;
+  font-size: 0.875rem;
 }
 
 /* Form styles */
@@ -242,7 +287,7 @@
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  font-weight: 600;
+  font-weight: 500;
   color: var(--gray-700);
   margin-bottom: 0.5rem;
   font-size: 0.875rem;
@@ -257,11 +302,11 @@
 .form-input,
 .form-select,
 .form-textarea {
-  padding: 0.75rem 1rem;
-  border: 2px solid var(--gray-300);
+  padding: 0.75rem;
+  border: 1px solid var(--gray-300);
   border-radius: var(--border-radius);
-  font-size: 1rem;
-  transition: var(--transition);
+  font-size: 0.875rem;
+  transition: var(--transition-fast);
   background-color: var(--white);
 }
 
@@ -288,42 +333,81 @@
 
 /* Symptoms grid */
 .symptoms-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  display: flex;
+  flex-wrap: wrap;
   gap: 0.75rem;
   margin-top: 1rem;
+  justify-content: flex-start;
+  align-items: flex-start;
 }
 
 .symptom-checkbox {
-  display: flex;
+  display: inline-flex;
   align-items: center;
-  padding: 0.75rem 1rem;
-  border: 2px solid var(--gray-300);
-  border-radius: var(--border-radius);
+  padding: 0.6rem 1.2rem;
+  border: 1px solid var(--gray-300);
+  border-radius: 9999px; /* Fully rounded pill shape */
   cursor: pointer;
   transition: var(--transition);
   position: relative;
+  background: var(--white);
+  white-space: nowrap;
+  flex-shrink: 0;
+  max-width: fit-content;
+  overflow: visible;
 }
 
 .symptom-checkbox:hover {
   border-color: var(--primary-color);
   background-color: var(--primary-light);
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-sm);
 }
 
 .symptom-checkbox.selected {
   border-color: var(--primary-color);
-  background-color: var(--primary-light);
+  background: linear-gradient(135deg, var(--primary-color), var(--primary-dark));
+  color: var(--white);
+  box-shadow: var(--shadow-md);
 }
 
 .symptom-checkbox-input {
-  margin: 0 0.75rem 0 0;
+  margin: 0 0.6rem 0 0;
   accent-color: var(--primary-color);
+  width: 1rem;
+  height: 1rem;
+  flex-shrink: 0;
+}
+
+.symptom-checkbox.selected .symptom-checkbox-input {
+  accent-color: var(--white);
 }
 
 .symptom-checkbox-text {
   font-size: 0.875rem;
   color: var(--gray-700);
   font-weight: 500;
+  letter-spacing: 0.01em;
+  line-height: 1.2;
+  text-overflow: clip;
+  overflow: visible;
+  display: block;
+  width: auto;
+}
+
+.symptom-checkbox.selected .symptom-checkbox-text {
+  color: var(--white);
+  font-weight: 600;
+}
+
+/* Ensure proper spacing for longer symptom names */
+.symptoms-section {
+  width: 100%;
+  overflow: visible;
+}
+
+.symptoms-section .form-label {
+  margin-bottom: 1rem;
 }
 
 /* Device grid */
@@ -336,60 +420,56 @@
 
 .device-card {
   background: var(--white);
-  border: 2px solid var(--gray-300);
+  border: 1px solid var(--gray-300);
   border-radius: var(--border-radius-lg);
-  padding: 2rem;
+  padding: 1.5rem;
   cursor: pointer;
   transition: var(--transition);
   text-align: center;
   position: relative;
-  overflow: hidden;
 }
 
 .device-card:hover {
   border-color: var(--primary-color);
   box-shadow: var(--shadow-md);
-  transform: translateY(-2px);
+  transform: translateY(-1px);
 }
 
 .device-card.selected {
   border-color: var(--primary-color);
-  background: linear-gradient(135deg, var(--primary-light) 0%, var(--white) 100%);
-  box-shadow: var(--shadow-lg);
-}
-
-.device-card.selected::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 4px;
-  background: var(--primary-color);
+  background: var(--primary-light);
+  box-shadow: var(--shadow-md);
 }
 
 .device-icon-wrapper {
-  width: 4rem;
-  height: 4rem;
+  width: 3rem;
+  height: 3rem;
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
   margin: 0 auto 1rem auto;
   transition: var(--transition);
+  background: var(--gray-100);
 }
 
 .device-card.selected .device-icon-wrapper {
-  transform: scale(1.1);
+  background: var(--primary-color);
+  transform: scale(1.05);
 }
 
 .device-icon {
-  width: 2rem;
-  height: 2rem;
+  width: 1.5rem;
+  height: 1.5rem;
+  color: var(--gray-600);
+}
+
+.device-card.selected .device-icon {
+  color: var(--white);
 }
 
 .device-name {
-  font-size: 1.25rem;
+  font-size: 1.125rem;
   font-weight: 600;
   color: var(--gray-900);
   margin: 0 0 0.5rem 0;
@@ -398,7 +478,7 @@
 .device-description {
   color: var(--gray-600);
   font-size: 0.875rem;
-  margin: 0 0 1.5rem 0;
+  margin: 0 0 1rem 0;
 }
 
 .device-features {
@@ -413,6 +493,7 @@
   gap: 0.5rem;
   font-size: 0.75rem;
   color: var(--gray-600);
+  justify-content: center;
 }
 
 .device-feature-icon {
@@ -426,23 +507,24 @@
   text-align: center;
   margin-bottom: 2rem;
   padding: 2rem;
-  background: linear-gradient(135deg, var(--gray-50) 0%, var(--white) 100%);
+  background: var(--gray-50);
   border-radius: var(--border-radius-lg);
   border: 1px solid var(--gray-200);
 }
 
 .auth-device-icon {
-  width: 5rem;
-  height: 5rem;
+  width: 4rem;
+  height: 4rem;
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
   margin: 0 auto 1rem auto;
+  background: var(--primary-light);
 }
 
 .auth-device-name {
-  font-size: 1.5rem;
+  font-size: 1.25rem;
   font-weight: 600;
   color: var(--gray-900);
   margin: 0 0 1rem 0;
@@ -452,6 +534,7 @@
   color: var(--gray-600);
   margin: 0;
   line-height: 1.6;
+  font-size: 0.875rem;
 }
 
 .connection-status {
@@ -460,6 +543,7 @@
   border-radius: var(--border-radius);
   font-weight: 500;
   text-align: center;
+  font-size: 0.875rem;
 }
 
 .connection-status.info {
@@ -484,7 +568,7 @@
 }
 
 .permissions-title {
-  font-size: 1.125rem;
+  font-size: 1rem;
   font-weight: 600;
   color: var(--gray-900);
   margin: 0 0 1rem 0;
@@ -525,8 +609,8 @@
 .auth-checkbox {
   margin-top: 0.25rem;
   accent-color: var(--primary-color);
-  width: 1.25rem;
-  height: 1.25rem;
+  width: 1.125rem;
+  height: 1.125rem;
   flex-shrink: 0;
 }
 
@@ -550,7 +634,7 @@
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  font-size: 1.125rem;
+  font-size: 1rem;
   font-weight: 600;
   color: var(--success-color);
   margin: 0 0 1rem 0;
@@ -593,13 +677,13 @@
   gap: 0.5rem;
   padding: 0.75rem 1.5rem;
   border-radius: var(--border-radius);
-  font-weight: 600;
+  font-weight: 500;
   font-size: 0.875rem;
   transition: var(--transition);
   cursor: pointer;
-  border: 2px solid transparent;
+  border: 1px solid transparent;
   text-decoration: none;
-  min-height: 2.75rem;
+  min-height: 2.5rem;
 }
 
 .btn:disabled {
@@ -616,7 +700,13 @@
 .btn-primary:hover:not(:disabled) {
   background-color: var(--primary-dark);
   border-color: var(--primary-dark);
+  transform: translateY(-1px);
   box-shadow: var(--shadow-md);
+}
+
+.btn-primary:focus:not(:disabled) {
+  outline: none;
+  box-shadow: 0 0 0 3px var(--primary-light);
 }
 
 .btn-secondary {
@@ -639,6 +729,7 @@
 .btn-success:hover:not(:disabled) {
   background-color: #059669;
   border-color: #059669;
+  transform: translateY(-1px);
   box-shadow: var(--shadow-md);
 }
 
@@ -652,8 +743,8 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-top: 3rem;
-  padding-top: 2rem;
+  margin-top: 2.5rem;
+  padding-top: 1.5rem;
   border-top: 1px solid var(--gray-200);
 }
 
@@ -684,7 +775,7 @@
 }
 
 .progress-title {
-  font-size: 1.25rem;
+  font-size: 1.125rem;
   font-weight: 600;
   color: var(--gray-900);
   margin: 0 0 1.5rem 0;
@@ -708,6 +799,7 @@
 .progress-item-label {
   font-weight: 500;
   color: var(--gray-700);
+  font-size: 0.875rem;
 }
 
 .progress-item-status {
@@ -716,8 +808,8 @@
 }
 
 .progress-icon {
-  width: 1.25rem;
-  height: 1.25rem;
+  width: 1.125rem;
+  height: 1.125rem;
 }
 
 .progress-icon.completed {
@@ -725,8 +817,8 @@
 }
 
 .progress-circle {
-  width: 1.25rem;
-  height: 1.25rem;
+  width: 1.125rem;
+  height: 1.125rem;
   border-radius: 50%;
   border: 2px solid var(--gray-300);
 }
@@ -750,6 +842,7 @@
 .help-text {
   color: var(--gray-600);
   margin: 0;
+  font-size: 0.875rem;
 }
 
 .help-link {
@@ -765,6 +858,7 @@
 
 .help-link:hover {
   text-decoration: underline;
+  color: var(--primary-dark);
 }
 
 /* Error messages */
@@ -783,17 +877,17 @@
 
 /* Animations */
 .fade-in-up {
-  animation: fadeInUp 0.6s ease-out forwards;
+  animation: fadeInUp 0.4s ease-out forwards;
 }
 
 .slide-in-right {
-  animation: slideInRight 0.5s ease-out forwards;
+  animation: slideInRight 0.3s ease-out forwards;
 }
 
 @keyframes fadeInUp {
   from {
     opacity: 0;
-    transform: translateY(20px);
+    transform: translateY(10px);
   }
   to {
     opacity: 1;
@@ -804,7 +898,7 @@
 @keyframes slideInRight {
   from {
     opacity: 0;
-    transform: translateX(20px);
+    transform: translateX(10px);
   }
   to {
     opacity: 1;
@@ -819,7 +913,7 @@
   }
   
   .registration-title {
-    font-size: 2rem;
+    font-size: 1.875rem;
   }
   
   .registration-card {
@@ -827,19 +921,25 @@
   }
   
   .step-title {
-    font-size: 1.5rem;
+    font-size: 1.25rem;
   }
   
   .step-indicator-wrapper {
     padding: 1.5rem 1rem;
-    flex-direction: column;
-    gap: 1.5rem;
   }
   
-  .step-connector {
-    width: 2px;
+  .step-circle {
+    width: 2rem;
     height: 2rem;
-    transform: rotate(90deg);
+    font-size: 0.75rem;
+  }
+  
+  .step-item:not(:last-child)::after {
+    width: 4rem;
+  }
+  
+  .symptoms-grid {
+    justify-content: center;
   }
   
   .form-grid.two-cols {
@@ -847,10 +947,6 @@
   }
   
   .device-grid {
-    grid-template-columns: 1fr;
-  }
-  
-  .symptoms-grid {
     grid-template-columns: 1fr;
   }
   
@@ -875,7 +971,7 @@
 
 @media (max-width: 480px) {
   .registration-title {
-    font-size: 1.75rem;
+    font-size: 1.5rem;
   }
   
   .registration-card {
@@ -883,7 +979,7 @@
   }
   
   .step-title {
-    font-size: 1.25rem;
+    font-size: 1.125rem;
   }
   
   .info-box {
@@ -893,33 +989,71 @@
   .info-box-content {
     flex-direction: column;
     text-align: center;
+    gap: 0.75rem;
   }
   
   .device-card {
-    padding: 1.5rem;
+    padding: 1.25rem;
+  }
+  
+  .step-indicator-wrapper {
+    padding: 1rem;
+    flex-direction: column;
+    gap: 1rem;
+  }
+  
+  .step-item {
+    width: 100%;
+    flex-direction: row;
+    justify-content: flex-start;
+    align-items: center;
+    gap: 1rem;
+  }
+  
+  .step-item:not(:last-child)::after {
+    display: none;
+  }
+  
+  .step-label {
+    margin-top: 0;
+    text-align: left;
+    min-height: auto;
+  }
+  
+  .step-circle {
+    width: 1.75rem;
+    height: 1.75rem;
+    font-size: 0.6875rem;
+    flex-shrink: 0;
+  }
+  
+  .symptoms-grid {
+    gap: 0.5rem;
+    justify-content: flex-start;
+  }
+  
+  .symptom-checkbox {
+    padding: 0.5rem 1rem;
+    margin: 0;
+    max-width: none;
+    flex: 0 0 auto;
+  }
+  
+  .symptom-checkbox-text {
+    font-size: 0.8125rem;
+    white-space: nowrap;
   }
 }
 
-/* Print styles */
-@media print {
-  .registration-page {
-    background: var(--white);
-    padding: 0;
-  }
-  
-  .registration-card,
-  .progress-summary {
-    box-shadow: none;
-    border: 1px solid var(--gray-300);
-  }
-  
-  .btn {
-    display: none;
-  }
-  
-  .form-navigation {
-    display: none;
-  }
+/* Focus visible for better accessibility */
+.form-input:focus-visible,
+.form-select:focus-visible,
+.form-textarea:focus-visible,
+.btn:focus-visible,
+.symptom-checkbox:focus-visible,
+.device-card:focus-visible {
+  outline: 2px solid var(--primary-color);
+  outline-offset: 2px;
 }
 
 /* High contrast mode support */
@@ -935,7 +1069,14 @@
   
   .device-card,
   .info-box,
-  .registration-card {
+  .registration-card,
+  .step-indicator-wrapper {
+    border-width: 2px;
+  }
+  
+  .form-input,
+  .form-select,
+  .form-textarea {
     border-width: 2px;
   }
 }
@@ -951,5 +1092,10 @@
   .fade-in-up,
   .slide-in-right {
     animation: none;
+  }
+  
+  .device-card:hover,
+  .btn:hover {
+    transform: none;
   }
 }

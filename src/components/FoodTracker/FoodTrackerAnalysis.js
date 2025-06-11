@@ -976,7 +976,7 @@ if (!processedData || processedData.length === 0) {
 return (
   <div className="chart-container">
     <div ref={chartRef} className="efficiency-chart" style={{ minHeight: '500px' }}></div>
-    <div className="" style={{ marginTop: '20px', padding: '15px', backgroundColor: '#f8f9fa', borderRadius: '8px' }}>
+    <div className="chart-info">
       <h4>Understanding Metabolic Efficiency</h4>
       <p>
         Metabolic efficiency refers to how effectively your body converts the calories you consume into usable energy. 
@@ -1856,7 +1856,7 @@ return (
         <MicronutrientChart data={microSums} userData={userProfile} />
       </div>
       
-      <div className="chart-wrapper">
+      <div className="chart-wrapper one">
         <div className="chart-header">
           <h4>⚡ Metabolic Efficiency</h4>
           <p className="chart-description">How effectively your body converts food calories into usable energy</p>

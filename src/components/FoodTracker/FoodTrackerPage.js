@@ -64,7 +64,39 @@ function FoodTrackerPage() {
   
   // Suggestion cache for performance
   const [suggestionCache, setSuggestionCache] = useState({});
-
+// Handle logout - Complete logout from both localStorage and Firebase Auth
+const handleLogout = async () => {
+  console.log('Logout clicked - starting complete logout process');
+  
+  try {
+    // Clear localStorage
+    console.log('Clearing localStorage userData');
+    localStorage.removeItem('userData');
+    
+    // Clear any other potential session data
+    sessionStorage.clear();
+    console.log('Cleared sessionStorage');
+    
+    // Reset component state
+    setCurrentUser(null);
+    setAuthLoading(false);
+    
+    console.log('Complete logout finished, navigating to login...');
+    
+    // Navigate to login with replace to prevent back navigation
+    navigate('/login', { replace: true });
+    
+  } catch (error) {
+    console.error('Error during logout:', error);
+    
+    // Even if logout fails, still clear local data and redirect
+    localStorage.removeItem('userData');
+    sessionStorage.clear();
+    setCurrentUser(null);
+    
+    navigate('/login', { replace: true });
+  }
+};
   // Fetch user profile from Firestore
   const fetchUserProfile = async (uid) => {
     try {
@@ -1062,6 +1094,7 @@ function FoodTrackerPage() {
           <button onClick={handleBack} className="back-button">
             Back to Dashboard
           </button>
+        
         </div>
       </div>
     );
@@ -1073,6 +1106,9 @@ function FoodTrackerPage() {
         <button onClick={handleBack} className="back-button">
           ← Back to Dashboard
         </button>
+        <button onClick={handleLogout} className="logout-btn">
+    Logout
+  </button>
       </div>
       
       <h2>Meal Tracker</h2>
@@ -1320,3 +1356,4 @@ function FoodTrackerPage() {
 }
 
 export default FoodTrackerPage;
+
