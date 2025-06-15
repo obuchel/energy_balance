@@ -980,3 +980,854 @@
   outline: none;
   box-shadow: 0 0 0 3px rgba(229, 62, 62, 0.3);
 }
+
+/* Edit Mode Banner */
+.edit-mode-banner {
+  background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%);
+  border: 2px solid #2196f3;
+  border-radius: 8px;
+  padding: 16px;
+  margin-bottom: 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  box-shadow: 0 2px 8px rgba(33, 150, 243, 0.15);
+}
+
+.edit-indicator {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.edit-icon {
+  font-size: 20px;
+}
+
+.edit-text {
+  font-size: 16px;
+  color: #1976d2;
+}
+
+.cancel-edit-btn {
+  background: #f44336;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  padding: 8px 16px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  transition: all 0.2s ease;
+}
+
+.cancel-edit-btn:hover {
+  background: #d32f2f;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(244, 67, 54, 0.3);
+}
+
+/* Action Buttons Column */
+.action-buttons {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  justify-content: center;
+}
+
+.edit-btn, .delete-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 18px;
+  padding: 6px;
+  border-radius: 4px;
+  transition: all 0.2s ease;
+  min-width: 32px;
+  min-height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.edit-btn {
+  color: #2196f3;
+  background: rgba(33, 150, 243, 0.1);
+}
+
+.edit-btn:hover {
+  background: rgba(33, 150, 243, 0.2);
+  transform: scale(1.1);
+}
+
+.delete-btn {
+  color: #f44336;
+  background: rgba(244, 67, 54, 0.1);
+}
+
+.delete-btn:hover {
+  background: rgba(244, 67, 54, 0.2);
+  transform: scale(1.1);
+}
+
+/* Delete Confirmation Modal */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  backdrop-filter: blur(4px);
+}
+
+.delete-confirm-modal {
+  background: white;
+  border-radius: 12px;
+  padding: 24px;
+  max-width: 400px;
+  width: 90%;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+  animation: modalSlideIn 0.3s ease-out;
+}
+
+@keyframes modalSlideIn {
+  from {
+    opacity: 0;
+    transform: scale(0.9) translateY(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+.delete-confirm-modal h3 {
+  margin: 0 0 16px 0;
+  color: #f44336;
+  font-size: 20px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.delete-confirm-modal p {
+  margin: 12px 0;
+  color: #555;
+  line-height: 1.5;
+}
+
+.entry-preview {
+  background: #f5f5f5;
+  padding: 12px;
+  border-radius: 6px;
+  margin: 16px 0;
+  border-left: 4px solid #f44336;
+}
+
+.entry-preview strong {
+  color: #333;
+  font-size: 16px;
+}
+
+.warning-text {
+  color: #f44336;
+  font-weight: 500;
+  font-style: italic;
+}
+
+.modal-actions {
+  display: flex;
+  gap: 12px;
+  justify-content: flex-end;
+  margin-top: 24px;
+}
+
+.cancel-button {
+  background: #e0e0e0;
+  color: #333;
+  border: none;
+  border-radius: 6px;
+  padding: 10px 20px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  transition: all 0.2s ease;
+}
+
+.cancel-button:hover {
+  background: #d0d0d0;
+}
+
+.cancel-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.delete-button {
+  background: #f44336;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  padding: 10px 20px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  transition: all 0.2s ease;
+}
+
+.delete-button:hover {
+  background: #d32f2f;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(244, 67, 54, 0.3);
+}
+
+.delete-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+/* Update Button Styling */
+.submit-button.update-mode {
+  background: linear-gradient(135deg, #2196f3 0%, #1976d2 100%);
+  border: none;
+  color: white;
+  padding: 12px 24px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 16px;
+  font-weight: 600;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 8px rgba(33, 150, 243, 0.3);
+}
+
+.submit-button.update-mode:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 16px rgba(33, 150, 243, 0.4);
+}
+
+.submit-button.update-mode:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: 0 2px 8px rgba(33, 150, 243, 0.3);
+}
+
+/* Table Action Column Styling */
+.food-log-table th:last-child {
+  width: 100px;
+  text-align: center;
+}
+
+.food-log-table td:last-child {
+  text-align: center;
+  padding: 8px;
+}
+
+/* Responsive Design for Action Buttons */
+@media (max-width: 768px) {
+  .action-buttons {
+    flex-direction: column;
+    gap: 4px;
+  }
+  
+  .edit-btn, .delete-btn {
+    font-size: 16px;
+    min-width: 28px;
+    min-height: 28px;
+    padding: 4px;
+  }
+  
+  .delete-confirm-modal {
+    margin: 20px;
+    width: calc(100% - 40px);
+  }
+  
+  .modal-actions {
+    flex-direction: column;
+    gap: 8px;
+  }
+  
+  .cancel-button, .delete-button {
+    width: 100%;
+  }
+}
+
+/* Success message styling for updates */
+.success-message {
+  background: linear-gradient(135deg, #4caf50 0%, #45a049 100%);
+  color: white;
+  padding: 12px 16px;
+  border-radius: 6px;
+  margin-top: 12px;
+  font-weight: 500;
+  box-shadow: 0 2px 8px rgba(76, 175, 80, 0.3);
+  animation: successSlideIn 0.3s ease-out;
+}
+
+@keyframes successSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Loading state for buttons */
+.edit-btn:disabled,
+.delete-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* Enhanced table styling for better action column integration */
+.food-log-table {
+  border-collapse: collapse;
+  width: 100%;
+  margin-top: 16px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.food-log-table th {
+  background: linear-gradient(135deg, #f5f5f5 0%, #e9e9e9 100%);
+  padding: 12px;
+  text-align: left;
+  font-weight: 600;
+  color: #333;
+  border-bottom: 2px solid #ddd;
+}
+
+.food-log-table td {
+  padding: 10px 12px;
+  border-bottom: 1px solid #eee;
+  vertical-align: middle;
+}
+
+.food-log-table tr:hover {
+  background: rgba(33, 150, 243, 0.05);
+}
+
+.food-log-table tr:nth-child(even) {
+  background: rgba(0, 0, 0, 0.02);
+}
+
+.food-log-table tr:nth-child(even):hover {
+  background: rgba(33, 150, 243, 0.05);
+}
+
+
+/* Compact Table Layout */
+.food-log-table.compact {
+  font-size: 13px;
+  table-layout: fixed;
+  width: 100%;
+}
+
+/* Column-specific widths for compact layout */
+.date-time-col { width: 80px; }
+.meal-type-col { width: 45px; }
+.food-col { width: 180px; }
+.serving-col { width: 55px; }
+.macro-col { width: 35px; }
+.calories-col { width: 45px; }
+.efficiency-col { width: 50px; }
+.actions-col { width: 70px; }
+
+/* Compact cell styling */
+.food-log-table.compact th {
+  padding: 8px 4px;
+  font-size: 12px;
+  font-weight: 600;
+  text-align: center;
+}
+
+.food-log-table.compact td {
+  padding: 6px 4px;
+  font-size: 13px;
+  text-align: center;
+  vertical-align: middle;
+}
+
+/* Date/Time cell specific styling */
+.date-time-cell {
+  font-size: 11px;
+  font-weight: 500;
+  color: #666;
+  line-height: 1.2;
+}
+
+/* Meal type badges */
+.meal-badge {
+  display: inline-block;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  color: white;
+  font-size: 11px;
+  font-weight: bold;
+  line-height: 20px;
+  text-align: center;
+}
+
+.meal-badge.breakfast { background: #ff9800; }
+.meal-badge.lunch { background: #4caf50; }
+.meal-badge.dinner { background: #f44336; }
+.meal-badge.snack { background: #9c27b0; }
+
+/* Food cell with text overflow */
+.food-cell {
+  text-align: left !important;
+  padding-left: 8px !important;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 180px;
+}
+
+/* Serving cell */
+.serving-cell {
+  font-size: 11px;
+  color: #666;
+}
+
+/* Macro cells */
+.macro-cell {
+  font-size: 12px;
+  font-weight: 500;
+}
+
+/* Calories cell */
+.calories-cell {
+  font-weight: 600;
+  color: #333;
+}
+
+/* Efficiency badges */
+.efficiency-badge {
+  display: inline-block;
+  padding: 2px 6px;
+  border-radius: 12px;
+  font-size: 10px;
+  font-weight: bold;
+  color: white;
+  min-width: 28px;
+}
+
+.efficiency-badge.high { background: #4caf50; }
+.efficiency-badge.medium { background: #ff9800; }
+.efficiency-badge.low { background: #f44336; }
+.efficiency-badge.unknown { background: #9e9e9e; }
+
+/* Compact action buttons */
+.action-buttons.compact {
+  display: flex;
+  gap: 2px;
+  justify-content: center;
+  align-items: center;
+}
+
+.edit-btn.compact, .delete-btn.compact {
+  font-size: 14px;
+  padding: 2px;
+  min-width: 24px;
+  min-height: 24px;
+  border-radius: 3px;
+}
+
+/* Responsive adjustments for smaller screens */
+@media (max-width: 1200px) {
+  .food-log-table.compact {
+    font-size: 12px;
+  }
+  
+  .food-col { width: 150px; }
+  .macro-col { width: 32px; }
+}
+
+@media (max-width: 992px) {
+  .food-col { width: 120px; }
+  .date-time-col { width: 70px; }
+  .serving-col { width: 50px; }
+  .calories-col { width: 40px; }
+  
+  .food-log-table.compact th,
+  .food-log-table.compact td {
+    padding: 4px 2px;
+  }
+}
+
+@media (max-width: 768px) {
+  /* Stack action buttons vertically on mobile */
+  .action-buttons.compact {
+    flex-direction: column;
+    gap: 1px;
+  }
+  
+  .edit-btn.compact, .delete-btn.compact {
+    font-size: 12px;
+    min-width: 20px;
+    min-height: 20px;
+  }
+  
+  .food-col { width: 100px; }
+  .date-time-col { width: 60px; }
+  
+  .date-time-cell {
+    font-size: 10px;
+  }
+  
+  .meal-badge {
+    width: 16px;
+    height: 16px;
+    line-height: 16px;
+    font-size: 9px;
+  }
+}
+
+/* Table container to prevent overflow */
+.journal-table-container {
+  overflow-x: auto;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  max-width: 100%;
+}
+
+/* Ensure table fits within container */
+.food-log-table.compact {
+  min-width: 750px; /* Minimum width to maintain readability */
+}
+
+@media (min-width: 1200px) {
+  .food-log-table.compact {
+    min-width: 100%; /* Full width on larger screens */
+  }
+}
+
+/* Edit Mode Banner */
+.edit-mode-banner {
+  background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%);
+  border: 2px solid #2196f3;
+  border-radius: 8px;
+  padding: 16px;
+  margin-bottom: 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  box-shadow: 0 2px 8px rgba(33, 150, 243, 0.15);
+}
+
+.edit-indicator {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.edit-icon {
+  font-size: 20px;
+}
+
+.edit-text {
+  font-size: 16px;
+  color: #1976d2;
+}
+
+.cancel-edit-btn {
+  background: #f44336;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  padding: 8px 16px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  transition: all 0.2s ease;
+}
+
+.cancel-edit-btn:hover {
+  background: #d32f2f;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(244, 67, 54, 0.3);
+}
+
+/* Action Buttons Column */
+.action-buttons {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  justify-content: center;
+}
+
+.edit-btn, .delete-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 18px;
+  padding: 6px;
+  border-radius: 4px;
+  transition: all 0.2s ease;
+  min-width: 32px;
+  min-height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.edit-btn {
+  color: #2196f3;
+  background: rgba(33, 150, 243, 0.1);
+}
+
+.edit-btn:hover {
+  background: rgba(33, 150, 243, 0.2);
+  transform: scale(1.1);
+}
+
+.delete-btn {
+  color: #f44336;
+  background: rgba(244, 67, 54, 0.1);
+}
+
+.delete-btn:hover {
+  background: rgba(244, 67, 54, 0.2);
+  transform: scale(1.1);
+}
+
+/* Delete Confirmation Modal */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  backdrop-filter: blur(4px);
+}
+
+.delete-confirm-modal {
+  background: white;
+  border-radius: 12px;
+  padding: 24px;
+  max-width: 400px;
+  width: 90%;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+  animation: modalSlideIn 0.3s ease-out;
+}
+
+@keyframes modalSlideIn {
+  from {
+    opacity: 0;
+    transform: scale(0.9) translateY(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+.delete-confirm-modal h3 {
+  margin: 0 0 16px 0;
+  color: #f44336;
+  font-size: 20px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.delete-confirm-modal p {
+  margin: 12px 0;
+  color: #555;
+  line-height: 1.5;
+}
+
+.entry-preview {
+  background: #f5f5f5;
+  padding: 12px;
+  border-radius: 6px;
+  margin: 16px 0;
+  border-left: 4px solid #f44336;
+}
+
+.entry-preview strong {
+  color: #333;
+  font-size: 16px;
+}
+
+.warning-text {
+  color: #f44336;
+  font-weight: 500;
+  font-style: italic;
+}
+
+.modal-actions {
+  display: flex;
+  gap: 12px;
+  justify-content: flex-end;
+  margin-top: 24px;
+}
+
+.cancel-button {
+  background: #e0e0e0;
+  color: #333;
+  border: none;
+  border-radius: 6px;
+  padding: 10px 20px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  transition: all 0.2s ease;
+}
+
+.cancel-button:hover {
+  background: #d0d0d0;
+}
+
+.cancel-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.delete-button {
+  background: #f44336;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  padding: 10px 20px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  transition: all 0.2s ease;
+}
+
+.delete-button:hover {
+  background: #d32f2f;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(244, 67, 54, 0.3);
+}
+
+.delete-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+/* Update Button Styling */
+.submit-button.update-mode {
+  background: linear-gradient(135deg, #2196f3 0%, #1976d2 100%);
+  border: none;
+  color: white;
+  padding: 12px 24px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 16px;
+  font-weight: 600;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 8px rgba(33, 150, 243, 0.3);
+}
+
+.submit-button.update-mode:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 16px rgba(33, 150, 243, 0.4);
+}
+
+.submit-button.update-mode:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: 0 2px 8px rgba(33, 150, 243, 0.3);
+}
+
+/* Table Action Column Styling */
+.food-log-table th:last-child {
+  width: 100px;
+  text-align: center;
+}
+
+.food-log-table td:last-child {
+  text-align: center;
+  padding: 8px;
+}
+
+/* Success message styling for updates */
+.success-message {
+  background: linear-gradient(135deg, #4caf50 0%, #45a049 100%);
+  color: white;
+  padding: 12px 16px;
+  border-radius: 6px;
+  margin-top: 12px;
+  font-weight: 500;
+  box-shadow: 0 2px 8px rgba(76, 175, 80, 0.3);
+  animation: successSlideIn 0.3s ease-out;
+}
+
+@keyframes successSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Loading state for buttons */
+.edit-btn:disabled,
+.delete-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* Enhanced table styling for better action column integration */
+.food-log-table {
+  border-collapse: collapse;
+  width: 100%;
+  margin-top: 16px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.food-log-table th {
+  background: linear-gradient(135deg, #f5f5f5 0%, #e9e9e9 100%);
+  padding: 12px;
+  text-align: left;
+  font-weight: 600;
+  color: #333;
+  border-bottom: 2px solid #ddd;
+}
+
+.food-log-table td {
+  padding: 10px 12px;
+  border-bottom: 1px solid #eee;
+  vertical-align: middle;
+}
+
+.food-log-table tr:hover {
+  background: rgba(33, 150, 243, 0.05);
+}
+
+.food-log-table tr:nth-child(even) {
+  background: rgba(0, 0, 0, 0.02);
+}
+
+.food-log-table tr:nth-child(even):hover {
+  background: rgba(33, 150, 243, 0.05);
+}

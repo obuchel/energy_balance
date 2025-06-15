@@ -9,6 +9,25 @@ import {
   calculateFoodEfficiency
 } from './enhanced-efficiency-functions';
 
+// FIXED: Utility functions to handle dates without timezone issues
+const parseDate = (dateString) => {
+  const parts = dateString.split('-');
+  return new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
+};
+
+const formatDateForComparison = (date) => {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
+const isSameOrAfter = (dateString1, dateString2) => {
+  const date1 = parseDate(dateString1);
+  const date2 = parseDate(dateString2);
+  return date1 >= date2;
+};
+
 // Local getSeverityFactor function with correct logic
 const getSeverityFactor = (severity) => {
   console.log('getSeverityFactor called with:', severity);
@@ -544,14 +563,16 @@ const [processedData, setProcessedData] = useState([]);
 useEffect(() => {
   if (!data || data.length === 0) return;
   
+  // FIXED: Use proper date comparison without timezone issues
   const today = new Date();
   const oneWeekAgo = new Date();
   oneWeekAgo.setDate(today.getDate() - 7);
+  const oneWeekAgoString = formatDateForComparison(oneWeekAgo);
   
   const lastWeekData = data.filter(meal => {
     try {
-      const mealDate = new Date(meal.date);
-      return mealDate >= oneWeekAgo;
+      // Use string comparison instead of Date objects to avoid timezone issues
+      return isSameOrAfter(meal.date, oneWeekAgoString);
     } catch (err) {
       console.warn('Error parsing date:', meal.date);
       return false;
@@ -645,12 +666,13 @@ useEffect(() => {
     .style("z-index", "10")
     .style("max-width", "300px");
   
+  // FIXED: Generate date range without timezone issues
   const allDatesInRange = [];
   const today = new Date();
   for (let i = 6; i >= 0; i--) {
     const date = new Date();
     date.setDate(today.getDate() - i);
-    const formattedDate = date.toISOString().split('T')[0];
+    const formattedDate = formatDateForComparison(date);
     allDatesInRange.push(formattedDate);
   }
   
@@ -717,9 +739,10 @@ useEffect(() => {
     .range([0, xOuter.bandwidth()])
     .padding(0.1);
   
+  // FIXED: Format date without timezone issues
   const formatDate = date => {
     const parts = date.split('-');
-    return `${parts[1]}/${parts[2]}`;
+    return `${parseInt(parts[1])}/${parseInt(parts[2])}`;
   };
   
   const maxCalories = d3.max(combinedData, d => d.calories) || 1000;
@@ -1821,7 +1844,8 @@ const getChartData = () => {
   return { macroSums, microSums, efficiencyData };
 };
 
-const today = new Date().toISOString().slice(0, 10);
+// FIXED: Use timezone-safe date comparison
+const today = formatDateForComparison(new Date());
 const analysisDate = foodLog.length > 0 ? foodLog[0].date : today;
 const todayMeals = foodLog.filter(entry => entry.date === today);
 const { macroSums, microSums, efficiencyData } = getChartData();

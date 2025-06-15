@@ -1,4 +1,4 @@
-// enhanced-efficiency-functions.js - Fixed with proper imports and structure
+// enhanced-efficiency-functions.js - Fixed with proper time sorting and chronological line positioning
 import React, { useRef, useState, useEffect } from 'react';
 import * as d3 from 'd3';
 
@@ -84,7 +84,7 @@ export const calculateFoodEfficiency = (mealData, userProfile) => {
   return Math.min(100, Math.max(0, efficiency));
 };
 
-// Rest of the file remains the same...
+// Micronutrient enhancement functions
 export const estimateMicronutrientEnhancement = (micronutrients, severity) => {
   const severityMultipliers = {
     'mild': 1.2,
@@ -121,11 +121,6 @@ export const estimateMicronutrientEnhancement = (micronutrients, severity) => {
   
   return enhancedMicronutrients;
 };
-
-// Rest of your existing functions remain unchanged...
-
-// Calculate Food Efficiency based on Long COVID factors
-
 
 // Standard micronutrient enhancement (non-Long COVID)
 export const estimateStandardMicronutrientEnhancement = (micronutrients, userProfile) => {
@@ -166,10 +161,29 @@ export const estimateStandardMicronutrientEnhancement = (micronutrients, userPro
   return enhancedMicronutrients;
 };
 
-// Enhanced Efficiency Chart Component
+// FIXED: Enhanced Efficiency Chart Component with proper time sorting
 export const EnhancedEfficiencyChart = ({ data, userData }) => {
   const chartRef = useRef(null);
   const [processedData, setProcessedData] = useState([]);
+  
+  // FIXED: Time conversion function for proper sorting
+  const convertTo24Hour = (time12h) => {
+    if (!time12h) return '12:00';
+    
+    const [time, modifier] = time12h.split(' ');
+    if (!time || !modifier) return time12h;
+    
+    let [hours, minutes] = time.split(':');
+    let hour24 = parseInt(hours, 10);
+    
+    if (modifier.toUpperCase() === 'AM') {
+      if (hour24 === 12) hour24 = 0;
+    } else if (modifier.toUpperCase() === 'PM') {
+      if (hour24 !== 12) hour24 += 12;
+    }
+    
+    return `${hour24.toString().padStart(2, '0')}:${minutes}`;
+  };
   
   useEffect(() => {
     if (!data || data.length === 0) return;
@@ -285,15 +299,28 @@ export const EnhancedEfficiencyChart = ({ data, userData }) => {
       }
     });
     
-
-
-
-
-    
+    // FIXED: Sort by actual chronological time instead of string comparison
     const sortedCombinedData = [...combinedData].sort((a, b) => {
       if (a.date !== b.date) return a.date.localeCompare(b.date);
-      return a.time.localeCompare(b.time);
+      
+      // Convert times to 24-hour format for proper comparison
+      const timeA = convertTo24Hour(a.time);
+      const timeB = convertTo24Hour(b.time);
+      return timeA.localeCompare(timeB);
     });
+
+    // Debug function to verify time sorting
+    const debugTimeSorting = (data) => {
+      console.log('=== TIME SORTING DEBUG ===');
+      data.forEach((meal, index) => {
+        const time24 = convertTo24Hour(meal.time);
+        console.log(`${index}: ${meal.date} ${meal.time} → ${time24} (${meal.mealType})`);
+      });
+      console.log('=== END DEBUG ===');
+    };
+    
+    // Uncomment to debug time sorting
+    // debugTimeSorting(sortedCombinedData);
 
     // Calculate scales
     const xOuter = d3.scaleBand()
@@ -430,16 +457,29 @@ export const EnhancedEfficiencyChart = ({ data, userData }) => {
         .attr("stroke-dasharray", "3,3");
     });
 
-    // Add efficiency line
+    // FIXED: Create chronological positions for the efficiency line
     if (sortedCombinedData.length > 0) {
+      const chronologicalData = sortedCombinedData.map((meal, index) => {
+        // Calculate x position based on chronological order within each day
+        const dayMeals = sortedCombinedData.filter(m => m.date === meal.date);
+        const mealIndexInDay = dayMeals.findIndex(m => m === meal);
+        const dayWidth = xOuter.bandwidth();
+        const mealSpacing = dayWidth / Math.max(1, dayMeals.length);
+        
+        return {
+          ...meal,
+          xPos: xOuter(meal.date) + (mealIndexInDay * mealSpacing) + (mealSpacing / 2)
+        };
+      });
+
       const lineGenerator = d3.line()
-        .x(d => xOuter(d.date) + xInner(d.mealType) + xInner.bandwidth() / 2)
+        .x(d => d.xPos) // Use chronological position
         .y(d => yEff(d.efficiency))
-        .defined(d => d.efficiency != null)
+        .defined(d => d.efficiency != null && !isNaN(d.efficiency))
         .curve(d3.curveMonotoneX);
       
       svg.append("path")
-        .datum(sortedCombinedData)
+        .datum(chronologicalData) // Use chronological data
         .attr("fill", "none")
         .attr("stroke", "#FF5733")
         .attr("stroke-width", 3)
@@ -447,23 +487,40 @@ export const EnhancedEfficiencyChart = ({ data, userData }) => {
       
       // Add efficiency points
       svg.selectAll(".efficiency-point")
-        .data(combinedData)
+        .data(chronologicalData) // Use chronological data
         .enter()
         .append("circle")
         .attr("class", "efficiency-point")
-        .attr("cx", d => xOuter(d.date) + xInner(d.mealType) + xInner.bandwidth() / 2)
+        .attr("cx", d => d.xPos) // Use chronological position
         .attr("cy", d => yEff(d.efficiency))
         .attr("r", 5)
         .attr("fill", "#FF5733")
         .attr("stroke", "#333")
-        .attr("stroke-width", 1);
+        .attr("stroke-width", 1)
+        .on("mouseover", function(event, d) {
+          d3.select(this).attr("r", 8);
+          tooltip
+            .style("visibility", "visible")
+            .html(`
+              <div style="font-weight:bold;font-size:16px;">${d.mealType} - ${d.time}</div>
+              <div style="font-weight:bold;font-size:14px;">${d.date}</div>
+              <div>Enhanced Efficiency: <strong>${d.efficiency}%</strong></div>
+              <div style="margin-top:6px">Chronologically sorted meal</div>
+            `)
+            .style("left", `${event.pageX + 15}px`)
+            .style("top", `${event.pageY - 10}px`);
+        })
+        .on("mouseout", function() {
+          d3.select(this).attr("r", 5);
+          tooltip.style("visibility", "hidden");
+        });
     }
 
     // Cleanup function
     return () => {
       d3.select(".chart-tooltip").remove();
     };
-  }, [chartRef, processedData, userData]);
+  }, [chartRef, processedData, userData, convertTo24Hour]);
   
   if (!processedData || processedData.length === 0) {
     return (
@@ -484,7 +541,8 @@ export const EnhancedEfficiencyChart = ({ data, userData }) => {
         <h4>Enhanced Metabolic Efficiency</h4>
         <p>
           This enhanced chart takes into account Long COVID severity, meal timing, and individual factors 
-          to provide more accurate efficiency calculations for energy management.
+          to provide more accurate efficiency calculations for energy management. The efficiency line now 
+          follows proper chronological order.
         </p>
       </div>
     </div>
