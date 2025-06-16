@@ -17,7 +17,8 @@ import { db } from '../../firebase-config';
 import './FoodTrackerPage.css';
 import { AnalysisTab } from './FoodTrackerAnalysis';
 
-const mealTypes = ['Breakfast', 'Lunch', 'Dinner', 'Snack'];
+// UPDATED: Expanded snack categories
+const mealTypes = ['Breakfast', 'Morning Snack', 'Lunch', 'Afternoon Snack', 'Dinner', 'Late Night Snack'];
 const TABS = ['Add Food', 'Food Journal', 'Analysis'];
 const ENTRIES_PER_PAGE = 20;
 
@@ -761,11 +762,15 @@ const handleLogout = async () => {
       timeFactor = 0.9;
     }
     
+    // UPDATED: Expanded meal type factors
     const mealTypeFactors = {
       'Breakfast': 1.3,
+      'Morning Snack': 0.9,
       'Lunch': 1.1,
+      'Afternoon Snack': 0.8,
       'Dinner': 0.9,
-      'Snack': 0.8
+      'Late Night Snack': 0.6,
+      'Snack': 0.8  // Keep for backward compatibility
     };
     const mealTypeFactor = mealTypeFactors[mealData.mealType] || 1.0;
     
@@ -1483,12 +1488,26 @@ const fetchSuggestions = useCallback(async () => {
                       const formatDateTime = (date, time) => {
                         // Parse date string manually to avoid timezone issues
                         const dateParts = date.split('-');
-                        const year = parseInt(dateParts[0], 10);
+                        //const year = parseInt(dateParts[0], 10);
                         const month = parseInt(dateParts[1], 10);
                         const day = parseInt(dateParts[2], 10);
                         
                         const shortTime = time.replace(':00', '').replace(' ', '');
                         return `${month}/${day} ${shortTime}`;
+                      };
+                      
+                      // UPDATED: Handle all snack types for badge display
+                      const getMealBadge = (mealType) => {
+                        switch(mealType) {
+                          case 'Breakfast': return 'B';
+                          case 'Morning Snack': return 'MS';
+                          case 'Lunch': return 'L';
+                          case 'Afternoon Snack': return 'AS';
+                          case 'Dinner': return 'D';
+                          case 'Late Night Snack': return 'LN';
+                          case 'Snack': return 'S'; // Original snack for backward compatibility
+                          default: return mealType.charAt(0);
+                        }
                       };
                       
                       return (
@@ -1497,10 +1516,8 @@ const fetchSuggestions = useCallback(async () => {
                             {formatDateTime(entry.date, entry.time)}
                           </td>
                           <td className="meal-type-cell">
-                            <span className={`meal-badge ${entry.mealType.toLowerCase()}`}>
-                              {entry.mealType === 'Breakfast' ? 'B' : 
-                               entry.mealType === 'Lunch' ? 'L' : 
-                               entry.mealType === 'Dinner' ? 'D' : 'S'}
+                            <span className={`meal-badge ${(entry.mealType || 'unknown').trim().toLowerCase().replace(/\s+/g, '-')}`}>
+                              {getMealBadge(entry.mealType || 'Unknown')}
                             </span>
                           </td>
                           <td className="food-cell" title={entry.name}>

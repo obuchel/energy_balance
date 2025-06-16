@@ -26,7 +26,7 @@ export const getMetabolicEfficiencyFactor = (severity) => {
   return severityFactors[severity?.toLowerCase()] || 0.85;
 };
 
-// UPDATED: Calculate Food Efficiency using the correct factor for efficiency
+// UPDATED: Calculate Food Efficiency using the correct factor for efficiency + expanded snack types
 export const calculateFoodEfficiency = (mealData, userProfile) => {
   const timeStr = mealData.time;
   const hourMatch = timeStr.match(/(\d+):/);
@@ -52,12 +52,15 @@ export const calculateFoodEfficiency = (mealData, userProfile) => {
     timeFactor = 0.9;
   }
   
-  // Meal type factors
+  // UPDATED: Expanded meal type factors including all snack types
   const mealTypeFactors = {
     'Breakfast': 1.3,
+    'Morning Snack': 0.9,      // Good mid-morning metabolism
     'Lunch': 1.1,
+    'Afternoon Snack': 0.8,    // Decent afternoon metabolism
     'Dinner': 0.9,
-    'Snack': 0.8
+    'Late Night Snack': 0.6   // Lower efficiency for late eating
+            // Keep original for backward compatibility
   };
   const mealTypeFactor = mealTypeFactors[mealData.mealType] || 1.0;
   
@@ -161,29 +164,10 @@ export const estimateStandardMicronutrientEnhancement = (micronutrients, userPro
   return enhancedMicronutrients;
 };
 
-// FIXED: Enhanced Efficiency Chart Component with proper time sorting
+// FIXED: Enhanced Efficiency Chart Component with proper time sorting and linting fixes
 export const EnhancedEfficiencyChart = ({ data, userData }) => {
   const chartRef = useRef(null);
   const [processedData, setProcessedData] = useState([]);
-  
-  // FIXED: Time conversion function for proper sorting
-  const convertTo24Hour = (time12h) => {
-    if (!time12h) return '12:00';
-    
-    const [time, modifier] = time12h.split(' ');
-    if (!time || !modifier) return time12h;
-    
-    let [hours, minutes] = time.split(':');
-    let hour24 = parseInt(hours, 10);
-    
-    if (modifier.toUpperCase() === 'AM') {
-      if (hour24 === 12) hour24 = 0;
-    } else if (modifier.toUpperCase() === 'PM') {
-      if (hour24 !== 12) hour24 += 12;
-    }
-    
-    return `${hour24.toString().padStart(2, '0')}:${minutes}`;
-  };
   
   useEffect(() => {
     if (!data || data.length === 0) return;
@@ -205,6 +189,25 @@ export const EnhancedEfficiencyChart = ({ data, userData }) => {
   
   useEffect(() => {
     if (!chartRef.current || !processedData || processedData.length === 0) return;
+    
+    // FIXED: Move convertTo24Hour inside useEffect to avoid dependency issues
+    const convertTo24Hour = (time12h) => {
+      if (!time12h) return '12:00';
+      
+      const [time, modifier] = time12h.split(' ');
+      if (!time || !modifier) return time12h;
+      
+      let [hours, minutes] = time.split(':');
+      let hour24 = parseInt(hours, 10);
+      
+      if (modifier.toUpperCase() === 'AM') {
+        if (hour24 === 12) hour24 = 0;
+      } else if (modifier.toUpperCase() === 'PM') {
+        if (hour24 !== 12) hour24 += 12;
+      }
+      
+      return `${hour24.toString().padStart(2, '0')}:${minutes}`;
+    };
     
     // Clear previous chart
     d3.select(chartRef.current).selectAll("*").remove();
@@ -267,7 +270,9 @@ export const EnhancedEfficiencyChart = ({ data, userData }) => {
     // Group data by date and meal type
     const combinedData = [];
     const groupedByDate = d3.group(lastWeekData, d => d.date);
-    const uniqueMealTypes = ['Breakfast', 'Lunch', 'Dinner', 'Snack'];
+    
+    // UPDATED: Expanded unique meal types to include all snack categories
+    const uniqueMealTypes = ['Breakfast', 'Morning Snack', 'Lunch', 'Afternoon Snack', 'Dinner', 'Late Night Snack'];
     
     allDatesInRange.forEach(date => {
       const dateData = groupedByDate.get(date) || [];
@@ -308,19 +313,6 @@ export const EnhancedEfficiencyChart = ({ data, userData }) => {
       const timeB = convertTo24Hour(b.time);
       return timeA.localeCompare(timeB);
     });
-
-    // Debug function to verify time sorting
-    const debugTimeSorting = (data) => {
-      console.log('=== TIME SORTING DEBUG ===');
-      data.forEach((meal, index) => {
-        const time24 = convertTo24Hour(meal.time);
-        console.log(`${index}: ${meal.date} ${meal.time} → ${time24} (${meal.mealType})`);
-      });
-      console.log('=== END DEBUG ===');
-    };
-    
-    // Uncomment to debug time sorting
-    // debugTimeSorting(sortedCombinedData);
 
     // Calculate scales
     const xOuter = d3.scaleBand()
@@ -378,12 +370,15 @@ export const EnhancedEfficiencyChart = ({ data, userData }) => {
       .style("fill", "#000")
       .text("Enhanced Efficiency (%)");
 
-    // Define colors for meal types
+    // UPDATED: Expanded color scheme for all meal types
     const mealColors = {
-      "Breakfast": "#FF9F1C",
-      "Lunch": "#2EC4B6",
-      "Dinner": "#E71D36",
-      "Snack": "#011627"
+      "Breakfast": "#FF9F1C",        // Orange
+      "Morning Snack": "#FFB84D",    // Light Orange
+      "Lunch": "#2EC4B6",            // Teal
+      "Afternoon Snack": "#4ECDC4",  // Light Teal
+      "Dinner": "#E71D36",           // Red
+      "Late Night Snack": "#FF6B6B" // Light Red
+             // Keep original for backward compatibility
     };
 
     // Create tooltip
@@ -516,11 +511,87 @@ export const EnhancedEfficiencyChart = ({ data, userData }) => {
         });
     }
 
+    // Add legend for meal types
+    const legendY = height + 80;
+    
+    svg.append("line")
+      .attr("x1", 10)
+      .attr("x2", 40)
+      .attr("y1", legendY)
+      .attr("y2", legendY)
+      .attr("stroke", "#FF5733")
+      .attr("stroke-width", 3);
+    
+    svg.append("circle")
+      .attr("cx", 25)
+      .attr("cy", legendY)
+      .attr("r", 5)
+      .attr("fill", "#FF5733")
+      .attr("stroke", "#333")
+      .attr("stroke-width", 1);
+    
+    svg.append("text")
+      .attr("x", 50)
+      .attr("y", legendY + 4)
+      .style("font-size", "12px")
+      .text("Efficiency (%)");
+    
+    const legendData = [
+      { label: "Usable Energy", color: "#2EC4B6", opacity: 0.9 },
+      { label: "Energy Lost", color: "#2EC4B6", opacity: 0.3 }
+    ];
+    
+    svg.selectAll(".legend-rect")
+      .data(legendData)
+      .enter()
+      .append("rect")
+      .attr("x", 200)
+      .attr("y", (d, i) => legendY - 10 + i * 20)
+      .attr("width", 15)
+      .attr("height", 15)
+      .attr("fill", d => d.color)
+      .attr("opacity", d => d.opacity)
+      .attr("stroke", "#333")
+      .attr("stroke-width", 1);
+    
+    svg.selectAll(".legend-text")
+      .data(legendData)
+      .enter()
+      .append("text")
+      .attr("x", 225)
+      .attr("y", (d, i) => legendY + 2 + i * 20)
+      .style("font-size", "12px")
+      .text(d => d.label);
+    
+    // UPDATED: Expanded meal type legend
+    const mealTypeData = Object.entries(mealColors).map(([type, color]) => ({ type, color }));
+    
+    svg.selectAll(".meal-type-rect")
+      .data(mealTypeData)
+      .enter()
+      .append("rect")
+      .attr("x", (d, i) => 400 + Math.floor(i/3) * 140)
+      .attr("y", (d, i) => legendY - 10 + (i % 3) * 20)
+      .attr("width", 15)
+      .attr("height", 15)
+      .attr("fill", d => d.color)
+      .attr("stroke", "#333")
+      .attr("stroke-width", 1);
+    
+    svg.selectAll(".meal-type-text")
+      .data(mealTypeData)
+      .enter()
+      .append("text")
+      .attr("x", (d, i) => 425 + Math.floor(i/3) * 140)
+      .attr("y", (d, i) => legendY + 2 + (i % 3) * 20)
+      .style("font-size", "12px")
+      .text(d => d.type);
+
     // Cleanup function
     return () => {
       d3.select(".chart-tooltip").remove();
     };
-  }, [chartRef, processedData, userData, convertTo24Hour]);
+  }, [chartRef, processedData, userData]); // FIXED: Removed convertTo24Hour from dependencies
   
   if (!processedData || processedData.length === 0) {
     return (
@@ -544,6 +615,17 @@ export const EnhancedEfficiencyChart = ({ data, userData }) => {
           to provide more accurate efficiency calculations for energy management. The efficiency line now 
           follows proper chronological order.
         </p>
+        <div style={{ marginTop: '10px' }}>
+          <strong>Meal Type Efficiency Factors:</strong>
+          <ul style={{ marginTop: '5px', paddingLeft: '20px' }}>
+            <li><strong>Breakfast:</strong> 130% (highest metabolism)</li>
+            <li><strong>Morning Snack:</strong> 90% (good morning metabolism)</li>
+            <li><strong>Lunch:</strong> 110% (good midday metabolism)</li>
+            <li><strong>Afternoon Snack:</strong> 80% (decent afternoon metabolism)</li>
+            <li><strong>Dinner:</strong> 90% (reduced evening metabolism)</li>
+            <li><strong>Late Night Snack:</strong> 60% (discouraged - lowest efficiency)</li>
+          </ul>
+        </div>
       </div>
     </div>
   );

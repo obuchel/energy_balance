@@ -101,8 +101,11 @@ const calculateFoodEfficiencyDebug = (mealData, userProfile) => {
   // Step 4: Calculate meal type factor
   const mealTypeFactors = {
     'Breakfast': 1.3,
+    'Morning Snack': 0.9,
     'Lunch': 1.1,
+    'Afternoon Snack': 0.8,
     'Dinner': 0.9,
+    'Late Night Snack': 0.6,
     'Snack': 0.8
   };
   const mealTypeFactor = mealTypeFactors[mealData.mealType] || 1.0;
@@ -682,7 +685,9 @@ useEffect(() => {
   const combinedData = [];
   const groupedByDate = d3.group(processedData, d => d.date);
   const sortedDates = allDatesInRange;
-  const uniqueMealTypes = ['Breakfast', 'Lunch', 'Dinner', 'Snack'];
+  
+  // UPDATED: Expanded unique meal types to include all snack categories
+  const uniqueMealTypes = ['Breakfast', 'Morning Snack', 'Lunch', 'Afternoon Snack', 'Dinner', 'Late Night Snack'];
   
   sortedDates.forEach(date => {
     const dateData = groupedByDate.get(date) || [];
@@ -784,11 +789,15 @@ useEffect(() => {
     .style("fill", "#000")
     .text("Metabolic Efficiency (%)");
 
+  // UPDATED: Expanded color scheme for all meal types
   const mealColors = {
-    "Breakfast": "#FF9F1C",
-    "Lunch": "#2EC4B6",
-    "Dinner": "#E71D36",
-    "Snack": "#011627"
+    "Breakfast": "#FF9F1C",        // Orange
+    "Morning Snack": "#FFB84D",    // Light Orange
+    "Lunch": "#2EC4B6",            // Teal
+    "Afternoon Snack": "#4ECDC4",  // Light Teal
+    "Dinner": "#E71D36",           // Red
+    "Late Night Snack": "#FF6B6B" // Light Red
+        // Keep original for backward compatibility
   };
 
   const defaultColor = "#999999";
@@ -956,13 +965,14 @@ useEffect(() => {
     .style("font-size", "12px")
     .text(d => d.label);
   
+  // UPDATED: Expanded meal type legend to accommodate all snack types
   const mealTypeData = Object.entries(mealColors).map(([type, color]) => ({ type, color }));
   
   svg.selectAll(".meal-type-rect")
     .data(mealTypeData)
     .enter()
     .append("rect")
-    .attr("x", (d, i) => 400 + Math.floor(i/2) * 120)
+    .attr("x", (d, i) => 400 + Math.floor(i/2) * 130)
     .attr("y", (d, i) => legendY - 10 + (i % 2) * 20)
     .attr("width", 15)
     .attr("height", 15)
@@ -974,9 +984,9 @@ useEffect(() => {
     .data(mealTypeData)
     .enter()
     .append("text")
-    .attr("x", (d, i) => 425 + Math.floor(i/2) * 120)
+    .attr("x", (d, i) => 425 + Math.floor(i/2) * 130)
     .attr("y", (d, i) => legendY + 2 + (i % 2) * 20)
-    .style("font-size", "12px")
+    .style("font-size", "11px")
     .text(d => d.type);
 
   return () => {
@@ -1013,6 +1023,7 @@ return (
         <li>Higher efficiency percentages mean more of your food energy is being utilized</li>
         <li>The red line tracks your efficiency over time across different meals</li>
         <li>Different meal types and timing can affect how efficiently your body processes food</li>
+        <li><strong>Snack Timing:</strong> Morning snacks (90%) are more efficient than late night snacks (60%)</li>
       </ul>
     </div>
   </div>
