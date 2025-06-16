@@ -4,11 +4,12 @@
   "description": "Energy balance calculation application with React and Firestore",
   "private": true,
   "homepage": "https://obuchel.github.io/energy_balance",
-  "scripts": {
-    "start": "react-scripts start",
-    "build": "react-scripts build",
+    "scripts": {
+	"build": "react-scripts build && cp build/index.html build/404.html",
+    "build:windows": "react-scripts build && copy build\\index.html build\\404.html",
     "test": "react-scripts test",
     "eject": "react-scripts eject",
+    "start": "react-scripts start",
     "deploy": "npm run build && gh-pages -d build",
     "predeploy": "npm run build"
   },
