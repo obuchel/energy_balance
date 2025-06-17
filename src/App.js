@@ -4,7 +4,8 @@ import RegistrationPage from './components/Register/RegistrationPage';
 import FitbitCallback from './FitbitCallback';
 import Dashboard from './components/Dashboard/Dashboard';
 import SignInPage from './components/SignIn/SignInPage';
-import FoodTrackerPage from './components/FoodTracker/FoodTrackerPage'; // Add this import
+import FoodTrackerPage from './components/FoodTracker/FoodTrackerPage';
+import FitbitDashboard from './components/FitbitDashboard/FitbitDashboard'; // Add this import
 import './App.css';
 
 function App() {
@@ -85,6 +86,16 @@ function App() {
             element={
               <ProtectedRoute>
                 <FoodTrackerPage />
+              </ProtectedRoute>
+            } 
+          />
+          
+          {/* Add Fitbit Dashboard route */}
+          <Route 
+            path="/fitbit-dashboard" 
+            element={
+              <ProtectedRoute>
+                <FitbitDashboard />
               </ProtectedRoute>
             } 
           />

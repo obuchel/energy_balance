@@ -184,6 +184,11 @@ function Dashboard() {
     // Navigate to FoodTrackerPage
     navigate('/food-tracker');
   };
+
+  // Handle button click for activity dashboard
+  const handleViewActivityData = () => {
+    navigate('/fitbit-dashboard');
+  };
   
   // Handle logout - Complete logout from both localStorage and Firebase Auth
   const handleLogout = async () => {
@@ -227,6 +232,9 @@ function Dashboard() {
       navigate('/login', { replace: true });
     }
   };
+
+  // Check if user has Fitbit connected
+  const isFitbitConnected = userData?.selectedDevice === 'fitbit' && userData?.deviceConnected === true;
   
   // Show loading state
   if (loading) {
@@ -271,17 +279,18 @@ function Dashboard() {
             <span className="info-icon" title="One-tap access to common activities for logging your day and managing your condition.">ⓘ</span>
           </h3>
           <div className="quick-actions">
-            <button className="action-button meal" onClick={handleTrackMeal}>Track Meal</button>
+            <button className="action-button meal" onClick={handleTrackMeal}>
+              📝 Track Meal
+            </button>
+            {isFitbitConnected && (
+              <button className="action-button activity" onClick={handleViewActivityData}>
+                📊 View Activity Data
+              </button>
+            )}
           </div>
         </div>
         
-        {userData?.device === 'fitbit' && (
-          <div className="card fitbit-status">
-            <h3 className="card-title">Fitbit Connection</h3>
-            <p>✅ Connected as {userData.fitbitData?.displayName || 'Fitbit User'}</p>
-            <p>Device: {userData.device}</p>
-          </div>
-        )}
+
       </div>
     </div>
   );

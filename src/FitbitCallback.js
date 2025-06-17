@@ -1,4 +1,4 @@
-// FitbitCallback.js - Fixed version with proper security and React hooks
+// Updated FitbitCallback.js - Complete version that avoids CORS issues
 import React, { useEffect, useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { createUserWithEmailAndPassword } from 'firebase/auth';
@@ -8,11 +8,15 @@ import { doc, setDoc, collection, query, where, getDocs } from 'firebase/firesto
 // Helper function to get the correct redirect URI (must match registration)
 const getRedirectUri = () => {
   const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
-  
+  const isGitHubPages = window.location.hostname.includes('github.io');
+
   if (isLocalhost) {
-    return process.env.REACT_APP_FITBIT_REDIRECT_URI_DEV || 'http://localhost:3000/fitbit/callback';
+    const port = window.location.port || '64556';
+    return `http://localhost:${port}/energy_balance/fitbit-dashboard`;
+  } else if (isGitHubPages) {
+    return 'https://obuchel.github.io/energy_balance/fitbit-dashboard/callback';
   } else {
-    return process.env.REACT_APP_FITBIT_REDIRECT_URI_PROD || `${window.location.origin}/fitbit/callback`;
+    return `${window.location.origin}/fitbit-dashboard/callback`;
   }
 };
 
@@ -24,7 +28,6 @@ const FitbitCallback = () => {
   const location = useLocation();
 
   useEffect(() => {
-    // Move the entire function inside useEffect to avoid dependency issues
     const handleFitbitCallback = async () => {
       try {
         console.log('=== Fitbit Callback Started ===');
@@ -107,8 +110,7 @@ const FitbitCallback = () => {
         const registrationData = JSON.parse(registrationDataStr);
         console.log('Registration data found for:', registrationData.email);
 
-        // For security reasons, we'll create the Firebase user first and store the Fitbit code
-        // In a production app, you'd exchange the code on your backend
+        // Create Firebase user with the auth code (no token exchange yet)
         setStatus('Creating your account...');
         
         await createUserWithFitbitCode(registrationData, code);
@@ -119,7 +121,7 @@ const FitbitCallback = () => {
         setTimeout(() => {
           navigate('/login', { 
             state: { 
-              message: 'Registration successful! Your Fitbit has been connected. Please sign in.',
+              message: 'Registration successful! Your Fitbit has been connected. Sign in to start using the app.',
               email: registrationData.email 
             }
           });
@@ -132,29 +134,59 @@ const FitbitCallback = () => {
       }
     };
 
+    // Simplified user creation - no API calls, just save the auth code
     const createUserWithFitbitCode = async (registrationData, authCode) => {
       try {
         console.log('Creating Firebase user...');
         
-        // Check if email already exists
+        // Check if email already exists in Firestore
         const usersRef = collection(db, 'users');
         const emailQuery = query(usersRef, where('email', '==', registrationData.email.toLowerCase()));
         const emailSnapshot = await getDocs(emailQuery);
         
         if (!emailSnapshot.empty) {
-          throw new Error('An account with this email already exists');
+          throw new Error('This email already exists in our database. Please use a different email or sign in.');
         }
-
-        // Create Firebase Auth user
-        const userCredential = await createUserWithEmailAndPassword(
-          auth, 
-          registrationData.email.toLowerCase().trim(), 
-          registrationData.password
-        );
+    
+        let user;
         
-        const user = userCredential.user;
-        console.log('Firebase user created:', user.uid);
-
+        try {
+          // Try to create new Firebase Auth user
+          console.log('🔐 Attempting to create new Firebase Auth user...');
+          const userCredential = await createUserWithEmailAndPassword(
+            auth, 
+            registrationData.email.toLowerCase().trim(), 
+            registrationData.password
+          );
+          user = userCredential.user;
+          console.log('✅ New Firebase Auth user created:', user.uid);
+          
+        } catch (authError) {
+          if (authError.code === 'auth/email-already-in-use') {
+            console.log('🔄 Email exists in Firebase Auth, but not in Firestore. Completing registration...');
+            
+            // Sign in to get the existing user
+            const { signInWithEmailAndPassword } = await import('firebase/auth');
+            try {
+              const signInResult = await signInWithEmailAndPassword(
+                auth,
+                registrationData.email.toLowerCase().trim(),
+                registrationData.password
+              );
+              user = signInResult.user;
+              console.log('✅ Signed in to existing Firebase Auth user:', user.uid);
+              
+              setStatus('Completing your profile setup...');
+            } catch (signInError) {
+              throw new Error('Email exists in Firebase Auth but password doesn\'t match. Please use the correct password or try password reset.');
+            }
+          } else {
+            throw authError; // Re-throw other auth errors
+          }
+        }
+    
+        setStatus('Saving your profile...');
+        
         // Prepare complete user data
         const userData = {
           uid: user.uid,
@@ -175,13 +207,24 @@ const FitbitCallback = () => {
           deviceConnected: true,
           authorizationGiven: true,
           
-          // Fitbit integration data (store the code for later server-side exchange)
+          // Store auth code for later token exchange via serverless API
           fitbitData: {
-            authCode: authCode, // Store code for server-side token exchange
+            authCode: authCode,
             redirectUri: getRedirectUri(),
-            scope: 'activity heartrate location nutrition profile settings sleep social weight',
-            codeReceivedAt: new Date().toISOString(),
-            // Note: Actual tokens should be obtained server-side for security
+            authCodeReceivedAt: new Date().toISOString(),
+            tokensExchanged: false,
+          },
+          
+          // Placeholder for data that will be fetched later
+          latestFitbitData: {
+            date: null,
+            heartRate: null,
+            steps: null,
+            calories: null,
+            distance: null,
+            activeMinutes: null,
+            lastSync: null,
+            needsInitialSync: true,
           },
           
           // Energy management profile
@@ -189,7 +232,7 @@ const FitbitCallback = () => {
             baselineCalculated: false,
             currentEnergyLevel: 50,
             energyEnvelope: null,
-            dailyEnergyBudget: null
+            dailyEnergyBudget: null,
           },
           
           // User preferences
@@ -205,25 +248,23 @@ const FitbitCallback = () => {
           registrationComplete: true,
           accountStatus: 'active'
         };
-
+    
         // Create user document with UID as document ID
         await setDoc(doc(db, 'users', user.uid), userData);
-        console.log('User data saved to Firestore');
-
+        console.log('✅ User data saved to Firestore');
+    
         // Clean up session storage
         sessionStorage.removeItem('registrationData');
         sessionStorage.removeItem('fitbitOAuthState');
         sessionStorage.removeItem('fitbitAuthStartTime');
-
-        console.log('Registration completed successfully');
-
+    
+        console.log('✅ Registration completed successfully');
+    
       } catch (error) {
-        console.error('Error creating user:', error);
+        console.error('❌ Registration error:', error);
         
         // Handle specific Firebase errors
-        if (error.code === 'auth/email-already-in-use') {
-          throw new Error('This email is already registered. Please use a different email or sign in.');
-        } else if (error.code === 'auth/weak-password') {
+        if (error.code === 'auth/weak-password') {
           throw new Error('Password is too weak. Please choose a stronger password.');
         } else if (error.code === 'auth/invalid-email') {
           throw new Error('Invalid email address format.');
@@ -235,7 +276,7 @@ const FitbitCallback = () => {
 
     // Call the function immediately
     handleFitbitCallback();
-  }, [location.search, navigate]); // Only depend on stable values
+  }, [location.search, navigate]);
 
   const handleRetry = () => {
     // Clear any stored data and redirect to registration
@@ -267,10 +308,10 @@ const FitbitCallback = () => {
         boxShadow: '0 4px 20px rgba(0,0,0,0.1)',
         backgroundColor: 'white'
       }}>
-        {status === 'processing' && (
+        {(status === 'processing' || status === 'Creating your account...' || status === 'Saving your profile...') && (
           <div>
             <h2 style={{ color: '#495057', marginBottom: '20px' }}>
-              🔗 Connecting your Fitbit account...
+              🔗 {status === 'processing' ? 'Processing your Fitbit connection...' : status}
             </h2>
             <div className="spinner" style={{
               border: '4px solid #e9ecef',
@@ -281,8 +322,12 @@ const FitbitCallback = () => {
               animation: 'spin 1s linear infinite',
               margin: '20px auto'
             }}></div>
-            <p style={{ color: '#6c757d' }}>Please wait while we complete your registration...</p>
-            {debugInfo && (
+            <p style={{ color: '#6c757d' }}>
+              {status === 'processing' && 'Please wait while we complete your registration...'}
+              {status === 'Creating your account...' && 'Setting up your Firebase account...'}
+              {status === 'Saving your profile...' && 'Saving your profile and Fitbit connection...'}
+            </p>
+            {debugInfo && status === 'processing' && (
               <p style={{ fontSize: '14px', color: '#6c757d', marginTop: '10px' }}>
                 Debug: {debugInfo}
               </p>
@@ -293,10 +338,10 @@ const FitbitCallback = () => {
         {status === 'success' && (
           <div>
             <h2 style={{ color: '#28a745', marginBottom: '20px' }}>
-              ✅ Fitbit Connected Successfully!
+              ✅ Registration Completed Successfully!
             </h2>
             <p style={{ color: '#495057', marginBottom: '10px' }}>
-              Your account has been created and your Fitbit is now connected.
+              Your account has been created and your Fitbit has been connected.
             </p>
             <p style={{ color: '#6c757d', fontSize: '14px' }}>
               Redirecting to sign in page...
@@ -316,13 +361,24 @@ const FitbitCallback = () => {
             }}>
               ✓
             </div>
+            <div style={{ 
+              backgroundColor: '#d4edda', 
+              border: '1px solid #c3e6cb', 
+              borderRadius: '8px', 
+              padding: '12px', 
+              marginTop: '20px',
+              fontSize: '14px',
+              color: '#155724'
+            }}>
+              <strong>Note:</strong> Your Fitbit data will be synced when you first access your dashboard.
+            </div>
           </div>
         )}
         
         {status === 'error' && (
           <div>
             <h2 style={{ color: '#dc3545', marginBottom: '20px' }}>
-              ❌ Connection Failed
+              ❌ Registration Failed
             </h2>
             <div style={{
               backgroundColor: '#f8d7da',
@@ -336,7 +392,7 @@ const FitbitCallback = () => {
               </p>
             </div>
             
-            <div style={{ display: 'flex', gap: '10px', justifyContent: 'center' }}>
+            <div style={{ display: 'flex', gap: '10px', justifyContent: 'center', flexWrap: 'wrap' }}>
               <button 
                 onClick={handleRetry}
                 style={{
@@ -350,7 +406,7 @@ const FitbitCallback = () => {
                   fontWeight: '500'
                 }}
               >
-                Try Again
+                Try Registration Again
               </button>
               <button 
                 onClick={handleGoToLogin}

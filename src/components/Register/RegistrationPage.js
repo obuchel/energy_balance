@@ -7,6 +7,7 @@ import { createUserWithEmailAndPassword } from 'firebase/auth';
 import { auth, db } from '../../firebase-config';
 import { collection, query, where, getDocs, doc, setDoc } from 'firebase/firestore';
 
+
 // Updated StepIndicator component
 const StepIndicator = ({ step }) => (
   <div className="step-indicator">
@@ -299,123 +300,176 @@ function RegisterPage() {
     }
   };
 
-  const handleDeviceConnection = async () => {
-    setLoading(true);
-    setConnectionStatus('Connecting...');
+// Enhanced debug version of handleDeviceConnection for RegistrationPage.js
+// This will help us see exactly what redirect URI is being sent
+
+const handleDeviceConnection = async () => {
+  setLoading(true);
+  setConnectionStatus('Connecting...');
+  
+  const selectedDeviceInfo = deviceOptions.find(d => d.id === formData.selectedDevice);
+  
+  // Enhanced helper function to get the correct redirect URI with debugging
+  const getRedirectUri = () => {
+    const hostname = window.location.hostname;
+    const port = window.location.port;
+    const origin = window.location.origin;
+    const pathname = window.location.pathname;
     
-    const selectedDeviceInfo = deviceOptions.find(d => d.id === formData.selectedDevice);
+    console.log('=== REDIRECT URI DEBUG ===');
+    console.log('Hostname:', hostname);
+    console.log('Port:', port);
+    console.log('Origin:', origin);
+    console.log('Pathname:', pathname);
+    console.log('Full location:', window.location.href);
     
-    try {
-      if (selectedDeviceInfo.connectionType === 'oauth') {
+    const isLocalhost = hostname === 'localhost' || hostname === '127.0.0.1';
+    const isGitHubPages = hostname.includes('github.io');
+    
+    console.log('Is localhost:', isLocalhost);
+    console.log('Is GitHub Pages:', isGitHubPages);
+    
+    let redirectUri;
+    
+    if (isLocalhost) {
+      // IMPORTANT: You need to match your actual registered localhost URL
+      // Your registered URL is: http://localhost:64556/energy_balance/fitbit-dashboard
+      // But you're running on a different port, so we need to detect the actual port
+      
+      if (port) {
+        redirectUri = `http://localhost:${port}/energy_balance/fitbit-dashboard`;
+      } else {
+        // Fallback if port detection fails
+        redirectUri = `http://localhost:64556/energy_balance/fitbit-dashboard`;
+      }
+    } else if (isGitHubPages) {
+      // For GitHub Pages, this should match your registered URL exactly
+      redirectUri = 'https://obuchel.github.io/energy_balance/fitbit-dashboard/callback';
+    } else {
+      // Fallback for other environments
+      redirectUri = `${origin}/fitbit-dashboard/callback`;
+    }
+    
+    console.log('Generated redirect URI:', redirectUri);
+    console.log('=== END REDIRECT URI DEBUG ===');
+    
+    return redirectUri;
+  };
+  
+  try {
+    if (selectedDeviceInfo.connectionType === 'oauth') {
+      
+      if (formData.selectedDevice === 'fitbit') {
+        // Store registration data in sessionStorage for FitbitCallback
+        const registrationDataForStorage = {
+          name: formData.name,
+          email: formData.email,
+          password: formData.password,
+          age: formData.age,
+          gender: formData.gender,
+          weight: formData.weight,
+          height: formData.height,
+          covidDate: formData.covidDate,
+          covidDuration: formData.covidDuration,
+          severity: formData.severity,
+          symptoms: formData.symptoms,
+          medicalConditions: formData.medicalConditions,
+          selectedDevice: formData.selectedDevice
+        };
         
-        if (formData.selectedDevice === 'fitbit') {
-          // Store registration data in sessionStorage for FitbitCallback
-          const registrationDataForStorage = {
-            name: formData.name,
-            email: formData.email,
-            password: formData.password, // Note: In production, don't store plain text passwords
-            age: formData.age,
-            gender: formData.gender,
-            weight: formData.weight,
-            height: formData.height,
-            covidDate: formData.covidDate,
-            covidDuration: formData.covidDuration,
-            severity: formData.severity,
-            symptoms: formData.symptoms,
-            medicalConditions: formData.medicalConditions,
-            selectedDevice: formData.selectedDevice
-          };
-          
-          sessionStorage.setItem('registrationData', JSON.stringify(registrationDataForStorage));
-          
-          // Generate state parameter for CSRF protection
-          const state = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
-          sessionStorage.setItem('fitbitOAuthState', state);
-          sessionStorage.setItem('fitbitAuthStartTime', Date.now().toString());
-          
-          // Get environment variables and determine correct redirect URI
-          const clientId = process.env.REACT_APP_FITBIT_CLIENT_ID;
-          
-          // Determine redirect URI based on current environment
-          let redirectUri;
-          const currentUrl = window.location.href;
-          console.log('Current URL:', currentUrl);
-          console.log('Current hostname:', window.location.hostname);
-          console.log('Current origin:', window.location.origin);
-          
-          const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
-          const isGitHubPages = window.location.hostname.includes('github.io');
-          
-          if (isLocalhost) {
-            redirectUri = 'http://localhost:3000/fitbit/callback';
-          } else if (isGitHubPages) {
-            // For GitHub Pages, construct the exact URL
-            redirectUri = 'https://obuchel.github.io/energy_balance/fitbit/callback';
-          } else {
-            // Fallback: construct from current location
-            redirectUri = `${window.location.origin}/fitbit/callback`;
-          }
-          
-          console.log('Using Fitbit redirect URI:', redirectUri);
-          console.log('Fitbit Client ID:', clientId);
-          
-          if (!clientId) {
-            throw new Error('Fitbit Client ID missing. Please check environment variables.');
-          }
-          
-          // Build Fitbit OAuth URL with exact parameters
-          const fitbitAuthUrl = new URL('https://www.fitbit.com/oauth2/authorize');
-          fitbitAuthUrl.searchParams.append('response_type', 'code');
-          fitbitAuthUrl.searchParams.append('client_id', clientId);
-          fitbitAuthUrl.searchParams.append('redirect_uri', redirectUri);
-          fitbitAuthUrl.searchParams.append('scope', 'activity heartrate location nutrition profile settings sleep social weight');
-          fitbitAuthUrl.searchParams.append('state', state);
-          
-          console.log('Full Fitbit OAuth URL:', fitbitAuthUrl.toString());
-          
-          // Show the URL to user for debugging
-          const confirmRedirect = window.confirm(
-            `About to redirect to Fitbit with:\n\n` +
-            `Redirect URI: ${redirectUri}\n` +
-            `Client ID: ${clientId}\n\n` +
-            `Make sure this redirect URI is exactly registered in your Fitbit app.\n\n` +
-            `Continue to Fitbit?`
-          );
-          
-          if (!confirmRedirect) {
-            setLoading(false);
-            setConnectionStatus('Connection cancelled by user.');
-            return;
-          }
-          
-          setConnectionStatus('Redirecting to Fitbit...');
-          
-          // Redirect to Fitbit OAuth
-          window.location.href = fitbitAuthUrl.toString();
-          return; // Exit early since we're redirecting
-        } else {
-          // Handle other OAuth providers (Apple Watch, Garmin, etc.)
-          // For now, these will proceed to step 3 without actual OAuth
-          await new Promise(resolve => setTimeout(resolve, 2000));
-          setConnectionStatus('Device ready for authorization');
+        sessionStorage.setItem('registrationData', JSON.stringify(registrationDataForStorage));
+        
+        // Generate state parameter for CSRF protection
+        const state = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+        sessionStorage.setItem('fitbitOAuthState', state);
+        sessionStorage.setItem('fitbitAuthStartTime', Date.now().toString());
+        
+        // Get environment variables
+        const clientId = process.env.REACT_APP_FITBIT_CLIENT_ID;
+        
+        // Use the enhanced redirect URI function
+        const redirectUri = getRedirectUri();
+        
+        // ENHANCED DEBUG LOGGING
+        console.log('=== FITBIT OAUTH FULL DEBUG ===');
+        console.log('Current window location:', window.location.href);
+        console.log('Current hostname:', window.location.hostname);
+        console.log('Current port:', window.location.port);
+        console.log('Current origin:', window.location.origin);
+        console.log('Current pathname:', window.location.pathname);
+        console.log('Redirect URI being used:', redirectUri);
+        console.log('Fitbit Client ID:', clientId ? clientId.substring(0, 6) + '...' : 'MISSING');
+        
+        // Show all registered URLs for comparison
+        console.log('YOUR REGISTERED FITBIT URLs SHOULD BE:');
+        console.log('1. For localhost:', `http://localhost:${window.location.port || '64556'}/energy_balance/fitbit-dashboard`);
+        console.log('2. For GitHub Pages: https://obuchel.github.io/energy_balance/fitbit-dashboard/callback');
+        
+        if (!clientId) {
+          throw new Error('Fitbit Client ID missing. Please check environment variables.');
         }
         
-        setFormData(prev => ({ ...prev, deviceConnected: true }));
-        setStep(3);
+        // Build Fitbit OAuth URL with exact parameters
+        const fitbitAuthUrl = new URL('https://www.fitbit.com/oauth2/authorize');
+        fitbitAuthUrl.searchParams.append('response_type', 'code');
+        fitbitAuthUrl.searchParams.append('client_id', clientId);
+        fitbitAuthUrl.searchParams.append('redirect_uri', redirectUri);
+        fitbitAuthUrl.searchParams.append('scope', 'activity heartrate location nutrition profile settings sleep social weight');
+        fitbitAuthUrl.searchParams.append('state', state);
+        
+        console.log('Full Fitbit OAuth URL:', fitbitAuthUrl.toString());
+        console.log('=== END FULL DEBUG ===');
+        
+        // Enhanced confirmation dialog with more info
+        const confirmRedirect = window.confirm(
+          `FITBIT OAUTH DEBUG INFO:\n\n` +
+          `Current URL: ${window.location.href}\n` +
+          `Detected Port: ${window.location.port || 'none (probably 64556)'}\n` +
+          `Redirect URI: ${redirectUri}\n\n` +
+          `YOUR FITBIT APP SHOULD HAVE THESE EXACT URLs REGISTERED:\n` +
+          `1. http://localhost:${window.location.port || '64556'}/energy_balance/fitbit-dashboard\n` +
+          `2. https://obuchel.github.io/energy_balance/fitbit-dashboard/callback\n\n` +
+          `Client ID: ${clientId ? clientId.substring(0, 6) + '...' : 'MISSING'}\n\n` +
+          `If the redirect URI above doesn't EXACTLY match one of your registered URLs in dev.fitbit.com, you'll get the "Invalid redirect_uri" error.\n\n` +
+          `Continue to Fitbit?`
+        );
+        
+        if (!confirmRedirect) {
+          setLoading(false);
+          setConnectionStatus('Connection cancelled by user.');
+          return;
+        }
+        
+        setConnectionStatus('Redirecting to Fitbit...');
+        
+        // Small delay to show status, then redirect
+        setTimeout(() => {
+          window.location.href = fitbitAuthUrl.toString();
+        }, 1000);
+        
+        return; // Exit early since we're redirecting
       } else {
-        // Manual entry - no connection needed
-        setFormData(prev => ({ ...prev, deviceConnected: true }));
-        setConnectionStatus('Manual entry selected');
-        setStep(3);
+        // Handle other OAuth providers (Apple Watch, Garmin, etc.)
+        // For now, these will proceed to step 3 without actual OAuth
+        await new Promise(resolve => setTimeout(resolve, 2000));
+        setConnectionStatus('Device ready for authorization');
       }
-    } catch (error) {
-      console.error('Device connection error:', error);
-      setConnectionStatus(`Connection failed: ${error.message}`);
-    } finally {
-      setLoading(false);
+      
+      setFormData(prev => ({ ...prev, deviceConnected: true }));
+      setStep(3);
+    } else {
+      // Manual entry - no connection needed
+      setFormData(prev => ({ ...prev, deviceConnected: true }));
+      setConnectionStatus('Manual entry selected');
+      setStep(3);
     }
-  };
-
+  } catch (error) {
+    console.error('Device connection error:', error);
+    setConnectionStatus(`Connection failed: ${error.message}`);
+  } finally {
+    setLoading(false);
+  }
+};
   // Check if email already exists in the system
   const checkEmailExists = async (email) => {
     try {

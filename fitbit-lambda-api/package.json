@@ -1,0 +1,26 @@
+{
+  "name": "fitbit-lambda-api",
+  "version": "1.0.0",
+  "description": "Serverless API for Fitbit data integration",
+  "main": "index.js",
+  "scripts": {
+    "deploy": "serverless deploy",
+    "deploy:dev": "serverless deploy --stage dev",
+    "deploy:prod": "serverless deploy --stage prod", 
+    "logs:fitbit": "serverless logs -f getFitbitData -t",
+    "logs:refresh": "serverless logs -f refreshToken -t",
+    "offline": "serverless offline",
+    "remove": "serverless remove",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": ["serverless", "aws", "lambda", "fitbit", "api"],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "node-fetch": "^2.7.0"
+  },
+  "devDependencies": {
+    "serverless": "^3.38.0",
+    "serverless-offline": "^14.4.0"
+  }
+}
