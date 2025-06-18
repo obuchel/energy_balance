@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { db, auth } from '../../firebase-config';
 import { doc, updateDoc, getDoc } from 'firebase/firestore';
-import { updatePassword, reauthenticateWithCredential, EmailAuthProvider } from 'firebase/auth';
+import { updatePassword, reauthenticateWithCredential, EmailAuthProvider, signOut } from 'firebase/auth';
 import { 
   ArrowLeft, 
   Save, 
@@ -14,7 +14,8 @@ import {
   Ruler, 
   Check,
   Eye,
-  EyeOff 
+  EyeOff,
+  LogOut
 } from 'lucide-react';
 
 const symptomOptions = [
@@ -106,6 +107,49 @@ const PersonalSettings = () => {
   useEffect(() => {
     loadUserData();
   }, [loadUserData]);
+
+  // Handle logout - Complete logout from both localStorage and Firebase Auth
+  const handleLogout = async () => {
+    console.log('Logout clicked - starting complete logout process');
+    
+    try {
+      // 1. Sign out from Firebase Auth
+      if (auth.currentUser) {
+        console.log('Signing out Firebase user:', auth.currentUser.email);
+        await signOut(auth);
+        console.log('Firebase signOut successful');
+      } else {
+        console.log('No Firebase user to sign out');
+      }
+      
+      // 2. Clear localStorage
+      console.log('Clearing localStorage userData');
+      localStorage.removeItem('userData');
+      
+      // 3. Clear any other potential session data
+      sessionStorage.clear();
+      console.log('Cleared sessionStorage');
+      
+      // 4. Reset component state
+      setUserData(null);
+      setLoading(false);
+      
+      console.log('Complete logout finished, navigating to login...');
+      
+      // 5. Navigate to login with replace to prevent back navigation
+      navigate('/login', { replace: true });
+      
+    } catch (error) {
+      console.error('Error during logout:', error);
+      
+      // Even if Firebase signOut fails, still clear local data and redirect
+      localStorage.removeItem('userData');
+      sessionStorage.clear();
+      setUserData(null);
+      
+      navigate('/login', { replace: true });
+    }
+  };
 
   // Handle form input changes
   const handleInputChange = (e) => {
@@ -326,26 +370,51 @@ const PersonalSettings = () => {
       fontFamily: 'system-ui, -apple-system, sans-serif'
     }}>
       <div style={{ maxWidth: '800px', margin: '0 auto 30px', textAlign: 'center' }}>
-        <button 
-          onClick={() => navigate('/dashboard')} 
-          style={{
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: '8px',
-            background: 'rgba(255, 255, 255, 0.2)',
-            border: '1px solid rgba(255, 255, 255, 0.3)',
-            color: 'white',
-            padding: '10px 20px',
-            borderRadius: '8px',
-            cursor: 'pointer',
-            fontSize: '14px',
-            marginBottom: '20px',
-            transition: 'all 0.2s ease'
-          }}
-        >
-          <ArrowLeft size={16} />
-          Back to Dashboard
-        </button>
+        <div style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          marginBottom: '20px'
+        }}>
+          <button 
+            onClick={() => navigate('/dashboard')} 
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '8px',
+              background: 'rgba(255, 255, 255, 0.2)',
+              border: '1px solid rgba(255, 255, 255, 0.3)',
+              color: 'white',
+              padding: '10px 20px',
+              borderRadius: '8px',
+              cursor: 'pointer',
+              fontSize: '14px',
+              transition: 'all 0.2s ease'
+            }}
+          >
+            <ArrowLeft size={16} />
+            Back to Dashboard
+          </button>
+          <button 
+            onClick={handleLogout}
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '8px',
+              background: 'rgba(255, 255, 255, 0.1)',
+              border: '1px solid rgba(255, 255, 255, 0.3)',
+              color: 'white',
+              padding: '10px 20px',
+              borderRadius: '8px',
+              cursor: 'pointer',
+              fontSize: '14px',
+              transition: 'all 0.2s ease'
+            }}
+          >
+            <LogOut size={16} />
+            Logout
+          </button>
+        </div>
         <h1 style={{
           fontSize: '2.5rem',
           fontWeight: '700',

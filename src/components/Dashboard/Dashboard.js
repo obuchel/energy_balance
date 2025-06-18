@@ -189,6 +189,11 @@ function Dashboard() {
   const handleViewActivityData = () => {
     navigate('/fitbit-dashboard');
   };
+
+  // Handle navigation to personal settings
+  const handlePersonalSettings = () => {
+    navigate('/personal-settings');
+  };
   
   // Handle logout - Complete logout from both localStorage and Firebase Auth
   const handleLogout = async () => {
@@ -252,7 +257,10 @@ function Dashboard() {
         <h1>Energy Management Dashboard</h1>
         <div className="user-info">
           <span>Welcome, {userData?.name || 'User'}!</span>
-          <button onClick={handleLogout} className="logout-btn">Logout</button>
+          <div className="user-actions">
+            <button onClick={handlePersonalSettings} className="settings-btn">⚙️ Settings</button>
+            <button onClick={handleLogout} className="logout-btn">Logout</button>
+          </div>
         </div>
         <div className="date" id="current-date">
           {new Date().toLocaleDateString('en-US', { 

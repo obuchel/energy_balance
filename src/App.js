@@ -6,6 +6,7 @@ import Dashboard from './components/Dashboard/Dashboard';
 import SignInPage from './components/SignIn/SignInPage';
 import FoodTrackerPage from './components/FoodTracker/FoodTrackerPage';
 import FitbitDashboard from './components/FitbitDashboard/FitbitDashboard';
+import PersonalSettings from './components/Settings/PersonalSettings';
 import './App.css';
 
 function App() {
@@ -103,6 +104,16 @@ function App() {
             element={
               <ProtectedRoute>
                 <FitbitDashboard />
+              </ProtectedRoute>
+            } 
+          />
+          
+          {/* Add Personal Settings route */}
+          <Route 
+            path="/personal-settings" 
+            element={
+              <ProtectedRoute>
+                <PersonalSettings />
               </ProtectedRoute>
             } 
           />
