@@ -82,32 +82,55 @@ const FitbitDashboard = () => {
         if (docId.startsWith(`${userId}_${dateString}_`)) {
           console.log('📊 Found matching document:', docId, docData);
           
-          // Extract time from document ID (last 6 characters should be HHMMSS)
-          const timePart = docId.split('_')[2]; // Get the time part
-          if (timePart && timePart.length === 6) {
-            const hours = timePart.substring(0, 2);
-            const minutes = timePart.substring(2, 4);
-            
-            // Extract calories from the actual data structure
-            let calories = 0;
-            if (docData.metrics && docData.metrics.calories !== undefined) {
-              calories = docData.metrics.calories;
-            } else if (docData.calories !== undefined) {
-              calories = docData.calories;
-            }
-            
-            data.push({
-              time: `${hours}:${minutes}`, // Format as HH:MM for display
-              calories: calories,
-              timestamp: docData.timestamp || docData.syncedAt || new Date().toISOString(),
-              docId: docId
-            });
+          // Extract calories from the actual data structure
+          let calories = 0;
+          if (docData.metrics && docData.metrics.calories !== undefined) {
+            calories = docData.metrics.calories;
+          } else if (docData.calories !== undefined) {
+            calories = docData.calories;
           }
+          
+          // 🔥 FIX: Use actual timestamp and convert to local time
+          let displayTime = '';
+          let sortableTime = '';
+          
+          if (docData.timestamp || docData.syncedAt) {
+            const timestamp = new Date(docData.timestamp || docData.syncedAt);
+            // Convert to local time for display
+            displayTime = timestamp.toLocaleTimeString('en-US', { 
+              hour: '2-digit', 
+              minute: '2-digit',
+              hour12: false 
+            });
+            sortableTime = timestamp.getTime(); // For sorting
+          } else {
+            // Fallback: extract from document ID but note it's UTC
+            const timePart = docId.split('_')[2];
+            if (timePart && timePart.length === 6) {
+              const hours = timePart.substring(0, 2);
+              const minutes = timePart.substring(2, 4);
+              displayTime = `${hours}:${minutes} (UTC)`;
+              sortableTime = parseInt(hours) * 60 + parseInt(minutes); // For sorting
+            }
+          }
+          
+          data.push({
+            time: displayTime,
+            calories: calories,
+            timestamp: docData.timestamp || docData.syncedAt || new Date().toISOString(),
+            sortableTime: sortableTime,
+            docId: docId
+          });
         }
       });
       
-      // Sort by time
-      data.sort((a, b) => a.time.localeCompare(b.time));
+      // Sort by actual time (not string comparison)
+      data.sort((a, b) => {
+        if (typeof a.sortableTime === 'number' && typeof b.sortableTime === 'number') {
+          return a.sortableTime - b.sortableTime;
+        }
+        return a.time.localeCompare(b.time);
+      });
       
       console.log(`📊 Found ${data.length} data points for ${date}:`, data);
       setTimeseriesData(data);
@@ -338,9 +361,36 @@ const FitbitDashboard = () => {
         lastUpdated: new Date().toISOString()
       }, { merge: true });
       
-      // 🔥 NEW: Store current data as a timeseries point for today
+      // 🔥 FIXED: Only store timeseries data if enough time has passed (avoid duplicates from refreshing)
       const today = new Date().toISOString().split('T')[0];
-      await storeTimeseriesData(userId, today, fitbitDataWithMeta);
+      
+      // Check if we already have a recent data point (within last 15 minutes)
+      const now = new Date();
+      const fifteenMinutesAgo = new Date(now.getTime() - 15 * 60 * 1000);
+      
+      // Check existing timeseries data for today
+      const dateString = today.replace(/-/g, '');
+      const timeseriesRef = collection(db, 'fitbit_timeseries');
+      const allDocs = await getDocs(timeseriesRef);
+      
+      let shouldStore = true;
+      allDocs.forEach((docSnapshot) => {
+        if (docSnapshot.id.startsWith(`${userId}_${dateString}_`)) {
+          const docData = docSnapshot.data();
+          if (docData.timestamp) {
+            const docTime = new Date(docData.timestamp);
+            if (docTime > fifteenMinutesAgo) {
+              shouldStore = false; // Don't store if we have recent data
+              console.log('📊 Skipping timeseries storage - recent data exists within 15 minutes');
+            }
+          }
+        }
+      });
+      
+      if (shouldStore) {
+        await storeTimeseriesData(userId, today, fitbitDataWithMeta);
+        console.log('📊 Stored new timeseries data point');
+      }
       
       // Update local state
       setFitbitData(fitbitDataWithMeta);
