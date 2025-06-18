@@ -1,0 +1,109 @@
+/* Updated Dashboard.css - Additional styles for settings functionality */
+
+/* User Info Section Updates */
+.user-info {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  flex-wrap: wrap;
+}
+
+.user-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+/* Settings Button */
+.settings-btn {
+  background: rgba(255, 255, 255, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  color: white;
+  padding: 8px 16px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.settings-btn:hover {
+  background: rgba(255, 255, 255, 0.3);
+  transform: translateY(-1px);
+}
+
+/* Updated Logout Button */
+.logout-btn {
+  background: rgba(220, 53, 69, 0.8);
+  border: 1px solid rgba(220, 53, 69, 0.9);
+  color: white;
+  padding: 8px 16px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  transition: all 0.2s ease;
+}
+
+.logout-btn:hover {
+  background: rgba(220, 53, 69, 0.9);
+  transform: translateY(-1px);
+}
+
+/* Quick Actions - Additional Settings Button */
+.action-button.settings {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border: none;
+}
+
+.action-button.settings:hover {
+  background: linear-gradient(135deg, #5a67d8 0%, #6b46c1 100%);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 20px rgba(102, 126, 234, 0.3);
+}
+
+/* Responsive Design Updates */
+@media (max-width: 768px) {
+  .user-info {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+  }
+  
+  .user-actions {
+    order: 2;
+    width: 100%;
+    justify-content: flex-end;
+  }
+  
+  .user-info > span {
+    order: 1;
+  }
+}
+
+@media (max-width: 480px) {
+  .user-actions {
+    flex-direction: column;
+    width: 100%;
+    gap: 8px;
+  }
+  
+  .settings-btn,
+  .logout-btn {
+    width: 100%;
+    justify-content: center;
+    padding: 10px 16px;
+  }
+  
+  .quick-actions {
+    grid-template-columns: 1fr;
+  }
+  
+  .action-button {
+    width: 100%;
+  }
+}
