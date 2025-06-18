@@ -1,0 +1,6 @@
+# .github/workflows/fitbit-sync.yml (already created)
+- name: Run Fitbit sync
+  env:
+    FIREBASE_SERVICE_ACCOUNT_KEY: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_KEY }}
+  run: |
+    python fitbit_sync.py
