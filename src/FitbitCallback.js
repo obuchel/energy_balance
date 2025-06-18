@@ -6,18 +6,41 @@ import { auth, db } from './firebase-config';
 import { doc, setDoc, collection, query, where, getDocs } from 'firebase/firestore';
 
 // Helper function to get the correct redirect URI (must match registration)
-const getRedirectUri = () => {
-  const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
-  const isGitHubPages = window.location.hostname.includes('github.io');
+// Use this EXACT getRedirectUri function in BOTH FitbitCallback.js and RegistrationPage.js
+// This ensures consistency and matches your Fitbit app registration
 
+const getRedirectUri = () => {
+  const hostname = window.location.hostname;
+  const port = window.location.port;
+  
+  console.log('=== REDIRECT URI DEBUG ===');
+  console.log('Hostname:', hostname);
+  console.log('Port:', port);
+  console.log('Full URL:', window.location.href);
+  
+  const isLocalhost = hostname === 'localhost' || hostname === '127.0.0.1';
+  const isGitHubPages = hostname.includes('github.io');
+  
+  let redirectUri;
+  
   if (isLocalhost) {
-    const port = window.location.port || '64556';
-    return `http://localhost:${port}/energy_balance/fitbit-dashboard`;
+    // For localhost development
+    // IMPORTANT: Make sure this matches what you register in dev.fitbit.com for localhost
+    const actualPort = port || '64556';
+    redirectUri = `http://localhost:${actualPort}/energy_balance/fitbit-dashboard/callback`;
   } else if (isGitHubPages) {
-    return 'https://obuchel.github.io/energy_balance/fitbit-dashboard/callback';
+    // For GitHub Pages deployment - THIS MUST EXACTLY MATCH your Fitbit app registration
+    redirectUri = 'https://obuchel.github.io/energy_balance/fitbit-dashboard/callback';
   } else {
-    return `${window.location.origin}/fitbit-dashboard/callback`;
+    // For other deployments
+    redirectUri = `${window.location.origin}/energy_balance/fitbit-dashboard/callback`;
   }
+  
+  console.log('Generated redirect URI:', redirectUri);
+  console.log('This should match your Fitbit app registration EXACTLY');
+  console.log('=== END DEBUG ===');
+  
+  return redirectUri;
 };
 
 const FitbitCallback = () => {

@@ -5,7 +5,7 @@ import FitbitCallback from './FitbitCallback';
 import Dashboard from './components/Dashboard/Dashboard';
 import SignInPage from './components/SignIn/SignInPage';
 import FoodTrackerPage from './components/FoodTracker/FoodTrackerPage';
-import FitbitDashboard from './components/FitbitDashboard/FitbitDashboard'; // Add this import
+import FitbitDashboard from './components/FitbitDashboard/FitbitDashboard';
 import './App.css';
 
 function App() {
@@ -42,7 +42,7 @@ function App() {
   console.log('App rendering, checking routes...');
 
   return (
-    <Router basename={process.env.PUBLIC_URL || ''}>
+    <Router basename="/energy_balance">
       <div className="App">
         <Routes>
           {/* Public routes */}
@@ -64,7 +64,14 @@ function App() {
             } 
           />
           
-          {/* Fitbit OAuth callback route - accessible during registration flow */}
+          {/* CRITICAL: Fitbit OAuth callback route - MUST match your Fitbit app registration */}
+          {/* Your Fitbit app is registered with: https://obuchel.github.io/energy_balance/fitbit-dashboard/callback */}
+          <Route 
+            path="/fitbit-dashboard/callback" 
+            element={<FitbitCallback />} 
+          />
+          
+          {/* Alternative route in case Fitbit uses different path */}
           <Route 
             path="/fitbit/callback" 
             element={<FitbitCallback />} 
@@ -118,6 +125,7 @@ function App() {
                 <h2>Page Not Found</h2>
                 <p>The page you're looking for doesn't exist.</p>
                 <p>Current path: {window.location.pathname}</p>
+                <p>Expected Fitbit callback: /fitbit-dashboard/callback</p>
                 <button onClick={() => window.location.href = '/'}>
                   Go Home
                 </button>

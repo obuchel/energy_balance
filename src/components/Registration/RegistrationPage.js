@@ -310,52 +310,42 @@ const handleDeviceConnection = async () => {
   const selectedDeviceInfo = deviceOptions.find(d => d.id === formData.selectedDevice);
   
   // Enhanced helper function to get the correct redirect URI with debugging
-  const getRedirectUri = () => {
-    const hostname = window.location.hostname;
-    const port = window.location.port;
-    const origin = window.location.origin;
-    const pathname = window.location.pathname;
-    
-    console.log('=== REDIRECT URI DEBUG ===');
-    console.log('Hostname:', hostname);
-    console.log('Port:', port);
-    console.log('Origin:', origin);
-    console.log('Pathname:', pathname);
-    console.log('Full location:', window.location.href);
-    
-    const isLocalhost = hostname === 'localhost' || hostname === '127.0.0.1';
-    const isGitHubPages = hostname.includes('github.io');
-    
-    console.log('Is localhost:', isLocalhost);
-    console.log('Is GitHub Pages:', isGitHubPages);
-    
-    let redirectUri;
-    
-    if (isLocalhost) {
-      // IMPORTANT: You need to match your actual registered localhost URL
-      // Your registered URL is: http://localhost:64556/energy_balance/fitbit-dashboard
-      // But you're running on a different port, so we need to detect the actual port
-      
-      if (port) {
-        redirectUri = `http://localhost:${port}/energy_balance/fitbit-dashboard`;
-      } else {
-        // Fallback if port detection fails
-        redirectUri = `http://localhost:64556/energy_balance/fitbit-dashboard`;
-      }
-    } else if (isGitHubPages) {
-      // For GitHub Pages, this should match your registered URL exactly
-      redirectUri = 'https://obuchel.github.io/energy_balance/fitbit-dashboard/callback';
-    } else {
-      // Fallback for other environments
-      redirectUri = `${origin}/fitbit-dashboard/callback`;
-    }
-    
-    console.log('Generated redirect URI:', redirectUri);
-    console.log('=== END REDIRECT URI DEBUG ===');
-    
-    return redirectUri;
-  };
+// Use this EXACT getRedirectUri function in BOTH FitbitCallback.js and RegistrationPage.js
+// This ensures consistency and matches your Fitbit app registration
+
+const getRedirectUri = () => {
+  const hostname = window.location.hostname;
+  const port = window.location.port;
   
+  console.log('=== REDIRECT URI DEBUG ===');
+  console.log('Hostname:', hostname);
+  console.log('Port:', port);
+  console.log('Full URL:', window.location.href);
+  
+  const isLocalhost = hostname === 'localhost' || hostname === '127.0.0.1';
+  const isGitHubPages = hostname.includes('github.io');
+  
+  let redirectUri;
+  
+  if (isLocalhost) {
+    // For localhost development
+    // IMPORTANT: Make sure this matches what you register in dev.fitbit.com for localhost
+    const actualPort = port || '64556';
+    redirectUri = `http://localhost:${actualPort}/energy_balance/fitbit-dashboard/callback`;
+  } else if (isGitHubPages) {
+    // For GitHub Pages deployment - THIS MUST EXACTLY MATCH your Fitbit app registration
+    redirectUri = 'https://obuchel.github.io/energy_balance/fitbit-dashboard/callback';
+  } else {
+    // For other deployments
+    redirectUri = `${window.location.origin}/energy_balance/fitbit-dashboard/callback`;
+  }
+  
+  console.log('Generated redirect URI:', redirectUri);
+  console.log('This should match your Fitbit app registration EXACTLY');
+  console.log('=== END DEBUG ===');
+  
+  return redirectUri;
+};
   try {
     if (selectedDeviceInfo.connectionType === 'oauth') {
       
