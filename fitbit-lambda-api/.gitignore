@@ -4,3 +4,9 @@
 .env.development.local
 .env.test.local
 .env.production.local.serverless/
+
+# Environment files
+.env*
+.env.local
+.env.*.local
+*~

@@ -99,3 +99,12 @@ public
 tmp/
 temp/
 .vercel
+# Environment files
+.env*
+**/.env*
+*~
+
+# Environment files
+.env*
+**/.env*
+*~
