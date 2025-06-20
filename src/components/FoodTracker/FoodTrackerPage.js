@@ -844,7 +844,7 @@ const initializeFoodLogData = useCallback(async () => {
         console.log('📥 Fetching food database...');
         const q = query(
           collection(db, 'meals'),
-          limit(500)
+          limit(1000)
         );
         
         const snap = await getDocs(q);
