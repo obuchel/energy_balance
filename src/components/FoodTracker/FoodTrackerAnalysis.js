@@ -1175,7 +1175,7 @@ return (
         )}
       </div>
       <div className="bullet-chart-values">
-        {data.value} / {data.rda} {data.unit}
+        {data.value.toFixed(2)} / {data.rda} {data.unit}
         <span className="bullet-chart-percentage" style={{ color: barColor }}>
           ({Math.round(actualWidth)}%)
         </span>
