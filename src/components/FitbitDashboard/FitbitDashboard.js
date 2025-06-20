@@ -17,47 +17,12 @@ const FitbitDashboard = () => {
   const [timeseriesData, setTimeseriesData] = useState([]);
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
   const [timeseriesLoading, setTimeseriesLoading] = useState(false);
+  
   const navigate = useNavigate();
   const location = useLocation();
 
   // Your serverless API base URL
   const API_BASE_URL = 'https://6zfuwxqp01.execute-api.us-east-1.amazonaws.com/dev';
-
-  // 🔥 NEW: Store timeseries data points in Firestore using correct document ID format and structure
-  const storeTimeseriesData = async (userId, date, metrics) => {
-    try {
-      const now = new Date();
-      const timeString = now.toTimeString().slice(0, 8).replace(/:/g, ''); // HHMMSS format
-      const dateString = date.replace(/-/g, ''); // YYYYMMDD format
-      const docId = `${userId}_${dateString}_${timeString}`;
-      
-      const timeseriesRef = doc(db, 'fitbit_timeseries', docId);
-      
-      // Match the actual structure used in your Firestore
-      await setDoc(timeseriesRef, {
-        userId: userId,
-        date: date,
-        metrics: {
-          calories: metrics.calories || 0,
-          steps: metrics.steps || 0,
-          distance: metrics.distance || 0,
-          activeMinutes: metrics.activeMinutes || 0
-        },
-        heartRate: metrics.heartRate || null,
-        sleep: metrics.sleep || null,
-        timestamp: now.toISOString(),
-        syncedAt: now.toISOString(),
-        createdAt: now.toISOString(),
-        dataSource: "fitbit_api"
-      });
-      
-      console.log('✅ Timeseries data point stored with ID:', docId);
-    } catch (error) {
-      console.error('❌ Error storing timeseries data:', error);
-    }
-  };
-
-  // Note: generateSampleTimeseriesData function removed since we're working with real data
 
   // Fetch timeseries data from Firestore using document ID pattern
   const fetchTimeseriesData = useCallback(async (date, userId) => {
@@ -90,17 +55,17 @@ const FitbitDashboard = () => {
             calories = docData.calories;
           }
           
-          // 🔥 FIX: Use actual timestamp and convert to local time
+          // Fix: Use actual timestamp and convert to local time
           let displayTime = '';
           let sortableTime = '';
           
           if (docData.timestamp || docData.syncedAt) {
             const timestamp = new Date(docData.timestamp || docData.syncedAt);
             // Convert to local time for display
-            displayTime = timestamp.toLocaleTimeString('en-US', { 
-              hour: '2-digit', 
+            displayTime = timestamp.toLocaleTimeString('en-US', {
+              hour: '2-digit',
               minute: '2-digit',
-              hour12: false 
+              hour12: false
             });
             sortableTime = timestamp.getTime(); // For sorting
           } else {
@@ -135,8 +100,6 @@ const FitbitDashboard = () => {
       console.log(`📊 Found ${data.length} data points for ${date}:`, data);
       setTimeseriesData(data);
       
-      // Note: Working with real data only, no sample data generation
-      
     } catch (err) {
       console.error('❌ Error fetching timeseries data:', err);
       setTimeseriesData([]);
@@ -155,8 +118,8 @@ const FitbitDashboard = () => {
       
       // Get all documents and check if any match our pattern
       const querySnapshot = await getDocs(timeseriesRef);
-      
       let hasData = false;
+      
       querySnapshot.forEach((doc) => {
         if (doc.id.startsWith(`${userId}_${dateString}_`)) {
           hasData = true;
@@ -198,7 +161,7 @@ const FitbitDashboard = () => {
     console.log('📊 No data found in the specified direction');
   }, [selectedDate, user?.uid, checkDateHasData, fetchTimeseriesData]);
 
-  // 🔥 NEW: Button to go directly to today
+  // Go directly to today
   const goToToday = useCallback(async () => {
     const today = new Date().toISOString().split('T')[0];
     setSelectedDate(today);
@@ -219,15 +182,15 @@ const FitbitDashboard = () => {
           'Content-Type': 'application/json',
         }
       });
-      
+
       if (!response.ok) {
         const errorText = await response.text();
         throw new Error(`API request failed (${response.status}): ${errorText}`);
       }
-      
+
       const data = await response.json();
       console.log('✅ Data received from serverless API:', data);
-      
+
       return {
         heartRate: data.heartRate || null,
         steps: data.steps || 0,
@@ -239,7 +202,6 @@ const FitbitDashboard = () => {
         date: data.date || new Date().toISOString().split('T')[0],
         lastSync: new Date().toISOString(),
       };
-      
     } catch (error) {
       console.error('❌ Error fetching from serverless API:', error);
       throw new Error(`Failed to fetch Fitbit data: ${error.message}`);
@@ -249,6 +211,10 @@ const FitbitDashboard = () => {
   // Refresh Fitbit token using your serverless API
   const refreshFitbitToken = async (refreshToken) => {
     console.log('🔄 Refreshing Fitbit token...');
+    console.log('🐛 DEBUG: Refresh token details:');
+    console.log('- refreshToken exists:', !!refreshToken);
+    console.log('- refreshToken length:', refreshToken?.length || 0);
+    console.log('- API_BASE_URL:', API_BASE_URL);
     
     try {
       const response = await fetch(`${API_BASE_URL}/refresh`, {
@@ -260,47 +226,85 @@ const FitbitDashboard = () => {
           refresh_token: refreshToken
         })
       });
-      
+
+      console.log('🐛 DEBUG: Refresh API response:');
+      console.log('- status:', response.status);
+      console.log('- statusText:', response.statusText);
+      console.log('- ok:', response.ok);
+
       if (!response.ok) {
         const errorText = await response.text();
+        console.log('🐛 DEBUG: Refresh API error response:', errorText);
+        
+        // Try to parse as JSON for more details
+        try {
+          const errorJson = JSON.parse(errorText);
+          console.log('🐛 DEBUG: Parsed error JSON:', errorJson);
+        } catch (parseErr) {
+          console.log('🐛 DEBUG: Error response is not JSON');
+        }
+        
         throw new Error(`Token refresh failed (${response.status}): ${errorText}`);
       }
-      
+
       const tokenData = await response.json();
       console.log('✅ Token refreshed successfully');
-      
+      console.log('🐛 DEBUG: New token data structure:', Object.keys(tokenData));
+
       return {
         accessToken: tokenData.access_token,
         refreshToken: tokenData.refresh_token,
         expiresIn: tokenData.expires_in,
         tokenExpiresAt: new Date(Date.now() + tokenData.expires_in * 1000).toISOString(),
       };
-      
     } catch (error) {
       console.error('❌ Error refreshing token:', error);
+      console.log('🐛 DEBUG: Network or parsing error during refresh');
       throw error;
     }
   };
 
-  // Fetch Fitbit data with automatic token refresh
+  // Enhanced fetch Fitbit data function with debugging
   const fetchFitbitData = useCallback(async (accessToken, userId, refreshToken = null) => {
     try {
       console.log('🔄 Fetching fresh Fitbit data...');
+      
+      // Enhanced debug logging
+      console.log('🐛 DEBUG: Token Debug Info:');
+      console.log('- accessToken exists:', !!accessToken);
+      console.log('- accessToken length:', accessToken?.length || 0);
+      console.log('- refreshToken exists:', !!refreshToken);
+      console.log('- refreshToken length:', refreshToken?.length || 0);
+      console.log('- userId:', userId);
+
       setLoading(true);
       setError('');
-      
+
       // Check if token is expired
       const tokenData = userData?.fitbitData;
+      console.log('🐛 DEBUG: Token Data:');
+      console.log('- tokenData exists:', !!tokenData);
+      console.log('- tokenExpiresAt:', tokenData?.tokenExpiresAt);
+      console.log('- current time:', new Date().toISOString());
+
       const tokenExpired = tokenData?.tokenExpiresAt && new Date() > new Date(tokenData.tokenExpiresAt);
-      
+      console.log('🐛 DEBUG: Token expired?', tokenExpired);
+
       let currentAccessToken = accessToken;
-      
+
       // Refresh token if expired
       if (tokenExpired && refreshToken) {
         try {
           console.log('🔄 Token expired, refreshing...');
+          console.log('🐛 DEBUG: About to call refreshFitbitToken with refreshToken length:', refreshToken.length);
+          
           const newTokenData = await refreshFitbitToken(refreshToken);
           
+          console.log('🐛 DEBUG: Refresh response:');
+          console.log('- new accessToken exists:', !!newTokenData.accessToken);
+          console.log('- new refreshToken exists:', !!newTokenData.refreshToken);
+          console.log('- new tokenExpiresAt:', newTokenData.tokenExpiresAt);
+
           // Update Firestore with new tokens
           await setDoc(doc(db, 'users', userId), {
             fitbitData: {
@@ -310,7 +314,7 @@ const FitbitDashboard = () => {
               tokenExpiresAt: newTokenData.tokenExpiresAt,
             }
           }, { merge: true });
-          
+
           // Update local state
           setUserData(prev => ({
             ...prev,
@@ -321,92 +325,48 @@ const FitbitDashboard = () => {
               tokenExpiresAt: newTokenData.tokenExpiresAt,
             }
           }));
-          
+
           currentAccessToken = newTokenData.accessToken;
           console.log('✅ Token refreshed and saved');
-          
         } catch (refreshError) {
           console.error('❌ Token refresh failed:', refreshError);
+          console.log('🐛 DEBUG: Refresh error details:');
+          console.log('- error message:', refreshError.message);
+          console.log('- error stack:', refreshError.stack);
+          console.log('- refresh token used:', refreshToken?.substring(0, 10) + '...');
+          
           setError('Your Fitbit connection has expired. Please reconnect your account.');
           setStatus('needs_connection');
           return;
         }
       }
-      
+
       // Fetch data using current/refreshed token
+      console.log('🐛 DEBUG: About to fetch data with token length:', currentAccessToken?.length || 0);
       const data = await fetchFitbitDataFromAPI(currentAccessToken);
-      
-      // 🐛 ADD DEBUG LOGGING:
-      console.log('📊 Raw API Response:', data);
-      console.log('📊 Data types:', {
-        steps: typeof data.steps,
-        calories: typeof data.calories,
-        distance: typeof data.distance,
-        activeMinutes: typeof data.activeMinutes
-      });
-      
-      // Add metadata
-      const fitbitDataWithMeta = {
-        ...data,
-        date: new Date().toISOString().split('T')[0],
-        lastSync: new Date().toISOString(),
-      };
-      
-      // 🐛 ADD DEBUG LOGGING:
-      console.log('📊 Final Data with Meta:', fitbitDataWithMeta);
-      
-      // Update Firestore
+
+      // Save the fetched data
       await setDoc(doc(db, 'users', userId), {
-        latestFitbitData: fitbitDataWithMeta,
+        latestFitbitData: data,
         lastUpdated: new Date().toISOString()
       }, { merge: true });
-      
-      // 🔥 FIXED: Only store timeseries data if enough time has passed (avoid duplicates from refreshing)
-      const today = new Date().toISOString().split('T')[0];
-      
-      // Check if we already have a recent data point (within last 15 minutes)
-      const now = new Date();
-      const fifteenMinutesAgo = new Date(now.getTime() - 15 * 60 * 1000);
-      
-      // Check existing timeseries data for today
-      const dateString = today.replace(/-/g, '');
-      const timeseriesRef = collection(db, 'fitbit_timeseries');
-      const allDocs = await getDocs(timeseriesRef);
-      
-      let shouldStore = true;
-      allDocs.forEach((docSnapshot) => {
-        if (docSnapshot.id.startsWith(`${userId}_${dateString}_`)) {
-          const docData = docSnapshot.data();
-          if (docData.timestamp) {
-            const docTime = new Date(docData.timestamp);
-            if (docTime > fifteenMinutesAgo) {
-              shouldStore = false; // Don't store if we have recent data
-              console.log('📊 Skipping timeseries storage - recent data exists within 15 minutes');
-            }
-          }
-        }
-      });
-      
-      if (shouldStore) {
-        await storeTimeseriesData(userId, today, fitbitDataWithMeta);
-        console.log('📊 Stored new timeseries data point');
-      }
-      
-      // Update local state
-      setFitbitData(fitbitDataWithMeta);
-      
-      // 🔥 NEW: Refresh timeseries data if we're viewing today
-      if (selectedDate === today) {
-        setTimeout(() => fetchTimeseriesData(today, userId), 500);
-      }
-      
+
+      setFitbitData(data);
       console.log('✅ Fitbit data updated successfully');
-      
+
+      // Also refresh timeseries data for selected date
+      await fetchTimeseriesData(selectedDate, userId);
+
     } catch (err) {
       console.error('❌ Error fetching Fitbit data:', err);
-      
+      console.log('🐛 DEBUG: Main fetch error details:');
+      console.log('- error message:', err.message);
+      console.log('- error name:', err.name);
+      console.log('- error stack:', err.stack);
+
       // Handle specific error cases
       if (err.message.includes('401') || err.message.includes('Unauthorized')) {
+        console.log('🐛 DEBUG: 401/Unauthorized error detected');
         setError('Your Fitbit connection has expired. Please reconnect your account.');
         setStatus('needs_connection');
       } else {
@@ -422,7 +382,7 @@ const FitbitDashboard = () => {
     try {
       setLoading(true);
       console.log('📊 Loading user data for userId:', userId);
-
+      
       const userDoc = await getDoc(doc(db, 'users', userId));
       
       if (userDoc.exists()) {
@@ -435,10 +395,12 @@ const FitbitDashboard = () => {
         if (data.fitbitData?.accessToken) {
           // User has Fitbit connected
           setStatus('connected');
+          
           // Load existing data from Firestore if available
           if (data.latestFitbitData) {
             setFitbitData(data.latestFitbitData);
           }
+          
           // Load timeseries data for today
           console.log('📊 About to fetch timeseries data for userId:', userId, 'and date:', selectedDate);
           await fetchTimeseriesData(selectedDate, userId);
@@ -468,24 +430,23 @@ const FitbitDashboard = () => {
 
     setConnecting(true);
     setError('');
-    
+
     // Only need client ID for frontend OAuth initiation
     const clientId = process.env.REACT_APP_FITBIT_CLIENT_ID;
-    
     if (!clientId) {
       setError('Fitbit Client ID not configured. Please check environment variables.');
       setConnecting(false);
       return;
     }
-    
+
     // Generate state for CSRF protection
     const state = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
     sessionStorage.setItem('fitbitOAuthState', state);
     sessionStorage.setItem('fitbitAuthStartTime', Date.now().toString());
-    
+
     const redirectUri = window.location.origin + window.location.pathname;
     const scope = 'activity heartrate sleep weight profile';
-    
+
     // Use authorization code flow (more secure than implicit)
     const authUrl = `https://www.fitbit.com/oauth2/authorize?` +
       `response_type=code&` +
@@ -493,21 +454,20 @@ const FitbitDashboard = () => {
       `redirect_uri=${encodeURIComponent(redirectUri)}&` +
       `scope=${encodeURIComponent(scope)}&` +
       `state=${state}`;
-    
+
     console.log('🚀 Starting Fitbit OAuth flow');
     console.log('Auth URL:', authUrl);
     console.log('Redirect URI:', redirectUri);
-    
+
     // Redirect to Fitbit
     window.location.href = authUrl;
   };
 
-  // UPDATED: Secure token exchange through backend (no client secret on frontend)
+  // Secure token exchange through backend
   const exchangeCodeForTokens = async (authCode) => {
     console.log('🔧 Starting secure token exchange...');
-    
     const redirectUri = window.location.origin + window.location.pathname;
-    
+
     try {
       console.log('📡 Calling serverless token exchange endpoint...');
       
@@ -523,18 +483,16 @@ const FitbitDashboard = () => {
           // Note: No client_secret sent from frontend - backend handles this securely
         }),
       });
-      
+
       if (!response.ok) {
         const errorText = await response.text();
         console.error('❌ Token exchange failed:', errorText);
         throw new Error(`Token exchange failed (${response.status}): ${errorText}`);
       }
-      
+
       const tokenData = await response.json();
       console.log('✅ Token exchange successful via secure backend!');
-      
       return tokenData;
-      
     } catch (fetchError) {
       console.error('❌ Error during secure token exchange:', fetchError);
       throw new Error(`Token exchange failed: ${fetchError.message}`);
@@ -546,7 +504,7 @@ const FitbitDashboard = () => {
     try {
       setConnecting(true);
       setError('');
-      
+
       // Verify state parameter
       const storedState = sessionStorage.getItem('fitbitOAuthState');
       if (state !== storedState) {
@@ -554,12 +512,11 @@ const FitbitDashboard = () => {
       }
 
       console.log('🔄 Processing OAuth callback with secure backend...');
-      
+
       // Exchange code for tokens using secure backend
       const tokenData = await exchangeCodeForTokens(code);
-      
       console.log('✅ Token exchange successful! Saving connection...');
-      
+
       // Save tokens to Firestore
       const fitbitData = {
         accessToken: tokenData.access_token,
@@ -580,19 +537,18 @@ const FitbitDashboard = () => {
       // Update local state
       setUserData(prev => ({ ...prev, fitbitData }));
       setStatus('connected');
-      
-      // Clean up session storage
+
+      // Cleanup session storage
       sessionStorage.removeItem('fitbitOAuthState');
       sessionStorage.removeItem('fitbitAuthStartTime');
-      
+
       // Clear URL parameters
       window.history.replaceState({}, document.title, window.location.pathname);
-      
+
       console.log('✅ Fitbit connection completed successfully via secure backend!');
-      
+
       // Fetch initial data
       await fetchFitbitData(tokenData.access_token, user.uid, tokenData.refresh_token);
-      
     } catch (err) {
       console.error('❌ Error processing OAuth:', err);
       setError(`Failed to connect Fitbit: ${err.message}`);
@@ -608,18 +564,16 @@ const FitbitDashboard = () => {
       // 1. Sign out from Firebase
       await signOut(auth);
       
-      // 2. Clear localStorage (add this line)
+      // 2. Clear local storage
       localStorage.removeItem('userData');
       
       // 3. Navigate to login
       navigate('/login');
     } catch (error) {
       console.error('Error signing out:', error);
-      
-      // Even if Firebase logout fails, clear localStorage
+      // Even if Firebase logout fails, clear local storage
       localStorage.removeItem('userData');
       navigate('/login');
-      
       setError('Failed to logout. Please try again.');
     }
   };
@@ -681,7 +635,7 @@ const FitbitDashboard = () => {
       handleOAuthCallback();
     }
   }, [user, location.search, processFitbitOAuth]);
-
+  //console.log(new Date(selectedDate), selectedDate);
   // Timeseries Chart Component
   const TimeseriesChart = () => (
     <div style={{
@@ -864,7 +818,7 @@ const FitbitDashboard = () => {
         }}>
           <div style={{ fontSize: '24px', marginBottom: '10px' }}>📊</div>
           <p style={{ margin: '0', fontSize: '16px' }}>
-            No calorie data available for {new Date(selectedDate).toLocaleDateString()}
+            No calorie data available for {selectedDate}
           </p>
           <p style={{ margin: '8px 0 0 0', fontSize: '14px', color: '#999' }}>
             {selectedDate === new Date().toISOString().split('T')[0] 
@@ -900,7 +854,7 @@ const FitbitDashboard = () => {
           fontSize: '14px',
           color: '#666'
         }}>
-          <strong>📈 Summary for {new Date(selectedDate).toLocaleDateString()}:</strong><br />
+          <strong>📈 Summary for {new Date(fitbitData.lastSync).toLocaleString()}:</strong><br />
           Data points: {timeseriesData.length} | 
           Peak: {Math.max(...timeseriesData.map(d => d.calories)).toLocaleString()} cal | 
           Latest: {timeseriesData[timeseriesData.length - 1]?.calories.toLocaleString()} cal

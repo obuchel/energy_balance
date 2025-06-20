@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { db, auth } from '../../firebase-config';
-import { doc, updateDoc, getDoc } from 'firebase/firestore';
-import { updatePassword, reauthenticateWithCredential, EmailAuthProvider, signOut } from 'firebase/auth';
+import { doc, updateDoc, getDoc, deleteDoc, collection, query, where, getDocs, writeBatch, limit } from 'firebase/firestore';
+import { updatePassword, reauthenticateWithCredential, EmailAuthProvider, signOut, deleteUser } from 'firebase/auth';
 import { 
   ArrowLeft, 
   Save, 
@@ -15,7 +15,9 @@ import {
   Check,
   Eye,
   EyeOff,
-  LogOut
+  LogOut,
+  Trash2,
+  AlertTriangle
 } from 'lucide-react';
 
 const symptomOptions = [
@@ -28,11 +30,16 @@ const PersonalSettings = () => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const [userData, setUserData] = useState(null);
   const [showPasswordSection, setShowPasswordSection] = useState(false);
   const [showCurrentPassword, setShowCurrentPassword] = useState(false);
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [showDeleteConfirmation, setShowDeleteConfirmation] = useState(false);
+  const [showDeletePasswordConfirmation, setShowDeletePasswordConfirmation] = useState(false);
+  const [showDeletePassword, setShowDeletePassword] = useState(false);
+  const [deletePassword, setDeletePassword] = useState('');
   
   const [formData, setFormData] = useState({
     name: '',
@@ -151,6 +158,198 @@ const PersonalSettings = () => {
     }
   };
 
+  // Handle account deletion
+// Enhanced account deletion handler with complete data removal and verification
+const handleDeleteAccount = async () => {
+  if (!deletePassword.trim()) {
+    setErrors({ deletePassword: 'Password is required for account deletion' });
+    return;
+  }
+
+  setDeleting(true);
+  setErrors({});
+  
+  try {
+    const user = auth.currentUser;
+    if (!user) {
+      throw new Error('No authenticated user found');
+    }
+    
+    // Step 1: Reauthenticate user with password
+    console.log('🔐 Reauthenticating user...');
+    const credential = EmailAuthProvider.credential(user.email, deletePassword);
+    await reauthenticateWithCredential(user, credential);
+    
+    // Step 2: Delete all user data from Firestore with complete verification
+    console.log('🗑️ Starting complete data deletion...');
+    await deleteUserDataCompletely(userData);
+    
+    // Step 3: Clear local storage
+    console.log('🧹 Clearing local storage...');
+    localStorage.removeItem('userData');
+    sessionStorage.clear();
+    
+    // Step 4: Delete the Firebase Auth user account (must be last)
+    console.log('🔥 Deleting Firebase Auth account...');
+    await deleteUser(user);
+    console.log('✅ Firebase Auth user deleted successfully');
+    
+    // Step 5: Navigate to confirmation page
+    navigate('/login', { 
+      replace: true,
+      state: { message: 'Your account has been successfully deleted.' }
+    });
+    
+  } catch (error) {
+    console.error('❌ Error deleting account:', error);
+    
+    // Handle specific Firebase Auth errors
+    if (error.code === 'auth/wrong-password') {
+      setErrors({ deletePassword: 'Incorrect password' });
+    } else if (error.code === 'auth/requires-recent-login') {
+      setErrors({ deletePassword: 'Please log out and log back in before deleting your account' });
+    } else if (error.code === 'auth/too-many-requests') {
+      setErrors({ deletePassword: 'Too many failed attempts. Please try again later.' });
+    } else {
+      // For any other errors (including Firestore deletion failures)
+      setErrors({ 
+        deleteAccount: `Failed to delete account: ${error.message}. Please try again or contact support.` 
+      });
+    }
+  } finally {
+    setDeleting(false);
+  }
+};
+
+// Complete user data deletion with batching and verification
+async function deleteUserDataCompletely(userData) {
+  const userId = userData.id;
+  const MAX_BATCH_SIZE = 500; // Firestore batch limit
+  
+  // Collections to delete from
+  const collections = [
+    'timeseries',
+    'energyLogs', 
+    'symptoms',
+    'activities',
+    'devices',
+    'recommendations',
+    'analytics',
+    'settings'
+  ];
+
+  try {
+    console.log(`🚀 Starting complete deletion for user: ${userId}`);
+    
+    // Step 1: Delete all related collection data in batches
+    for (const collectionName of collections) {
+      await deleteCollectionData(collectionName, userId, MAX_BATCH_SIZE);
+    }
+    
+    // Step 2: Delete the main user document
+    await deleteUserDocument(userId);
+    
+    // Step 3: Verify complete deletion
+    await verifyDeletion(userId, collections);
+    
+    console.log('✅ Complete user data deletion verified successfully');
+    return { success: true, message: 'User data completely deleted' };
+    
+  } catch (error) {
+    console.error('❌ Error during user deletion:', error);
+    throw new Error(`Failed to delete user data: ${error.message}`);
+  }
+}
+
+// Delete data from a specific collection with batch management
+async function deleteCollectionData(collectionName, userId, maxBatchSize) {
+  let hasMore = true;
+  
+  while (hasMore) {
+    const batch = writeBatch(db);
+    let batchCount = 0;
+    
+    // Query for documents (limit to batch size)
+    const q = query(
+      collection(db, collectionName),
+      where("userId", "==", userId),
+      limit(maxBatchSize)
+    );
+    
+    const snapshot = await getDocs(q);
+    
+    if (snapshot.empty) {
+      hasMore = false;
+      break;
+    }
+    
+    // Add deletions to batch
+    snapshot.forEach((docSnapshot) => {
+      batch.delete(docSnapshot.ref);
+      batchCount++;
+    });
+    
+    // Commit batch
+    if (batchCount > 0) {
+      await batch.commit();
+      console.log(`📦 Deleted ${batchCount} documents from ${collectionName}`);
+    }
+    
+    // Check if we need another batch
+    hasMore = snapshot.size === maxBatchSize;
+    
+    // Add a small delay between batches to avoid rate limiting
+    if (hasMore) {
+      await new Promise(resolve => setTimeout(resolve, 100));
+    }
+  }
+  
+  console.log(`✅ ${collectionName}: Complete deletion finished`);
+}
+
+// Delete the main user document
+async function deleteUserDocument(userId) {
+  const userDocRef = doc(db, "users", userId);
+  const userDoc = await getDoc(userDocRef);
+  
+  if (userDoc.exists()) {
+    await deleteDoc(userDocRef);
+    console.log('✅ User document deleted');
+  } else {
+    console.log('ℹ️ User document already deleted or does not exist');
+  }
+}
+
+// Verify that all data has been completely deleted
+async function verifyDeletion(userId, collections) {
+  console.log('🔍 Verifying complete deletion...');
+  
+  // Check main user document
+  const userDocRef = doc(db, "users", userId);
+  const userDoc = await getDoc(userDocRef);
+  
+  if (userDoc.exists()) {
+    throw new Error('User document still exists after deletion');
+  }
+  
+  // Check each collection for remaining data
+  for (const collectionName of collections) {
+    const q = query(
+      collection(db, collectionName),
+      where("userId", "==", userId),
+      limit(1)
+    );
+    
+    const snapshot = await getDocs(q);
+    
+    if (!snapshot.empty) {
+      throw new Error(`Found remaining data in ${collectionName} collection`);
+    }
+  }
+  
+  console.log('✅ Deletion verification completed - no remaining data found');
+}
+
   // Handle form input changes
   const handleInputChange = (e) => {
     const { name, value, checked } = e.target;
@@ -186,6 +385,14 @@ const PersonalSettings = () => {
     // Clear related errors
     if (errors[name]) {
       setErrors(prev => ({ ...prev, [name]: '' }));
+    }
+  };
+
+  // Handle delete password change
+  const handleDeletePasswordChange = (e) => {
+    setDeletePassword(e.target.value);
+    if (errors.deletePassword) {
+      setErrors(prev => ({ ...prev, deletePassword: '' }));
     }
   };
 
@@ -702,8 +909,7 @@ const PersonalSettings = () => {
                   name="covidDate"
                   value={formData.covidDate}
                   onChange={handleInputChange}
-                  style={{
-                    padding: '12px 16px',
+                  style={{padding: '12px 16px',
                     border: '2px solid #e2e8f0',
                     borderRadius: '8px',
                     fontSize: '16px',
@@ -745,98 +951,100 @@ const PersonalSettings = () => {
                   <option value="more-than-2-years">More than 2 years</option>
                 </select>
               </div>
+
+              <div style={{ display: 'flex', flexDirection: 'column' }}>
+                <label style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  fontWeight: '500',
+                  color: '#4a5568',
+                  marginBottom: '8px',
+                  fontSize: '14px'
+                }}>
+                  COVID Severity
+                </label>
+                <select
+                  name="severity"
+                  value={formData.severity}
+                  onChange={handleInputChange}
+                  style={{
+                    padding: '12px 16px',
+                    border: '2px solid #e2e8f0',
+                    borderRadius: '8px',
+                    fontSize: '16px',
+                    transition: 'all 0.2s ease'
+                  }}
+                >
+                  <option value="">Select severity</option>
+                  <option value="mild">Mild</option>
+                  <option value="moderate">Moderate</option>
+                  <option value="severe">Severe</option>
+                </select>
+              </div>
             </div>
 
-            <div style={{ display: 'flex', flexDirection: 'column' }}>
+            {/* Symptoms Section */}
+            <div style={{ marginTop: '30px' }}>
               <label style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '8px',
+                display: 'block',
                 fontWeight: '500',
                 color: '#4a5568',
-                marginBottom: '8px',
-                fontSize: '14px'
+                marginBottom: '16px',
+                fontSize: '16px'
               }}>
-                Symptom Severity
-              </label>
-              <select
-                name="severity"
-                value={formData.severity}
-                onChange={handleInputChange}
-                style={{
-                  padding: '12px 16px',
-                  border: '2px solid #e2e8f0',
-                  borderRadius: '8px',
-                  fontSize: '16px',
-                  transition: 'all 0.2s ease'
-                }}
-              >
-                <option value="">Select severity</option>
-                <option value="mild">Mild</option>
-                <option value="moderate">Moderate</option>
-                <option value="severe">Severe</option>
-                <option value="very-severe">Very Severe</option>
-              </select>
-            </div>
-
-            <div style={{ display: 'flex', flexDirection: 'column' }}>
-              <label style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '8px',
-                fontWeight: '500',
-                color: '#4a5568',
-                marginBottom: '8px',
-                fontSize: '14px'
-              }}>
-                Current Symptoms (Select all that apply)
+                Long COVID Symptoms (select all that apply)
               </label>
               <div style={{
                 display: 'grid',
-                gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
-                gap: '10px',
-                marginTop: '10px'
+                gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))',
+                gap: '12px'
               }}>
-                {symptomOptions.map(symptom => (
-                  <label
-                    key={symptom}
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '8px',
-                      padding: '12px 16px',
-                      border: `2px solid ${formData.symptoms.includes(symptom) ? '#667eea' : '#e2e8f0'}`,
-                      borderRadius: '8px',
-                      cursor: 'pointer',
-                      transition: 'all 0.2s ease',
-                      background: formData.symptoms.includes(symptom) ? 'rgba(102, 126, 234, 0.05)' : 'white'
-                    }}
-                  >
+                {symptomOptions.map((symptom) => (
+                  <label key={symptom} style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '10px',
+                    padding: '12px',
+                    border: '2px solid #e2e8f0',
+                    borderRadius: '8px',
+                    cursor: 'pointer',
+                    transition: 'all 0.2s ease',
+                    background: formData.symptoms.includes(symptom) ? '#ebf8ff' : 'white',
+                    borderColor: formData.symptoms.includes(symptom) ? '#667eea' : '#e2e8f0'
+                  }}>
                     <input
                       type="checkbox"
                       name="symptoms"
                       value={symptom}
                       checked={formData.symptoms.includes(symptom)}
                       onChange={handleInputChange}
-                      style={{ margin: '0' }}
+                      style={{
+                        width: '18px',
+                        height: '18px',
+                        accentColor: '#667eea'
+                      }}
                     />
-                    <span style={{ fontSize: '14px', color: '#4a5568' }}>{symptom}</span>
+                    <span style={{
+                      fontSize: '14px',
+                      color: '#4a5568'
+                    }}>
+                      {symptom}
+                    </span>
                   </label>
                 ))}
               </div>
             </div>
 
+            {/* Medical Conditions */}
             <div style={{ display: 'flex', flexDirection: 'column' }}>
               <label style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '8px',
                 fontWeight: '500',
                 color: '#4a5568',
                 marginBottom: '8px',
                 fontSize: '14px'
               }}>
-                Medical Conditions
+                Other Medical Conditions
               </label>
               <textarea
                 name="medicalConditions"
@@ -847,66 +1055,51 @@ const PersonalSettings = () => {
                   border: '2px solid #e2e8f0',
                   borderRadius: '8px',
                   fontSize: '16px',
-                  transition: 'all 0.2s ease',
                   resize: 'vertical',
-                  minHeight: '80px'
+                  minHeight: '100px',
+                  fontFamily: 'inherit',
+                  transition: 'all 0.2s ease'
                 }}
-                rows="3"
-                placeholder="List any pre-existing medical conditions..."
+                placeholder="List any other medical conditions or medications that might affect your energy levels..."
               />
             </div>
 
             {errors.submit && (
-              <div style={{ color: '#f56565', fontSize: '14px', textAlign: 'center' }}>
+              <div style={{
+                background: '#fed7d7',
+                border: '1px solid #feb2b2',
+                color: '#c53030',
+                padding: '12px 16px',
+                borderRadius: '8px',
+                fontSize: '14px'
+              }}>
                 {errors.submit}
               </div>
             )}
 
-            <div style={{
-              display: 'flex',
-              gap: '15px',
-              justifyContent: 'flex-end',
-              marginTop: '20px'
-            }}>
-              <button
-                type="submit"
-                disabled={saving}
-                style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '8px',
-                  padding: '12px 24px',
-                  border: 'none',
-                  borderRadius: '8px',
-                  fontSize: '16px',
-                  fontWeight: '500',
-                  cursor: saving ? 'not-allowed' : 'pointer',
-                  background: '#667eea',
-                  color: 'white',
-                  opacity: saving ? 0.6 : 1,
-                  transition: 'all 0.2s ease'
-                }}
-              >
-                {saving ? (
-                  <>
-                    <div style={{
-                      width: '16px',
-                      height: '16px',
-                      border: '2px solid transparent',
-                      borderTop: '2px solid currentColor',
-                      borderRadius: '50%',
-                      animation: 'spin 1s linear infinite'
-                    }}></div>
-                    Saving...
-                  </>
-                ) : (
-                  <>
-                    <Save size={16} />
-                    Save Changes
-                  </>
-                )}
-              </button>
-            </div>
+            <button
+              type="submit"
+              disabled={saving}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '10px',
+                background: saving ? '#a0aec0' : 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                color: 'white',
+                border: 'none',
+                padding: '16px 32px',
+                borderRadius: '8px',
+                fontSize: '16px',
+                fontWeight: '600',
+                cursor: saving ? 'not-allowed' : 'pointer',
+                transition: 'all 0.2s ease',
+                width: 'fit-content'
+              }}
+            >
+              <Save size={18} />
+              {saving ? 'Saving...' : 'Save Profile'}
+            </button>
           </form>
         </div>
 
@@ -929,193 +1122,223 @@ const PersonalSettings = () => {
               color: '#2d3748',
               margin: '0 0 8px'
             }}>
-              Password & Security
+              Security Settings
             </h2>
-            <p style={{ color: '#718096', margin: '0', lineHeight: '1.6' }}>
-              Keep your account secure by updating your password regularly.
+            <p style={{ color: '#718096', margin: '0 0 20px', lineHeight: '1.6' }}>
+              Change your password to keep your account secure.
             </p>
-          </div>
-
-          {!showPasswordSection ? (
             <button
-              onClick={() => setShowPasswordSection(true)}
+              onClick={() => setShowPasswordSection(!showPasswordSection)}
               style={{
-                display: 'inline-flex',
+                display: 'flex',
                 alignItems: 'center',
                 gap: '8px',
-                padding: '12px 24px',
-                border: 'none',
+                background: 'rgba(102, 126, 234, 0.1)',
+                border: '1px solid #667eea',
+                color: '#667eea',
+                padding: '10px 20px',
                 borderRadius: '8px',
-                fontSize: '16px',
-                fontWeight: '500',
                 cursor: 'pointer',
-                background: '#e2e8f0',
-                color: '#4a5568',
+                fontSize: '14px',
+                fontWeight: '500',
                 transition: 'all 0.2s ease'
               }}
             >
               <Lock size={16} />
-              Change Password
+              {showPasswordSection ? 'Cancel Password Change' : 'Change Password'}
             </button>
-          ) : (
+          </div>
+
+          {showPasswordSection && (
             <form onSubmit={handleChangePassword} style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-              {['currentPassword', 'newPassword', 'confirmPassword'].map((field, index) => {
-                const showPassword = field === 'currentPassword' ? showCurrentPassword : 
-                                   field === 'newPassword' ? showNewPassword : showConfirmPassword;
-                const setShowPassword = field === 'currentPassword' ? setShowCurrentPassword : 
-                                       field === 'newPassword' ? setShowNewPassword : setShowConfirmPassword;
-                const labels = ['Current Password *', 'New Password *', 'Confirm New Password *'];
-                const placeholders = [
-                  'Enter your current password',
-                  'Enter your new password (min 6 characters)',
-                  'Confirm your new password'
-                ];
-
-                return (
-                  <div key={field} style={{ display: 'flex', flexDirection: 'column' }}>
-                    <label style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '8px',
-                      fontWeight: '500',
-                      color: '#4a5568',
-                      marginBottom: '8px',
-                      fontSize: '14px'
-                    }}>
-                      {labels[index]}
-                    </label>
-                    <div style={{ position: 'relative' }}>
-                      <input
-                        type={showPassword ? "text" : "password"}
-                        name={field}
-                        value={passwordData[field]}
-                        onChange={handlePasswordChange}
-                        style={{
-                          padding: '12px 16px',
-                          paddingRight: '45px',
-                          border: `2px solid ${errors[field] ? '#f56565' : '#e2e8f0'}`,
-                          borderRadius: '8px',
-                          fontSize: '16px',
-                          transition: 'all 0.2s ease',
-                          width: '100%',
-                          boxSizing: 'border-box'
-                        }}
-                        placeholder={placeholders[index]}
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setShowPassword(!showPassword)}
-                        style={{
-                          position: 'absolute',
-                          right: '12px',
-                          top: '50%',
-                          transform: 'translateY(-50%)',
-                          background: 'none',
-                          border: 'none',
-                          color: '#a0aec0',
-                          cursor: 'pointer',
-                          padding: '4px',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center'
-                        }}
-                      >
-                        {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
-                      </button>
-                    </div>
-                    {errors[field] && (
-                      <p style={{ color: '#f56565', fontSize: '14px', margin: '5px 0 0' }}>
-                        {errors[field]}
-                      </p>
-                    )}
-                  </div>
-                );
-              })}
-
-              <div style={{
-                display: 'flex',
-                gap: '15px',
-                justifyContent: 'flex-end',
-                marginTop: '20px'
-              }}>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setShowPasswordSection(false);
-                    setPasswordData({
-                      currentPassword: '',
-                      newPassword: '',
-                      confirmPassword: ''
-                    });
-                    setErrors({});
-                  }}
-                  style={{
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: '8px',
-                    padding: '12px 24px',
-                    border: 'none',
-                    borderRadius: '8px',
-                    fontSize: '16px',
-                    fontWeight: '500',
-                    cursor: 'pointer',
-                    background: '#e2e8f0',
-                    color: '#4a5568',
-                    transition: 'all 0.2s ease'
-                  }}
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={saving}
-                  style={{
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: '8px',
-                    padding: '12px 24px',
-                    border: 'none',
-                    borderRadius: '8px',
-                    fontSize: '16px',
-                    fontWeight: '500',
-                    cursor: saving ? 'not-allowed' : 'pointer',
-                    background: '#667eea',
-                    color: 'white',
-                    opacity: saving ? 0.6 : 1,
-                    transition: 'all 0.2s ease'
-                  }}
-                >
-                  {saving ? (
-                    <>
-                      <div style={{
-                        width: '16px',
-                        height: '16px',
-                        border: '2px solid transparent',
-                        borderTop: '2px solid currentColor',
-                        borderRadius: '50%',
-                        animation: 'spin 1s linear infinite'
-                      }}></div>
-                      Updating...
-                    </>
-                  ) : (
-                    <>
-                      <Save size={16} />
-                      Update Password
-                    </>
-                  )}
-                </button>
+              <div style={{ display: 'flex', flexDirection: 'column' }}>
+                <label style={{
+                  fontWeight: '500',
+                  color: '#4a5568',
+                  marginBottom: '8px',
+                  fontSize: '14px'
+                }}>
+                  Current Password *
+                </label>
+                <div style={{ position: 'relative' }}>
+                  <input
+                    type={showCurrentPassword ? 'text' : 'password'}
+                    name="currentPassword"
+                    value={passwordData.currentPassword}
+                    onChange={handlePasswordChange}
+                    style={{
+                      width: '100%',
+                      padding: '12px 50px 12px 16px',
+                      border: `2px solid ${errors.currentPassword ? '#f56565' : '#e2e8f0'}`,
+                      borderRadius: '8px',
+                      fontSize: '16px',
+                      boxSizing: 'border-box',
+                      transition: 'all 0.2s ease'
+                    }}
+                    placeholder="Enter your current password"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowCurrentPassword(!showCurrentPassword)}
+                    style={{
+                      position: 'absolute',
+                      right: '12px',
+                      top: '50%',
+                      transform: 'translateY(-50%)',
+                      background: 'none',
+                      border: 'none',
+                      cursor: 'pointer',
+                      color: '#a0aec0',
+                      padding: '4px'
+                    }}
+                  >
+                    {showCurrentPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+                  </button>
+                </div>
+                {errors.currentPassword && (
+                  <p style={{ color: '#f56565', fontSize: '14px', margin: '5px 0 0' }}>
+                    {errors.currentPassword}
+                  </p>
+                )}
               </div>
+
+              <div style={{ display: 'flex', flexDirection: 'column' }}>
+                <label style={{
+                  fontWeight: '500',
+                  color: '#4a5568',
+                  marginBottom: '8px',
+                  fontSize: '14px'
+                }}>
+                  New Password *
+                </label>
+                <div style={{ position: 'relative' }}>
+                  <input
+                    type={showNewPassword ? 'text' : 'password'}
+                    name="newPassword"
+                    value={passwordData.newPassword}
+                    onChange={handlePasswordChange}
+                    style={{
+                      width: '100%',
+                      padding: '12px 50px 12px 16px',
+                      border: `2px solid ${errors.newPassword ? '#f56565' : '#e2e8f0'}`,
+                      borderRadius: '8px',
+                      fontSize: '16px',
+                      boxSizing: 'border-box',
+                      transition: 'all 0.2s ease'
+                    }}
+                    placeholder="Enter your new password"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowNewPassword(!showNewPassword)}
+                    style={{
+                      position: 'absolute',
+                      right: '12px',
+                      top: '50%',
+                      transform: 'translateY(-50%)',
+                      background: 'none',
+                      border: 'none',
+                      cursor: 'pointer',
+                      color: '#a0aec0',
+                      padding: '4px'
+                    }}
+                  >
+                    {showNewPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+                  </button>
+                </div>
+                {errors.newPassword && (
+                  <p style={{ color: '#f56565', fontSize: '14px', margin: '5px 0 0' }}>
+                    {errors.newPassword}
+                  </p>
+                )}
+              </div>
+
+              <div style={{ display: 'flex', flexDirection: 'column' }}>
+                <label style={{
+                  fontWeight: '500',
+                  color: '#4a5568',
+                  marginBottom: '8px',
+                  fontSize: '14px'
+                }}>
+                  Confirm New Password *
+                </label>
+                <div style={{ position: 'relative' }}>
+                  <input
+                    type={showConfirmPassword ? 'text' : 'password'}
+                    name="confirmPassword"
+                    value={passwordData.confirmPassword}
+                    onChange={handlePasswordChange}
+                    style={{
+                      width: '100%',
+                      padding: '12px 50px 12px 16px',
+                      border: `2px solid ${errors.confirmPassword ? '#f56565' : '#e2e8f0'}`,
+                      borderRadius: '8px',
+                      fontSize: '16px',
+                      boxSizing: 'border-box',
+                      transition: 'all 0.2s ease'
+                    }}
+                    placeholder="Confirm your new password"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                    style={{
+                      position: 'absolute',
+                      right: '12px',
+                      top: '50%',
+                      transform: 'translateY(-50%)',
+                      background: 'none',
+                      border: 'none',
+                      cursor: 'pointer',
+                      color: '#a0aec0',
+                      padding: '4px'
+                    }}
+                  >
+                    {showConfirmPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+                  </button>
+                </div>
+                {errors.confirmPassword && (
+                  <p style={{ color: '#f56565', fontSize: '14px', margin: '5px 0 0' }}>
+                    {errors.confirmPassword}
+                  </p>
+                )}
+              </div>
+
+              <button
+                type="submit"
+                disabled={saving}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '10px',
+                  background: saving ? '#a0aec0' : 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                  color: 'white',
+                  border: 'none',
+                  padding: '16px 32px',
+                  borderRadius: '8px',
+                  fontSize: '16px',
+                  fontWeight: '600',
+                  cursor: saving ? 'not-allowed' : 'pointer',
+                  transition: 'all 0.2s ease',
+                  width: 'fit-content'
+                }}
+              >
+                <Lock size={18} />
+                {saving ? 'Updating...' : 'Update Password'}
+              </button>
             </form>
           )}
         </div>
 
-        {/* Device Information Section (Read-only) */}
+        {/* Account Deletion Section */}
         <div style={{
           background: 'white',
           borderRadius: '12px',
           padding: '30px',
           marginBottom: '30px',
-          boxShadow: '0 8px 25px rgba(0, 0, 0, 0.1)'
+          boxShadow: '0 8px 25px rgba(0, 0, 0, 0.1)',
+          border: '2px solid #fed7d7'
         }}>
           <div style={{
             marginBottom: '30px',
@@ -1125,66 +1348,260 @@ const PersonalSettings = () => {
             <h2 style={{
               fontSize: '1.5rem',
               fontWeight: '600',
-              color: '#2d3748',
-              margin: '0 0 8px'
+              color: '#c53030',
+              margin: '0 0 8px',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '10px'
             }}>
-              Device Information
+              <AlertTriangle size={24} />
+              Danger Zone
             </h2>
-            <p style={{ color: '#718096', margin: '0', lineHeight: '1.6' }}>
-              Your connected devices and data sources.
+            <p style={{ color: '#718096', margin: '0 0 20px', lineHeight: '1.6' }}>
+              Once you delete your account, there is no going back. This action will permanently delete your account and all associated data.
             </p>
+            <button
+              onClick={() => setShowDeleteConfirmation(true)}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                background: '#fed7d7',
+                border: '1px solid #f56565',
+                color: '#c53030',
+                padding: '10px 20px',
+                borderRadius: '8px',
+                cursor: 'pointer',
+                fontSize: '14px',
+                fontWeight: '500',
+                transition: 'all 0.2s ease'
+              }}
+            >
+              <Trash2 size={16} />
+              Delete Account
+            </button>
           </div>
 
-          <div style={{
-            display: 'flex',
-            alignItems: 'center',
-            padding: '20px',
-            border: '2px solid #e2e8f0',
-            borderRadius: '8px',
-            background: '#f7fafc'
-          }}>
-            <div style={{ flex: 1 }}>
+          {/* Delete Confirmation Dialog */}
+          {showDeleteConfirmation && (
+            <div style={{
+              background: '#fed7d7',
+              border: '1px solid #f56565',
+              borderRadius: '8px',
+              padding: '20px',
+              marginTop: '20px'
+            }}>
               <h3 style={{
-                fontSize: '1.1rem',
-                fontWeight: '600',
-                color: '#2d3748',
-                margin: '0 0 5px',
-                textTransform: 'capitalize'
+                color: '#c53030',
+                margin: '0 0 15px',
+                fontSize: '18px',
+                fontWeight: '600'
               }}>
-                {userData?.selectedDevice || 'No device connected'}
+                Are you absolutely sure?
               </h3>
-              <p style={{ fontSize: '14px', color: '#718096', margin: '0 0 3px' }}>
-                Status: {userData?.deviceConnected ? 'Connected' : 'Not connected'}
+              <p style={{
+                color: '#744210',
+                margin: '0 0 20px',
+                lineHeight: '1.6'
+              }}>
+                This action cannot be undone. This will permanently delete your account and remove all your data from our servers.
               </p>
-              {userData?.lastUpdated && (
-                <p style={{ fontSize: '14px', color: '#718096', margin: '0' }}>
-                  Last updated: {new Date(userData.lastUpdated).toLocaleDateString()}
-                </p>
-              )}
+              <div style={{
+                display: 'flex',
+                gap: '10px',
+                flexWrap: 'wrap'
+              }}>
+                <button
+                  onClick={() => setShowDeletePasswordConfirmation(true)}
+                  disabled={deleting}
+                  style={{
+                    background: '#c53030',
+                    color: 'white',
+                    border: 'none',
+                    padding: '12px 24px',
+                    borderRadius: '6px',
+                    cursor: deleting ? 'not-allowed' : 'pointer',
+                    fontSize: '14px',
+                    fontWeight: '600',
+                    opacity: deleting ? 0.6 : 1
+                  }}
+                >
+                  {deleting ? 'Deleting...' : 'Yes, delete my account'}
+                </button>
+                <button
+                  onClick={() => setShowDeleteConfirmation(false)}
+                  disabled={deleting}
+                  style={{
+                    background: 'white',
+                    color: '#4a5568',
+                    border: '1px solid #e2e8f0',
+                    padding: '12px 24px',
+                    borderRadius: '6px',
+                    cursor: deleting ? 'not-allowed' : 'pointer',
+                    fontSize: '14px',
+                    fontWeight: '600'
+                  }}
+                >
+                  Cancel
+                </button>
+              </div>
             </div>
-          </div>
+          )}
+
+          {/* Password Confirmation for Deletion */}
+          {showDeletePasswordConfirmation && (
+            <div style={{
+              background: '#fed7d7',
+              border: '1px solid #f56565',
+              borderRadius: '8px',
+              padding: '20px',
+              marginTop: '20px'
+            }}>
+              <h3 style={{
+                color: '#c53030',
+                margin: '0 0 15px',
+                fontSize: '18px',
+                fontWeight: '600'
+              }}>
+                Confirm Your Password
+              </h3>
+              <p style={{
+                color: '#744210',
+                margin: '0 0 20px',
+                lineHeight: '1.6'
+              }}>
+                Please enter your password to confirm account deletion.
+              </p>
+              
+              <div style={{ marginBottom: '20px' }}>
+                <div style={{ position: 'relative' }}>
+                  <input
+                    type={showDeletePassword ? 'text' : 'password'}
+                    value={deletePassword}
+                    onChange={handleDeletePasswordChange}
+                    style={{
+                      width: '100%',
+                      padding: '12px 50px 12px 16px',
+                      border: `2px solid ${errors.deletePassword ? '#f56565' : '#e2e8f0'}`,
+                      borderRadius: '8px',
+                      fontSize: '16px',
+                      boxSizing: 'border-box',
+                      transition: 'all 0.2s ease'
+                    }}
+                    placeholder="Enter your password"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowDeletePassword(!showDeletePassword)}
+                    style={{
+                      position: 'absolute',
+                      right: '12px',
+                      top: '50%',
+                      transform: 'translateY(-50%)',
+                      background: 'none',
+                      border: 'none',
+                      cursor: 'pointer',
+                      color: '#a0aec0',
+                      padding: '4px'
+                    }}
+                  >
+                    {showDeletePassword ? <EyeOff size={20} /> : <Eye size={20} />}
+                  </button>
+                </div>
+                {errors.deletePassword && (
+                  <p style={{ color: '#f56565', fontSize: '14px', margin: '5px 0 0' }}>
+                    {errors.deletePassword}
+                  </p>
+                )}
+                {errors.deleteAccount && (
+                  <p style={{ color: '#f56565', fontSize: '14px', margin: '5px 0 0' }}>
+                    {errors.deleteAccount}
+                  </p>
+                )}
+              </div>
+
+              <div style={{
+                display: 'flex',
+                gap: '10px',
+                flexWrap: 'wrap'
+              }}>
+                <button
+                  onClick={handleDeleteAccount}
+                  disabled={deleting || !deletePassword.trim()}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                    background: deleting || !deletePassword.trim() ? '#fed7d7' : '#c53030',
+                    color: 'white',
+                    border: 'none',
+                    padding: '12px 24px',
+                    borderRadius: '6px',
+                    cursor: deleting || !deletePassword.trim() ? 'not-allowed' : 'pointer',
+                    fontSize: '14px',
+                    fontWeight: '600',
+                    opacity: deleting || !deletePassword.trim() ? 0.6 : 1
+                  }}
+                >
+                  <Trash2 size={16} />
+                  {deleting ? 'Deleting Account...' : 'Delete Account Permanently'}
+                </button>
+                <button
+                  onClick={() => {
+                    setShowDeletePasswordConfirmation(false);
+                    setShowDeleteConfirmation(false);
+                    setDeletePassword('');
+                    setErrors(prev => ({ ...prev, deletePassword: '', deleteAccount: '' }));
+                  }}
+                  disabled={deleting}
+                  style={{
+                    background: 'white',
+                    color: '#4a5568',
+                    border: '1px solid #e2e8f0',
+                    padding: '12px 24px',
+                    borderRadius: '6px',
+                    cursor: deleting ? 'not-allowed' : 'pointer',
+                    fontSize: '14px',
+                    fontWeight: '600'
+                  }}
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
-      <style>
-        {`
-          @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
+      {/* CSS Animation for success message */}
+      <style>{`
+        @keyframes spin {
+          0% { transform: rotate(0deg); }
+          100% { transform: rotate(360deg); }
+        }
+        
+        @keyframes slideDown {
+          from {
+            opacity: 0;
+            transform: translateY(-10px);
           }
-          
-          @keyframes slideDown {
-            0% {
-              opacity: 0;
-              transform: translateY(-10px);
-            }
-            100% {
-              opacity: 1;
-              transform: translateY(0);
-            }
+          to {
+            opacity: 1;
+            transform: translateY(0);
           }
-        `}
-      </style>
+        }
+        
+        input:focus, select:focus, textarea:focus {
+          outline: none;
+          border-color: #667eea !important;
+          box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+        
+        button:hover:not(:disabled) {
+          transform: translateY(-1px);
+          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        }
+      `}</style>
     </div>
   );
 };

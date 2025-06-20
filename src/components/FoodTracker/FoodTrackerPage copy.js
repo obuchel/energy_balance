@@ -108,6 +108,7 @@ const handleLogout = async () => {
     navigate('/login', { replace: true });
   }
 };
+
   // Delete Confirmation Modal Component
   const DeleteConfirmModal = ({ entryId, entryName, onConfirm, onCancel }) => (
     <div className="modal-overlay">
@@ -137,6 +138,7 @@ const handleLogout = async () => {
       </div>
     </div>
   );
+
   // Handle delete entry
   const handleDeleteEntry = async (entryId) => {
     if (!currentUser || !entryId) return;
@@ -161,6 +163,7 @@ const handleLogout = async () => {
       setDeleteConfirmId(null);
     }
   };
+
   // Handle edit entry
   const handleEditEntry = (entry) => {
     // Pre-populate the form with entry data
@@ -188,209 +191,298 @@ const handleLogout = async () => {
     setTab('Add Food');
   };
 
-
-
-  
-
-
-// Update the handleLogFood function to handle both add and edit
-const handleLogFood = async () => {
-  if (!currentUser || !currentUser.id) {
-    setError('Please log in to save your meals');
-    return;
-  }
-
-  setLoading(true);
-  setError('');
-  setSuccess('');
-  
-  try {
-    if (!fields.name) {
-      throw new Error('Food name is required');
+  // Update the handleLogFood function to handle both add and edit
+  const handleLogFood = async () => {
+    if (!currentUser || !currentUser.id) {
+      setError('Please log in to save your meals');
+      return;
     }
+
+    setLoading(true);
+    setError('');
+    setSuccess('');
     
-    const entryData = {
-      name: fields.name,
-      protein: parseFloat(fields.protein) || 0,
-      carbs: parseFloat(fields.carbs) || 0,
-      fat: parseFloat(fields.fat) || 0,
-      calories: parseFloat(fields.calories) || 0,
-      serving: parseFloat(fields.serving) || 100,
-      micronutrients: fields.micronutrients || {},
-      mealType,
-      time,
-      date,
-      longCovidAdjust,
-      longCovidBenefits: fields.longCovidBenefits || [],
-      longCovidCautions: fields.longCovidCautions || [],
-      longCovidRelevance: fields.longCovidRelevance || {},
-      mealId: selectedMeal?.id || null
-    };
-    
-    entryData.metabolicEfficiency = calculateMetabolicEfficiency(entryData);
-    
-    if (editingEntry) {
-      // Update existing entry
-      await updateDoc(
-        doc(db, 'users', currentUser.id, 'food_journal', editingEntry.id), 
-        {
-          ...entryData,
-          updatedAt: Timestamp.now()
-        }
-      );
+    try {
+      if (!fields.name) {
+        throw new Error('Food name is required');
+      }
       
-      // Update local state
-      setFoodLog(prevLog => 
-        prevLog.map(entry => 
-          entry.id === editingEntry.id 
-            ? { ...entry, ...entryData, id: editingEntry.id }
-            : entry
-        )
-      );
+      const entryData = {
+        name: fields.name,
+        protein: parseFloat(fields.protein) || 0,
+        carbs: parseFloat(fields.carbs) || 0,
+        fat: parseFloat(fields.fat) || 0,
+        calories: parseFloat(fields.calories) || 0,
+        serving: parseFloat(fields.serving) || 100,
+        micronutrients: fields.micronutrients || {},
+        mealType,
+        time,
+        date,
+        longCovidAdjust,
+        longCovidBenefits: fields.longCovidBenefits || [],
+        longCovidCautions: fields.longCovidCautions || [],
+        longCovidRelevance: fields.longCovidRelevance || {},
+        mealId: selectedMeal?.id || null
+      };
       
-      setSuccess('Food entry updated successfully!');
-      setEditingEntry(null);
+      entryData.metabolicEfficiency = calculateMetabolicEfficiency(entryData);
       
-    } else {
-      // Add new entry
-      entryData.createdAt = Timestamp.now();
+      if (editingEntry) {
+        // Update existing entry
+        await updateDoc(
+          doc(db, 'users', currentUser.id, 'food_journal', editingEntry.id), 
+          {
+            ...entryData,
+            updatedAt: Timestamp.now()
+          }
+        );
+        
+        // Update local state
+        setFoodLog(prevLog => 
+          prevLog.map(entry => 
+            entry.id === editingEntry.id 
+              ? { ...entry, ...entryData, id: editingEntry.id }
+              : entry
+          )
+        );
+        
+        setSuccess('Food entry updated successfully!');
+        setEditingEntry(null);
+        
+      } else {
+        // Add new entry
+        entryData.createdAt = Timestamp.now();
+        
+        const docRef = await addDoc(
+          collection(db, 'users', currentUser.id, 'food_journal'), 
+          entryData
+        );
+        
+        // Update local state for immediate feedback
+        const newEntry = { id: docRef.id, ...entryData };
+        setFoodLog(prevLog => [newEntry, ...prevLog]);
+        
+        setSuccess('Food logged successfully!');
+      }
       
-      const docRef = await addDoc(
-        collection(db, 'users', currentUser.id, 'food_journal'), 
-        entryData
-      );
+      // Reset form
+      setFields({});
+      setSelectedMeal(null);
+      setSearch('');
       
-      // Update local state for immediate feedback
-      const newEntry = { id: docRef.id, ...entryData };
-      setFoodLog(prevLog => [newEntry, ...prevLog]);
-      
-      setSuccess('Food logged successfully!');
+    } catch (err) {
+      console.error('Error logging food:', err);
+      setError(`Failed to ${editingEntry ? 'update' : 'log'} food: ${err.message}`);
+    } finally {
+      setLoading(false);
     }
-    
-    // Reset form
+  };
+
+  // Cancel edit mode
+  const handleCancelEdit = () => {
+    setEditingEntry(null);
     setFields({});
     setSelectedMeal(null);
     setSearch('');
-    
-  } catch (err) {
-    console.error('Error logging food:', err);
-    setError(`Failed to ${editingEntry ? 'update' : 'log'} food: ${err.message}`);
-  } finally {
-    setLoading(false);
-  }
-};
+    setSuccess('');
+    setError('');
+  };
 
-// Cancel edit mode
-const handleCancelEdit = () => {
-  setEditingEntry(null);
-  setFields({});
-  setSelectedMeal(null);
-  setSearch('');
-  setSuccess('');
-  setError('');
-};
-
-// Fetch user profile from Firestore
-const fetchUserProfile = async (uid) => {
-  try {
-    const userDocRef = doc(db, 'users', uid);
-    const userDoc = await getDoc(userDocRef);
-    
-    if (userDoc.exists()) {
-      const userData = userDoc.data();
-      // Use only the data from the database, no defaults
-      setUserProfile(userData);
-    } else {
-      console.log('No user profile found in database');
-      // Set to null or empty object if no profile exists
-      setUserProfile(null);
+  // Fetch user profile from Firestore
+  const fetchUserProfile = async (uid) => {
+    try {
+      const userDocRef = doc(db, 'users', uid);
+      const userDoc = await getDoc(userDocRef);
+      
+      if (userDoc.exists()) {
+        const userData = userDoc.data();
+        setUserProfile({
+          age: userData.age || 30,
+          gender: userData.gender || 'female',
+          weight: userData.weight || 65,
+          height: userData.height || 165,
+          activityLevel: userData.activityLevel || 'moderate',
+          hasLongCovid: userData.hasLongCovid || false,
+          longCovidSeverity: userData.longCovidSeverity || 'moderate',
+          ...userData
+        });
+      } else {
+        console.log('No user profile found, using defaults');
+      }
+    } catch (err) {
+      console.error("Error fetching user profile:", err);
+      setError('Failed to load user profile');
     }
-  } catch (err) {
-    console.error("Error fetching user profile:", err);
-    setError('Failed to load user profile');
-    setUserProfile(null);
-  }
-};
+  };
 
-// Authentication check function
-const checkUserAuthentication = useCallback(async () => {
-  try {
-    const storedUserData = localStorage.getItem('userData');
-    
-    if (!storedUserData) {
+  // Authentication check function
+  const checkUserAuthentication = useCallback(async () => {
+    try {
+      const storedUserData = localStorage.getItem('userData');
+      
+      if (!storedUserData) {
+        navigate('/login');
+        return;
+      }
+      
+      const parsedUserData = JSON.parse(storedUserData);
+      setCurrentUser(parsedUserData);
+      
+      if (parsedUserData.id) {
+        await fetchUserProfile(parsedUserData.id);
+      } else {
+        setUserProfile(prevProfile => ({
+          ...prevProfile,
+          ...parsedUserData
+        }));
+      }
+      
+    } catch (error) {
+      console.error("Error checking authentication:", error);
       navigate('/login');
-      return;
+    } finally {
+      setAuthLoading(false);
     }
+  }, [navigate]);
+
+  // Authentication effect
+  useEffect(() => {
+    checkUserAuthentication();
+  }, [checkUserAuthentication]);
+
+  // Create sample food data
+  const createSampleFoodData = useCallback(async () => {
+    if (!currentUser || !currentUser.id) return;
     
-    const parsedUserData = JSON.parse(storedUserData);
-    setCurrentUser(parsedUserData);
-    
-    if (parsedUserData.id) {
-      // Only fetch from database if user has an ID
-      await fetchUserProfile(parsedUserData.id);
-    } else {
-      console.log('No user ID found - user profile not loaded');
-      setUserProfile(null);
+    const today = new Date().toISOString().split('T')[0];
+    const yesterday = new Date();
+    yesterday.setDate(yesterday.getDate() - 1);
+
+    const sampleEntries = [
+      {
+        name: 'Greek Yogurt with Berries',
+        protein: 20,
+        carbs: 35,
+        fat: 8,
+        calories: 320,
+        serving: 200,
+        micronutrients: {
+          vitamin_c: { value: 25, unit: 'mg' },
+          calcium: { value: 200, unit: 'mg' },
+          vitamin_b12: { value: 1.2, unit: 'mcg' },
+        },
+        mealType: 'Breakfast',
+        time: '8:00 AM',
+        date: today,
+        longCovidAdjust: userProfile.hasLongCovid,
+        longCovidBenefits: ['High protein for recovery', 'Probiotics for gut health'],
+        longCovidCautions: [],
+        longCovidRelevance: { antiInflammatory: 'moderate' },
+        metabolicEfficiency: 85,
+        createdAt: Timestamp.now()
+      },
+      {
+        name: 'Quinoa Salad with Grilled Chicken',
+        protein: 32,
+        carbs: 42,
+        fat: 15,
+        calories: 450,
+        serving: 300,
+        micronutrients: {
+          iron: { value: 3.5, unit: 'mg' },
+          magnesium: { value: 60, unit: 'mg' },
+          vitamin_b6: { value: 0.8, unit: 'mg' },
+          folate: { value: 80, unit: 'mcg' }
+        },
+        mealType: 'Lunch',
+        time: '12:30 PM',
+        date: today,
+        longCovidAdjust: userProfile.hasLongCovid,
+        longCovidBenefits: ['Complete protein', 'Anti-inflammatory nutrients'],
+        longCovidCautions: [],
+        longCovidRelevance: { antiInflammatory: 'high' },
+        metabolicEfficiency: 88,
+        createdAt: Timestamp.now()
+      },
+      {
+        name: 'Grilled Salmon with Sweet Potato',
+        protein: 38,
+        carbs: 30,
+        fat: 28,
+        calories: 520,
+        serving: 250,
+        micronutrients: {
+          vitamin_d: { value: 15, unit: 'mcg' },
+          vitamin_b12: { value: 3.2, unit: 'mcg' },
+          selenium: { value: 45, unit: 'mcg' },
+          vitamin_a: { value: 300, unit: 'mcg' }
+        },
+        mealType: 'Dinner',
+        time: '7:00 PM',
+        date: today,
+        longCovidAdjust: userProfile.hasLongCovid,
+        longCovidBenefits: ['Omega-3 fatty acids', 'High vitamin D', 'Anti-inflammatory'],
+        longCovidCautions: [],
+        longCovidRelevance: { 
+          antiInflammatory: 'high',
+          brainFogImpact: 'positive',
+          energyImpact: 'positive'
+        },
+        metabolicEfficiency: 90,
+        createdAt: Timestamp.now()
+      }
+    ];
+
+    try {
+      const promises = sampleEntries.map(entry => 
+        addDoc(collection(db, 'users', currentUser.id, 'food_journal'), entry)
+      );
+      
+      await Promise.all(promises);
+      
+      setFoodLog(sampleEntries.map((entry, index) => ({
+        id: `sample_${index}`,
+        ...entry
+      })));
+      
+      console.log('Sample food data created successfully');
+      
+    } catch (error) {
+      console.error('Error creating sample data:', error);
+      
+      setFoodLog(sampleEntries.map((entry, index) => ({
+        id: `sample_${index}`,
+        ...entry
+      })));
     }
-    
-  } catch (error) {
-    console.error("Error checking authentication:", error);
-    navigate('/login');
-  } finally {
-    setAuthLoading(false);
-  }
-}, [navigate]);
+  }, [currentUser, userProfile.hasLongCovid]);
 
-// Authentication effect
-useEffect(() => {
-  checkUserAuthentication();
-}, [checkUserAuthentication]);
-
-// Initialize food log data - FIXED VERSION
-const initializeFoodLogData = useCallback(async () => {
-  if (!currentUser || !currentUser.id) return;
-  
-  try {
-    const q = query(
-      collection(db, 'users', currentUser.id, 'food_journal'),
-      orderBy('date', 'desc'),
-      orderBy('createdAt', 'desc'),
-      limit(20)
-    );
+  // Initialize food log data
+  const initializeFoodLogData = useCallback(async () => {
+    if (!currentUser || !currentUser.id) return;
     
-    const snap = await getDocs(q);
-    const entries = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-    
-    // Simply set the entries (empty array if no data exists)
-    setFoodLog(entries);
-    
-    if (entries.length === 0) {
-      console.log('No food log entries found - showing empty state');
-    } else {
-      console.log(`Loaded ${entries.length} food log entries`);
+    try {
+      const q = query(
+        collection(db, 'users', currentUser.id, 'food_journal'),
+        orderBy('date', 'desc'),
+        orderBy('createdAt', 'desc'),
+        limit(20)
+      );
+      
+      const snap = await getDocs(q);
+      const entries = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      
+      if (entries.length > 0) {
+        setFoodLog(entries);
+      } else {
+        await createSampleFoodData();
+      }
+      
+    } catch (error) {
+      console.error('Error initializing food log data:', error);
+      await createSampleFoodData();
     }
-    
-  } catch (error) {
-    console.error('Error loading food log data:', error);
-    setError('Failed to load food log data');
-    // Set empty array on error to avoid undefined state
-    setFoodLog([]);
-  }
-}, [currentUser]);
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+  }, [currentUser, createSampleFoodData]);
 
   // Initialize food log when user is authenticated
   useEffect(() => {

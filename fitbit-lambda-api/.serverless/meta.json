@@ -110,7 +110,7 @@
               "Properties": {
                 "Code": {
                   "S3Bucket": "serverless-framework-deployments-us-east-1-d7d005ed-5bf5",
-                  "S3Key": "serverless/fitbit-lambda-api/dev/1750261989866-2025-06-18T15:53:09.866Z/fitbit-lambda-api.zip"
+                  "S3Key": "serverless/fitbit-lambda-api/dev/1750370669817-2025-06-19T22:04:29.817Z/fitbit-lambda-api.zip"
                 },
                 "Handler": "handlers/fitbitData.handler",
                 "Runtime": "nodejs22.x",
@@ -136,18 +136,18 @@
             },
             "RefreshTokenLambdaFunction": "<REDACTED>",
             "TokenExchangeLambdaFunction": "<REDACTED>",
-            "GetFitbitDataLambdaVersionDnTc47W2oVMcjxWLLTUjE9BdjPYrDHa1eDLrIenys": {
+            "GetFitbitDataLambdaVersionjbPHI811TTHs06R2eUoF7JMXXEOgCLBkAtwnRD4": {
               "Type": "AWS::Lambda::Version",
               "DeletionPolicy": "Retain",
               "Properties": {
                 "FunctionName": {
                   "Ref": "GetFitbitDataLambdaFunction"
                 },
-                "CodeSha256": "LPpqtzX2OiJjlR71pdzWIMsrloZudtu1Rxzt/H3eKng="
+                "CodeSha256": "RoJJETYCv/T2o1alwXQodpYLNcmTLnHCqO4t+8G/NW0="
               }
             },
-            "RefreshTokenLambdaVersionyclu6okN8HpxVgsp6E2yKr9NEgsmzH8Jo6dbZBHycZM": "<REDACTED>",
-            "TokenExchangeLambdaVersionqcRUMSGf4UvWPz57TMY8OuVoEcPJ2UuNcyZJ2Agh0": "<REDACTED>",
+            "RefreshTokenLambdaVersionBf5Z0sxPflX6Wo3nIrneakO6G1hpRfL2xATR6jxVbKU": "<REDACTED>",
+            "TokenExchangeLambdaVersionU1i0eh99yKX3g55pV1ML0dDPakzhq2Go73KIDEpA": "<REDACTED>",
             "ApiGatewayRestApi": {
               "Type": "AWS::ApiGateway::RestApi",
               "Properties": {
@@ -375,7 +375,7 @@
               ]
             },
             "ApiGatewayMethodTokenDashexchangePost": "<REDACTED>",
-            "ApiGatewayDeployment1750261984572": {
+            "ApiGatewayDeployment1750370664908": {
               "Type": "AWS::ApiGateway::Deployment",
               "Properties": {
                 "RestApiId": {
@@ -468,7 +468,7 @@
             "GetFitbitDataLambdaFunctionQualifiedArn": {
               "Description": "Current Lambda function version",
               "Value": {
-                "Ref": "GetFitbitDataLambdaVersionDnTc47W2oVMcjxWLLTUjE9BdjPYrDHa1eDLrIenys"
+                "Ref": "GetFitbitDataLambdaVersionjbPHI811TTHs06R2eUoF7JMXXEOgCLBkAtwnRD4"
               },
               "Export": {
                 "Name": "sls-fitbit-lambda-api-dev-GetFitbitDataLambdaFunctionQualifiedArn"
@@ -541,7 +541,7 @@
           "timeout": 6,
           "runtime": "nodejs22.x",
           "vpc": {},
-          "versionLogicalId": "GetFitbitDataLambdaVersionDnTc47W2oVMcjxWLLTUjE9BdjPYrDHa1eDLrIenys"
+          "versionLogicalId": "GetFitbitDataLambdaVersionjbPHI811TTHs06R2eUoF7JMXXEOgCLBkAtwnRD4"
         },
         "refreshToken": "<REDACTED>",
         "tokenExchange": "<REDACTED>"
@@ -691,7 +691,7 @@
             "Properties": {
               "Code": {
                 "S3Bucket": "serverless-framework-deployments-us-east-1-d7d005ed-5bf5",
-                "S3Key": "serverless/fitbit-lambda-api/dev/1750261989866-2025-06-18T15:53:09.866Z/fitbit-lambda-api.zip"
+                "S3Key": "serverless/fitbit-lambda-api/dev/1750370669817-2025-06-19T22:04:29.817Z/fitbit-lambda-api.zip"
               },
               "Handler": "handlers/fitbitData.handler",
               "Runtime": "nodejs22.x",
@@ -717,18 +717,18 @@
           },
           "RefreshTokenLambdaFunction": "<REDACTED>",
           "TokenExchangeLambdaFunction": "<REDACTED>",
-          "GetFitbitDataLambdaVersionDnTc47W2oVMcjxWLLTUjE9BdjPYrDHa1eDLrIenys": {
+          "GetFitbitDataLambdaVersionjbPHI811TTHs06R2eUoF7JMXXEOgCLBkAtwnRD4": {
             "Type": "AWS::Lambda::Version",
             "DeletionPolicy": "Retain",
             "Properties": {
               "FunctionName": {
                 "Ref": "GetFitbitDataLambdaFunction"
               },
-              "CodeSha256": "LPpqtzX2OiJjlR71pdzWIMsrloZudtu1Rxzt/H3eKng="
+              "CodeSha256": "RoJJETYCv/T2o1alwXQodpYLNcmTLnHCqO4t+8G/NW0="
             }
           },
-          "RefreshTokenLambdaVersionyclu6okN8HpxVgsp6E2yKr9NEgsmzH8Jo6dbZBHycZM": "<REDACTED>",
-          "TokenExchangeLambdaVersionqcRUMSGf4UvWPz57TMY8OuVoEcPJ2UuNcyZJ2Agh0": "<REDACTED>",
+          "RefreshTokenLambdaVersionBf5Z0sxPflX6Wo3nIrneakO6G1hpRfL2xATR6jxVbKU": "<REDACTED>",
+          "TokenExchangeLambdaVersionU1i0eh99yKX3g55pV1ML0dDPakzhq2Go73KIDEpA": "<REDACTED>",
           "ApiGatewayRestApi": {
             "Type": "AWS::ApiGateway::RestApi",
             "Properties": {
@@ -956,7 +956,7 @@
             ]
           },
           "ApiGatewayMethodTokenDashexchangePost": "<REDACTED>",
-          "ApiGatewayDeployment1750261984572": {
+          "ApiGatewayDeployment1750370664908": {
             "Type": "AWS::ApiGateway::Deployment",
             "Properties": {
               "RestApiId": {
@@ -1049,7 +1049,7 @@
           "GetFitbitDataLambdaFunctionQualifiedArn": {
             "Description": "Current Lambda function version",
             "Value": {
-              "Ref": "GetFitbitDataLambdaVersionDnTc47W2oVMcjxWLLTUjE9BdjPYrDHa1eDLrIenys"
+              "Ref": "GetFitbitDataLambdaVersionjbPHI811TTHs06R2eUoF7JMXXEOgCLBkAtwnRD4"
             },
             "Export": {
               "Name": "sls-fitbit-lambda-api-dev-GetFitbitDataLambdaFunctionQualifiedArn"
@@ -1109,24 +1109,24 @@
     "serviceProviderAwsCfStackName": "fitbit-lambda-api-dev",
     "serviceProviderAwsCfStackId": "arn:aws:cloudformation:us-east-1:802818634575:stack/fitbit-lambda-api-dev/a0c1d6a0-4b20-11f0-9b82-1226c9d69a55",
     "serviceProviderAwsCfStackCreated": "2025-06-17T02:13:15.783Z",
-    "serviceProviderAwsCfStackUpdated": "2025-06-18T13:25:54.610Z",
+    "serviceProviderAwsCfStackUpdated": "2025-06-18T15:53:14.486Z",
     "serviceProviderAwsCfStackStatus": "UPDATE_COMPLETE",
     "serviceProviderAwsCfStackOutputs": [
       {
         "OutputKey": "TokenExchangeLambdaFunctionQualifiedArn",
-        "OutputValue": "arn:aws:lambda:us-east-1:802818634575:function:fitbit-lambda-api-dev-tokenExchange:7",
+        "OutputValue": "arn:aws:lambda:us-east-1:802818634575:function:fitbit-lambda-api-dev-tokenExchange:8",
         "Description": "Current Lambda function version",
         "ExportName": "sls-fitbit-lambda-api-dev-TokenExchangeLambdaFunctionQualifiedArn"
       },
       {
         "OutputKey": "RefreshTokenLambdaFunctionQualifiedArn",
-        "OutputValue": "arn:aws:lambda:us-east-1:802818634575:function:fitbit-lambda-api-dev-refreshToken:9",
+        "OutputValue": "arn:aws:lambda:us-east-1:802818634575:function:fitbit-lambda-api-dev-refreshToken:10",
         "Description": "Current Lambda function version",
         "ExportName": "sls-fitbit-lambda-api-dev-RefreshTokenLambdaFunctionQualifiedArn"
       },
       {
         "OutputKey": "GetFitbitDataLambdaFunctionQualifiedArn",
-        "OutputValue": "arn:aws:lambda:us-east-1:802818634575:function:fitbit-lambda-api-dev-getFitbitData:9",
+        "OutputValue": "arn:aws:lambda:us-east-1:802818634575:function:fitbit-lambda-api-dev-getFitbitData:10",
         "Description": "Current Lambda function version",
         "ExportName": "sls-fitbit-lambda-api-dev-GetFitbitDataLambdaFunctionQualifiedArn"
       },
@@ -1237,7 +1237,7 @@
           "Properties": {
             "Code": {
               "S3Bucket": "serverless-framework-deployments-us-east-1-d7d005ed-5bf5",
-              "S3Key": "serverless/fitbit-lambda-api/dev/1750261989866-2025-06-18T15:53:09.866Z/fitbit-lambda-api.zip"
+              "S3Key": "serverless/fitbit-lambda-api/dev/1750370669817-2025-06-19T22:04:29.817Z/fitbit-lambda-api.zip"
             },
             "Handler": "handlers/fitbitData.handler",
             "Runtime": "nodejs22.x",
@@ -1263,18 +1263,18 @@
         },
         "RefreshTokenLambdaFunction": "<REDACTED>",
         "TokenExchangeLambdaFunction": "<REDACTED>",
-        "GetFitbitDataLambdaVersionDnTc47W2oVMcjxWLLTUjE9BdjPYrDHa1eDLrIenys": {
+        "GetFitbitDataLambdaVersionjbPHI811TTHs06R2eUoF7JMXXEOgCLBkAtwnRD4": {
           "Type": "AWS::Lambda::Version",
           "DeletionPolicy": "Retain",
           "Properties": {
             "FunctionName": {
               "Ref": "GetFitbitDataLambdaFunction"
             },
-            "CodeSha256": "LPpqtzX2OiJjlR71pdzWIMsrloZudtu1Rxzt/H3eKng="
+            "CodeSha256": "RoJJETYCv/T2o1alwXQodpYLNcmTLnHCqO4t+8G/NW0="
           }
         },
-        "RefreshTokenLambdaVersionyclu6okN8HpxVgsp6E2yKr9NEgsmzH8Jo6dbZBHycZM": "<REDACTED>",
-        "TokenExchangeLambdaVersionqcRUMSGf4UvWPz57TMY8OuVoEcPJ2UuNcyZJ2Agh0": "<REDACTED>",
+        "RefreshTokenLambdaVersionBf5Z0sxPflX6Wo3nIrneakO6G1hpRfL2xATR6jxVbKU": "<REDACTED>",
+        "TokenExchangeLambdaVersionU1i0eh99yKX3g55pV1ML0dDPakzhq2Go73KIDEpA": "<REDACTED>",
         "ApiGatewayRestApi": {
           "Type": "AWS::ApiGateway::RestApi",
           "Properties": {
@@ -1502,7 +1502,7 @@
           ]
         },
         "ApiGatewayMethodTokenDashexchangePost": "<REDACTED>",
-        "ApiGatewayDeployment1750261984572": {
+        "ApiGatewayDeployment1750370664908": {
           "Type": "AWS::ApiGateway::Deployment",
           "Properties": {
             "RestApiId": {
@@ -1595,7 +1595,7 @@
         "GetFitbitDataLambdaFunctionQualifiedArn": {
           "Description": "Current Lambda function version",
           "Value": {
-            "Ref": "GetFitbitDataLambdaVersionDnTc47W2oVMcjxWLLTUjE9BdjPYrDHa1eDLrIenys"
+            "Ref": "GetFitbitDataLambdaVersionjbPHI811TTHs06R2eUoF7JMXXEOgCLBkAtwnRD4"
           },
           "Export": {
             "Name": "sls-fitbit-lambda-api-dev-GetFitbitDataLambdaFunctionQualifiedArn"

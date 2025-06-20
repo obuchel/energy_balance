@@ -4,8 +4,6 @@ import './MicronutrientChart.css';
 import './FoodTrackerAnalysis.css';
 // Import enhanced efficiency functions
 import { 
-  estimateMicronutrientEnhancement, 
-  estimateStandardMicronutrientEnhancement,
   calculateFoodEfficiency
 } from './enhanced-efficiency-functions';
 
@@ -28,28 +26,7 @@ const isSameOrAfter = (dateString1, dateString2) => {
   return date1 >= date2;
 };
 
-// Local getSeverityFactor function with correct logic
-const getSeverityFactor = (severity) => {
-  console.log('getSeverityFactor called with:', severity);
-  
-  if (!severity || severity === 'None' || severity === null || severity === undefined) {
-    console.log('Returning 1.0 for None/null severity');
-    return 1.0; // No COVID = normal factor
-  }
-  
-  const severityMap = {
-    'mild': 1.1,        // 10% increase in RDA needs
-    'moderate': 1.3,    // 30% increase in RDA needs  
-    'severe': 1.5,      // 50% increase in RDA needs
-    'very severe': 1.7  // 70% increase in RDA needs
-  };
-  
-  const normalizedSeverity = severity.toString().toLowerCase();
-  const factor = severityMap[normalizedSeverity] || 1.0;
-  
-  console.log(`Severity "${severity}" normalized to "${normalizedSeverity}" -> factor: ${factor}`);
-  return factor;
-};
+
 
 // Debug version of calculateFoodEfficiency with detailed logging
 const calculateFoodEfficiencyDebug = (mealData, userProfile) => {
@@ -189,15 +166,52 @@ console.log('3. Is time format consistent (e.g., "8:00 AM" vs "8:00 am")?');
 console.log('4. Is longCovidSeverity exactly matching the case in severityFactors?');
 console.log('5. Are the macro values realistic (not 0 or undefined)?');
 
-function ensureCompleteNutrientData(intakeData, baseRDAData0) {
-  const completeData = baseRDAData0;
-  
-  Object.keys(intakeData).forEach(nutrient => {
-    completeData[nutrient] = intakeData[nutrient];
-  });
-  
-  return completeData;
+// This is how ensureCompleteNutrientData *should* be structured.
+function ensureCompleteNutrientData(intakeData, baseRDAData) {
+  const completeIntakeData = {};
+
+  // Iterate over all nutrients defined in your baseRDAData to ensure completeness
+  for (const nutrientKey in baseRDAData) {
+    if (baseRDAData.hasOwnProperty(nutrientKey)) {
+      const rdaInfo = baseRDAData[nutrientKey]; // Get the expected structure from RDA data
+
+      // Check if this nutrient exists in the user's intake data
+      if (intakeData && intakeData[nutrientKey] !== undefined) {
+        const intakeValue = intakeData[nutrientKey];
+
+        // Case 1: intakeData[nutrientKey] is already an object { value: X, unit: Y }
+        if (typeof intakeValue === 'object' && intakeValue.value !== undefined && intakeValue.unit !== undefined) {
+          completeIntakeData[nutrientKey] = { ...intakeValue }; // Use as is
+        }
+        // Case 2: intakeData[nutrientKey] is just a number (assume default unit from RDA)
+        else if (typeof intakeValue === 'number') {
+          completeIntakeData[nutrientKey] = {
+            value: intakeValue,
+            unit: rdaInfo.unit // Use the unit from your base RDA data
+          };
+        }
+        // Case 3: Handle other unexpected formats if necessary, or default to 0
+        else {
+          console.warn(`Unexpected intake data format for ${nutrientKey}:`, intakeValue);
+          completeIntakeData[nutrientKey] = {
+            value: 0,
+            unit: rdaInfo.unit
+          };
+        }
+      } else {
+        // Nutrient not found in intakeData, set to 0 with the correct unit
+        completeIntakeData[nutrientKey] = {
+          value: 0,
+          unit: rdaInfo.unit
+        };
+      }
+    }
+  }
+  return completeIntakeData;
 }
+
+// You might also need to import this function at the top of your FoodTrackerAnalysis.js
+// import { ensureCompleteNutrientData } from './path/to/your/utils/file';
 function MacronutrientChart({ userData, userIntake = {} }) {
 const chartRef = useRef(null);
 const [personalizedRDA, setPersonalizedRDA] = useState(null);
@@ -1290,496 +1304,657 @@ const baseRDAData10 = {
   }
 };
 
+
+
+
 function MicronutrientChart({ data, userData }) {
-  // ✅ TEMPORARY: Add some test micronutrient data
-  const testData = {
-    vitamin_a: { value: 450, unit: 'mcg' },
-    vitamin_c: { value: 45, unit: 'mg' },
-    vitamin_d: { value: 8, unit: 'mcg' },
-    vitamin_e: { value: 7, unit: 'mg' },
-    vitamin_b6: { value: 0.8, unit: 'mg' },
-    vitamin_b12: { value: 1.5, unit: 'mcg' },
-    folate: { value: 200, unit: 'mcg' },
-    iron: { value: 12, unit: 'mg' },
-    calcium: { value: 800, unit: 'mg' },
-    magnesium: { value: 200, unit: 'mg' },
-    zinc: { value: 6, unit: 'mg' },
-    selenium: { value: 35, unit: 'mcg' },
-    copper: { value: 0.5, unit: 'mg' },
-    vitamin_b1: { value: 0.9, unit: 'mg' },
-    vitamin_b2: { value: 1.0, unit: 'mg' },
-    vitamin_b3: { value: 12, unit: 'mg' }
-  };
-  
-  console.log('Using test data:', testData);
-  
-const [userInfo, setUserInfo] = useState(userData);
-const [chartData, setChartData] = useState([]);
-const [nutrientIntake] = useState(ensureCompleteNutrientData(testData, baseRDAData10));
-const [personalizedRDA, setPersonalizedRDA] = useState({});
-const [displayMode, setDisplayMode] = useState('all');
-const [isLoading, setIsLoading] = useState(true);
-const [selectedCategory, setSelectedCategory] = useState('all');
+  const [userInfo, setUserInfo] = useState(userData || {});
+  const [chartData, setChartData] = useState([]);
+  const [allChartData, setAllChartData] = useState([]); // Stores unfiltered data
+  // Use baseRDAData10 from the global scope/import for ensureCompleteNutrientData
+  const [nutrientIntake] = useState(data && Object.keys(data).length > 0 ? ensureCompleteNutrientData(data, baseRDAData10) : {});
+  const [personalizedRDA, setPersonalizedRDA] = useState({}); // Line 1316
+  const [displayMode, setDisplayMode] = useState('all');
+  const [isLoading, setIsLoading] = useState(true);
+  const [selectedCategory, setSelectedCategory] = useState('all');
 
-const calculatePersonalizedRDA = useCallback((baseRDAData_, userData) => {
-  console.log('=== DEBUGGING calculatePersonalizedRDA ===');
-  console.log('Input baseRDAData_:', baseRDAData_);
-  console.log('Input userData:', userData);
-  
-  if (!baseRDAData_ || Object.keys(baseRDAData_).length === 0) {
-    console.error('❌ baseRDAData_ is empty or invalid!');
-    return {};
-  }
-  
-  const personalRDA = JSON.parse(JSON.stringify(baseRDAData_));
-  
-  Object.keys(personalRDA).forEach(nutrient => {
-    console.log(`\n--- Processing ${nutrient} ---`);
-    console.log(`Initial data:`, personalRDA[nutrient]);
-    
-    if (!personalRDA[nutrient] || typeof personalRDA[nutrient].value !== 'number') {
-      console.error(`❌ Invalid data structure for ${nutrient}:`, personalRDA[nutrient]);
-      return;
+  // Helper function to get severity factor
+  const getSeverityFactor = useCallback((severity) => {
+    switch (severity?.toLowerCase()) {
+      case 'mild': return 1.1;
+      case 'moderate': return 1.3;
+      case 'severe': return 1.5;
+      case 'very severe': return 1.8;
+      default: return 1.0;
     }
-    
-    let adjustedValue = personalRDA[nutrient].value;
-    console.log(`Starting value: ${adjustedValue}`);
-    
-    // Apply gender adjustment
-    if (userData.gender && userData.gender.toLowerCase() === 'female') {
-      const femaleAdjust = personalRDA[nutrient].femaleAdjust || 1.0;
-      adjustedValue *= femaleAdjust;
-      console.log(`After female adjust (${femaleAdjust}): ${adjustedValue}`);
-    } else {
-      console.log(`No female adjustment applied (gender: ${userData.gender})`);
-    }
-    
-    // Apply age adjustments
-    if (userData.age) {
-      let ageMultiplier = 1.0;
-      if (userData.age >= 70) {
-        if (nutrient === 'vitamin_d') ageMultiplier = 1.2;
-        if (nutrient === 'vitamin_b12') ageMultiplier = 1.1;
-        if (nutrient === 'calcium') ageMultiplier = 1.15;
-      } else if (userData.age >= 50) {
-        if (nutrient === 'vitamin_d') ageMultiplier = 1.1;
-        if (nutrient === 'vitamin_b12') ageMultiplier = 1.05;
-      } else if (userData.age <= 18) {
-        if (nutrient === 'calcium') ageMultiplier = 1.15;
-        if (nutrient === 'iron') ageMultiplier = 1.1;
-      }
-      
-      if (ageMultiplier !== 1.0) {
-        adjustedValue *= ageMultiplier;
-        console.log(`After age adjust (${ageMultiplier}): ${adjustedValue}`);
-      } else {
-        console.log(`No age adjustment applied for ${nutrient} at age ${userData.age}`);
-      }
-    }
-    
-    // Apply COVID severity adjustments
-    const severity = userData.covid_severity || userData.longCovidSeverity;
-    const hasCovidCondition = severity && severity !== 'None' && severity !== null && severity !== undefined;
-    
-    console.log(`COVID check - severity: "${severity}", hasCovidCondition: ${hasCovidCondition}`);
-    
-    if (hasCovidCondition) {
-      console.log(`Applying COVID adjustments for severity: "${severity}"`);
-      
-      const severityFactor = getSeverityFactor(severity);
-      console.log(`Severity factor: ${severityFactor}`);
-      
-      if (['vitamin_c', 'vitamin_d', 'zinc', 'selenium'].includes(nutrient)) {
-        const covidMultiplier = Math.min(severityFactor * 1.5, 2.5); // Cap at 2.5x
-        adjustedValue *= covidMultiplier;
-        console.log(`After COVID high-priority adjust (${covidMultiplier}): ${adjustedValue}`);
-      } else if (['vitamin_a', 'vitamin_e', 'vitamin_b6', 'vitamin_b12', 'folate', 'iron'].includes(nutrient)) {
-        const covidMultiplier = Math.min(severityFactor * 1.3, 2.0); // Cap at 2x
-        adjustedValue *= covidMultiplier;
-        console.log(`After COVID medium-priority adjust (${covidMultiplier}): ${adjustedValue}`);
-      } else if (['magnesium', 'copper', 'vitamin_b1', 'vitamin_b2', 'vitamin_b3'].includes(nutrient)) {
-        const covidMultiplier = Math.min(severityFactor * 1.1, 1.5); // Cap at 1.5x
-        adjustedValue *= covidMultiplier;
-        console.log(`After COVID low-priority adjust (${covidMultiplier}): ${adjustedValue}`);
-      }
-    } else {
-      console.log('No COVID adjustments applied - using baseline RDA');
-    }
-    
-    // Final safety check
-    if (isNaN(adjustedValue) || !isFinite(adjustedValue) || adjustedValue <= 0) {
-      console.error(`❌ Invalid final value for ${nutrient}: ${adjustedValue}, resetting to base`);
-      adjustedValue = personalRDA[nutrient].value;
-    }
-    
-    const roundedValue = Math.round(adjustedValue * 10) / 10;
-    console.log(`Final rounded value: ${roundedValue}`);
-    
-    personalRDA[nutrient] = {
-      ...personalRDA[nutrient],
-      value: roundedValue,
-      isAdjusted: roundedValue !== baseRDAData_[nutrient].value
+  }, []);
+
+  // Standardize units for comparison
+  const standardizeUnitValue = useCallback((value, fromUnit, toUnit) => {
+    if (fromUnit === toUnit) return value;
+
+    if (fromUnit === 'g' && toUnit === 'mg') return value * 1000;
+    if (fromUnit === 'mg' && toUnit === 'mcg') return value * 1000;
+    if (fromUnit === 'mcg' && toUnit === 'mg') return value * 0.001;
+    if (fromUnit === 'mg' && toUnit === 'g') return value * 0.001;
+
+    console.warn(`Unit conversion from ${fromUnit} to ${toUnit} not defined for value ${value}`);
+    return value;
+  }, []);
+
+  const convertFromIU = useCallback((nutrient, value, inputUnit) => {
+    if (inputUnit?.toUpperCase() !== 'IU') return value;
+
+    const conversionFactors = {
+      vitamin_a: 0.3,     // 1 IU = ~0.3 mcg RAE (approximation)
+      vitamin_d: 0.025,   // 1 IU = 0.025 mcg (40 IU = 1 mcg)
+      vitamin_e: 0.67     // 1 IU = 0.67 mg alpha-tocopherol
     };
-  });
-  
-  console.log('Final personalRDA:', personalRDA);
-  console.log('=== END calculatePersonalizedRDA DEBUG ===\n');
-  
-  return personalRDA;
-}, []);
 
-const processNutrientData = useCallback((intake, rdaValues) => {
-  console.log('=== DEBUGGING processNutrientData ===');
-  console.log('Input intake:', intake);
-  console.log('Input rdaValues:', rdaValues);
-  
-  if (!rdaValues || Object.keys(rdaValues).length === 0) {
-    console.error('No RDA values provided to processNutrientData');
-    return;
-  }
-  
-  let enhancedIntake = intake;
-  if (userData.covid_severity || userData.longCovidSeverity) {
-    const severity = userData.covid_severity || userData.longCovidSeverity;
-    enhancedIntake = estimateMicronutrientEnhancement(intake, severity);
-  } else {
-    enhancedIntake = estimateStandardMicronutrientEnhancement(intake, userData);
-  }
-  
-  let processedData = Object.entries(enhancedIntake).map(([key, details]) => {
-    console.log(`Processing ${key}:`, details, 'RDA:', rdaValues[key]);
-    
-    if (!rdaValues[key]) {
-      console.warn(`No RDA data for ${key}`);
-      return null;
+    return value * (conversionFactors[nutrient] || 1);
+  }, []);
+
+  // Helper function to process nutrient data into chart format
+  const processNutrientData = useCallback((intakeData, rdaData) => {
+    const processedNutrients = [];
+
+    // Iterate over the personalizedRDA to ensure all required nutrients are included
+    for (const nutrientKey in rdaData) {
+      if (rdaData.hasOwnProperty(nutrientKey)) {
+        const rdaInfo = rdaData[nutrientKey];
+
+        // Ensure RDA info is valid and has a unit
+        if (!rdaInfo || rdaInfo.value === undefined || rdaInfo.unit === undefined) {
+          console.warn(`Skipping ${nutrientKey}: No valid RDA information (value or unit missing).`, rdaInfo);
+          continue; // Skip this nutrient if RDA info is incomplete
+        }
+
+        const intakeDetails = intakeData[nutrientKey]; // This is from ensureCompleteNutrientData, should be {value, unit}
+
+        let intakeValue = 0;
+        let intakeUnit = rdaInfo.unit; // Default intake unit to RDA unit for consistency
+
+        if (intakeDetails && intakeDetails.value !== undefined) {
+            intakeValue = intakeDetails.value;
+            intakeUnit = intakeDetails.unit || rdaInfo.unit; // Use intake unit if present, else RDA unit
+        } else {
+            // If intakeDetails is null/undefined or doesn't have a value property,
+            // intakeValue remains 0, and intakeUnit remains rdaInfo.unit
+        }
+
+        // Convert from IU if intake was in IU
+        let standardizedIntakeValue = convertFromIU(nutrientKey, intakeValue, intakeUnit);
+
+        // Standardize intake unit to RDA unit
+        standardizedIntakeValue = standardizeUnitValue(standardizedIntakeValue, intakeUnit, rdaInfo.unit);
+
+        // Handle cases where standardizedIntakeValue might still be invalid (e.g., from conversion errors)
+        if (isNaN(standardizedIntakeValue) || !isFinite(standardizedIntakeValue)) {
+            console.warn(`Invalid standardized intake value for ${nutrientKey}. Setting to 0.`, standardizedIntakeValue);
+            standardizedIntakeValue = 0;
+        }
+
+        // Calculate percentage of RDA
+        const percentOfRDA = (standardizedIntakeValue / rdaInfo.value) * 100;
+
+        // Cap percentage at 1000% for display purposes (or whatever max you use for BulletChart)
+        const cappedPercentage = Math.min(1000, percentOfRDA); // Ensure it doesn't break visualization
+
+        // Format the nutrient name and determine category
+        const formattedName = nutrientKey.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+        // Use category from baseRDAData10 if available, otherwise infer
+        const category = baseRDAData10[nutrientKey]?.category || (nutrientKey.includes('vitamin') ? 'vitamins' : 'minerals');
+
+        processedNutrients.push({
+          key: nutrientKey, // Unique key for React list rendering
+          name: formattedName,
+          value: percentOfRDA, // Actual percentage (for calculations and display)
+          cappedValue: cappedPercentage, // For visualization (max 1000%)
+          rawValue: intakeValue, // The original intake value
+          standardizedValue: standardizedIntakeValue, // Intake value after IU/unit conversions
+          unit: intakeUnit, // Unit of the original intake
+          rda: rdaInfo.value, // Personalized RDA value
+          rdaUnit: rdaInfo.unit, // Unit of the personalized RDA
+          isAdjustedRDA: rdaInfo.isAdjusted, // Whether personalized RDA was adjusted
+          isExtreme: percentOfRDA > 1000, // Flag for very high intake
+          percentOfRDA: percentOfRDA, // Redundant but useful for consistency in filters
+          category: category,
+        });
+      }
     }
-    
-    const intakeValue = typeof details === 'object' ? (details.value || details.recommendedValue || 0) : (details || 0);
-    const rdaValue = rdaValues[key].value;
-    
-    // ✅ Add safety checks
-    if (isNaN(intakeValue) || isNaN(rdaValue) || rdaValue === 0) {
-      console.warn(`Invalid values for ${key}: intake=${intakeValue}, rda=${rdaValue}`);
-      return null;
+
+    // Sort the processed nutrients (e.g., by percentage of RDA, ascending for deficient view by default)
+    return processedNutrients.sort((a, b) => a.percentOfRDA - b.percentOfRDA);
+  }, [convertFromIU, standardizeUnitValue]); // Removed baseRDAData10 from dependencies
+
+  const applyFilters = useCallback((dataToFilter) => {
+    let filteredData = [...dataToFilter];
+
+    if (selectedCategory !== 'all') {
+      filteredData = filteredData.filter(item => item.category === selectedCategory);
     }
-    
-    const unit = rdaValues[key].unit || 'mg';
-    const percentOfRDA = (intakeValue / rdaValue) * 100;
-    const formattedName = key.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
-    const isAdjusted = rdaValues[key].isAdjusted || (details.isEnhanced && details.isEnhanced);
-    const standardRDA = baseRDAData10[key]?.value || rdaValue;
-    const category = key.includes('vitamin') ? 'vitamins' : 'minerals';
-    
-    const result = {
-      name: formattedName,
-      key: key,
-      percentOfRDA: Math.min(percentOfRDA, 150),
-      fullPercent: percentOfRDA,
-      value: intakeValue,
-      unit: unit,
-      rda: rdaValue,
-      standardRDA: standardRDA,
-      isAdjusted: isAdjusted,
-      description: rdaValues[key].description || '',
-      category: category,
-      enhancementReason: details.reason || null
-    };
-    
-    console.log(`${key} result:`, result);
-    return result;
-  }).filter(item => item !== null);
-  
-  // Apply display filters
-  if (displayMode === 'deficient') {
-    processedData = processedData.filter(item => item.percentOfRDA < 90);
-  } else if (displayMode === 'optimal') {
-    processedData = processedData.filter(item => item.percentOfRDA >= 90);
-  }
-  
-  if (selectedCategory !== 'all') {
-    processedData = processedData.filter(item => item.category === selectedCategory);
-  }
-  
-  processedData.sort((a, b) => a.percentOfRDA - b.percentOfRDA);
-  
-  console.log('Final processedData:', processedData);
-  console.log('=== END processNutrientData DEBUG ===');
-  
-  setChartData(processedData);
-}, [displayMode, selectedCategory, userData]);
 
-// 4. Add this debug function to check your userData structure
-const debugUserData = (userData) => {
-  console.log('=== USER DATA STRUCTURE ===');
-  console.log('userData:', userData);
-  console.log('covid_severity:', userData.covid_severity, typeof userData.covid_severity);
-  console.log('longCovidSeverity:', userData.longCovidSeverity);
-  console.log('hasLongCovid:', userData.hasLongCovid);
-  console.log('age:', userData.age);
-  console.log('gender:', userData.gender);
-  console.log('weight:', userData.weight);
-  console.log('height:', userData.height);
-  console.log('=== END USER DATA ===');
-};
+    if (displayMode === 'deficient') {
+      filteredData = filteredData.filter(item => item.percentOfRDA < 70);
+      filteredData.sort((a, b) => a.percentOfRDA - b.percentOfRDA); // Sort deficient low to high
+    } else if (displayMode === 'optimal') {
+      filteredData = filteredData.filter(item => item.percentOfRDA >= 100);
+      filteredData.sort((a, b) => b.percentOfRDA - a.percentOfRDA); // Sort optimal high to low
+    } else { // 'all' mode
+      filteredData.sort((a, b) => a.percentOfRDA - b.percentOfRDA); // Default to low to high for 'all'
+    }
 
-useEffect(() => {
-  debugUserData(userInfo); // Add this debug call
-  
-  setTimeout(() => {
-    try {
-      const calculatedRDA = calculatePersonalizedRDA(baseRDAData10, userInfo);
-      
-      if (!calculatedRDA || Object.keys(calculatedRDA).length === 0) {
-        console.error('Failed to calculate RDA values');
+    setChartData(filteredData);
+  }, [displayMode, selectedCategory]);
+
+  const calculatePersonalizedRDA = useCallback((baseRDAData_, userData) => {
+    if (!baseRDAData_ || Object.keys(baseRDAData_).length === 0) {
+      console.error('baseRDAData_ is empty or invalid!');
+      return {};
+    }
+
+    const personalRDA = JSON.parse(JSON.stringify(baseRDAData_)); // Deep copy
+
+    Object.keys(personalRDA).forEach(nutrient => {
+      // Ensure the nutrient entry itself is an object and has a value property
+      if (!personalRDA[nutrient] || typeof personalRDA[nutrient].value !== 'number') {
+        console.error(`Invalid data structure for ${nutrient} in baseRDAData_ or copy:`, personalRDA[nutrient]);
+        // Set a default valid structure to prevent further errors downstream
+        personalRDA[nutrient] = { value: 0, unit: personalRDA[nutrient]?.unit || 'mg', isAdjusted: false };
         return;
       }
-      
-      setPersonalizedRDA(calculatedRDA);
-      processNutrientData(nutrientIntake, calculatedRDA);
-      setIsLoading(false);
-    } catch (error) {
-      console.error('Error in useEffect:', error);
-      setIsLoading(false);
-    }
-  }, 500);
-}, [userInfo, calculatePersonalizedRDA, processNutrientData, nutrientIntake]);
 
-const getCovidSeverityClass = (severity) => {
-  switch(severity) {
-    case 'Mild': return 'covid-severity-mild';
-    case 'Moderate': return 'covid-severity-moderate';
-    case 'Severe': return 'covid-severity-severe';
-    case 'Very Severe': return 'covid-severity-very-severe';
-    default: return 'covid-severity-unknown';
-  }
-};
+      let adjustedValue = personalRDA[nutrient].value;
 
-const toggleCovidSeverity = () => {
-  const severities = [null, 'mild', 'moderate', 'severe', 'very severe'];
-  
-  // Check both possible property names for current severity
-  const currentSeverity = userInfo.covid_severity || userInfo.longCovidSeverity || null;
-  const currentIndex = severities.indexOf(currentSeverity);
-  const nextIndex = (currentIndex + 1) % severities.length;
-  
-  const newSeverity = severities[nextIndex];
-  console.log(`Toggling COVID severity from "${currentSeverity}" to "${newSeverity}"`);
-  
-  const updatedUserInfo = {
-    ...userInfo,
-    // Update BOTH properties to ensure consistency
-    covid_severity: newSeverity,
-    longCovidSeverity: newSeverity,
-    hasLongCovid: newSeverity !== null // Set hasLongCovid based on severity
+      // Apply gender adjustment
+      if (userData?.gender && userData.gender.toLowerCase() === 'female') {
+        const femaleAdjust = personalRDA[nutrient].femaleAdjust || 1.0;
+        adjustedValue *= femaleAdjust;
+      }
+
+      // Apply age adjustments
+      if (userData?.age) {
+        let ageMultiplier = 1.0;
+        if (userData.age >= 70) {
+          if (nutrient === 'vitamin_d') ageMultiplier = 1.2;
+          if (nutrient === 'vitamin_b12') ageMultiplier = 1.1;
+          if (nutrient === 'calcium') ageMultiplier = 1.15;
+        } else if (userData.age >= 50) {
+          if (nutrient === 'vitamin_d') ageMultiplier = 1.1;
+          if (nutrient === 'vitamin_b12') ageMultiplier = 1.05;
+        } else if (userData.age <= 18) {
+          if (nutrient === 'calcium') ageMultiplier = 1.15;
+          if (nutrient === 'iron') ageMultiplier = 1.1;
+        }
+
+        if (ageMultiplier !== 1.0) {
+          adjustedValue *= ageMultiplier;
+        }
+      }
+
+      // Apply COVID severity adjustments
+      const severity = userData?.covid_severity || userData?.longCovidSeverity;
+      const hasCovidCondition = severity && severity !== 'None' && severity !== null && severity !== undefined;
+
+      if (hasCovidCondition) {
+        const severityFactor = getSeverityFactor(severity);
+
+        if (['vitamin_c', 'vitamin_d', 'zinc', 'selenium'].includes(nutrient)) {
+          const covidMultiplier = Math.min(severityFactor * 1.5, 2.5); // Cap at 2.5x
+          adjustedValue *= covidMultiplier;
+        } else if (['vitamin_a', 'vitamin_e', 'vitamin_b6', 'vitamin_b12', 'folate', 'iron'].includes(nutrient)) {
+          const covidMultiplier = Math.min(severityFactor * 1.3, 2.0); // Cap at 2x
+          adjustedValue *= covidMultiplier;
+        } else if (['magnesium', 'copper', 'vitamin_b1', 'vitamin_b2', 'vitamin_b3'].includes(nutrient)) {
+          const covidMultiplier = Math.min(severityFactor * 1.1, 1.5); // Cap at 1.5x
+          adjustedValue *= covidMultiplier;
+        }
+      }
+
+      // Final safety check
+      if (isNaN(adjustedValue) || !isFinite(adjustedValue) || adjustedValue <= 0) {
+        console.error(`Invalid final value for ${nutrient}: ${adjustedValue}, resetting to base`);
+        adjustedValue = personalRDA[nutrient].value; // Revert to base if invalid
+      }
+
+      const roundedValue = Math.round(adjustedValue * 10) / 10;
+
+      personalRDA[nutrient] = {
+        ...personalRDA[nutrient],
+        value: roundedValue,
+        isAdjusted: roundedValue !== baseRDAData_[nutrient].value // Check against original base value
+      };
+    });
+
+    return personalRDA;
+  }, [getSeverityFactor]);
+
+
+  // Get nutrient status label and color
+  const getNutrientStatus = (percentValue) => {
+    if (percentValue >= 100) return { label: "Optimal", color: "#4CAF50" };
+    if (percentValue >= 70) return { label: "Good", color: "#8BC34A" };
+    if (percentValue >= 50) return { label: "Moderate", color: "#FFC107" }; // Added 50-69%
+    if (percentValue >= 30) return { label: "Low", color: "#FF9800" }; // Adjusted
+    return { label: "Very Low", color: "#F44336" }; // Adjusted
   };
-  
-  // Remove covid properties entirely if severity is null
-  if (newSeverity === null) {
-    delete updatedUserInfo.covid_severity;
-    delete updatedUserInfo.longCovidSeverity;
-    updatedUserInfo.hasLongCovid = false;
+
+  // Helper function to provide nutrient-specific info
+  const getNutrientInfo = (nutrientName) => {
+    // You can pull this from baseRDAData10.description directly if consistent
+    // or keep a separate object if descriptions vary or are more detailed
+    const nutrientInfoMap = {};
+    for (const key in baseRDAData10) {
+        // Use key.replace to match the formatted name or directly use key
+        nutrientInfoMap[key.replace(/_/g, ' ')] = baseRDAData10[key].description;
+    }
+
+    // Attempt to match by exact name first, then by partial
+    const exactMatch = nutrientInfoMap[nutrientName.toLowerCase()]; // Ensure case consistency
+    if (exactMatch) return exactMatch;
+
+    for (const key in nutrientInfoMap) {
+      if (nutrientName.toLowerCase().includes(key)) { // Ensure case consistency
+        return nutrientInfoMap[key];
+      }
+    }
+    return '';
+  };
+
+
+  useEffect(() => {
+    setIsLoading(true);
+    const timer = setTimeout(() => {
+      try {
+        const calculatedRDA = calculatePersonalizedRDA(baseRDAData10, userInfo);
+
+        if (!calculatedRDA || Object.keys(calculatedRDA).length === 0) {
+          console.error('Failed to calculate RDA values');
+          setIsLoading(false);
+          return;
+        }
+
+        setPersonalizedRDA(calculatedRDA);
+
+        // Process all nutrient data first and store it in allChartData
+        // processNutrientData now iterates over calculatedRDA to include all,
+        // using nutrientIntake for actual consumed values.
+        const processedAllData = processNutrientData(nutrientIntake, calculatedRDA);
+        setAllChartData(processedAllData);
+
+        // Apply initial filters to set chartData
+        applyFilters(processedAllData);
+
+      } catch (error) {
+        console.error('Error in MicronutrientChart useEffect:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    }, 500); // Small delay to show loading state
+
+    return () => clearTimeout(timer); // Cleanup timeout on unmount or re-render
+  }, [userInfo, nutrientIntake, calculatePersonalizedRDA, processNutrientData, applyFilters]); // Removed baseRDAData10 from dependencies
+
+  // Effect to re-apply filters whenever display mode, category, or allChartData changes
+  useEffect(() => {
+    if (allChartData.length > 0) {
+      applyFilters(allChartData);
+    }
+  }, [displayMode, selectedCategory, allChartData, applyFilters]);
+
+  const getCovidSeverityClass = (severity) => {
+    switch(severity?.toLowerCase()) {
+      case 'mild': return 'covid-severity-mild';
+      case 'moderate': return 'covid-severity-moderate';
+      case 'severe': return 'covid-severity-severe';
+      case 'very severe': return 'covid-severity-very-severe';
+      default: return 'covid-severity-unknown';
+    }
+  };
+
+  const toggleCovidSeverity = () => {
+    const severities = [null, 'mild', 'moderate', 'severe', 'very severe'];
+    const currentSeverity = userInfo.covid_severity?.toLowerCase() || userInfo.longCovidSeverity?.toLowerCase() || null;
+    const currentIndex = severities.indexOf(currentSeverity);
+    const nextIndex = (currentIndex + 1) % severities.length;
+    const newSeverity = severities[nextIndex];
+
+    const updatedUserInfo = {
+      ...userInfo,
+      covid_severity: newSeverity,
+      longCovidSeverity: newSeverity,
+      hasLongCovid: newSeverity !== null
+    };
+
+    if (newSeverity === null) {
+      delete updatedUserInfo.covid_severity;
+      delete updatedUserInfo.longCovidSeverity;
+      updatedUserInfo.hasLongCovid = false;
+    }
+
+    setUserInfo(updatedUserInfo);
+  };
+
+  const getCurrentCovidSeverity = () => {
+    const severity = userInfo.covid_severity || userInfo.longCovidSeverity;
+    if (!severity || severity === null || severity === 'None') return 'None';
+    return severity.charAt(0).toUpperCase() + severity.slice(1);
+  };
+
+  const changeDisplayMode = (mode) => {
+    setDisplayMode(mode);
+  };
+
+  const changeCategory = (category) => {
+    setSelectedCategory(category);
+  };
+
+  const getFilterDescription = () => {
+    const displayPart = displayMode === 'deficient' ? "below 70% RDA" : displayMode === 'optimal' ? "at 100%+ RDA" : "";
+    const categoryPart = selectedCategory === 'vitamins' ? "vitamins" : selectedCategory === 'minerals' ? "minerals" : "nutrients";
+
+    // Construct the phrase dynamically
+    let description = categoryPart;
+    if (displayPart) {
+        description += ` ${displayPart}`;
+    }
+    return description.trim();
+  };
+
+
+  if (isLoading) {
+    return (
+      <div className="loading-container">
+        <div className="loading-indicator">
+          <div className="spinner"></div>
+          <p className="loading-text">Loading personalized micronutrient data...</p>
+        </div>
+      </div>
+    );
   }
-  
-  console.log('Updated user info:', updatedUserInfo);
-  setUserInfo(updatedUserInfo);
-};
-const getCurrentCovidSeverity = () => {
-  const severity = userInfo.covid_severity || userInfo.longCovidSeverity;
-  if (!severity || severity === null) return 'None';
-  
-  // Capitalize first letter for display
-  return severity.charAt(0).toUpperCase() + severity.slice(1);
-};
-const changeDisplayMode = (mode) => {
-  setDisplayMode(mode);
-  processNutrientData(nutrientIntake, personalizedRDA);
-};
 
-const changeCategory = (category) => {
-  setSelectedCategory(category);
-  processNutrientData(nutrientIntake, personalizedRDA);
-};
+  const deficientCount = allChartData.filter(item => item.percentOfRDA < 70).length;
 
-if (isLoading) {
+  // Show empty state if no user data AND no meal data
+  if ((!data || Object.keys(data).length === 0) && (!userData || Object.keys(userData).length === 0)) {
+    return (
+      <div className="micronutrient-chart-container">
+        <div className="chart-card">
+          <div className="chart-header">
+            <h2 className="chart-title">Micronutrient Status</h2>
+          </div>
+          <div className="empty-state">
+            <div className="empty-state-icon">📊</div>
+            <h3 className="empty-state-title">No Data Available</h3>
+            <p className="empty-state-description">
+              Please set up your profile and log some meals to see your personalized micronutrient analysis.
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Show empty state if user data exists but no meal data, or no processed data at all
+  // The allChartData check ensures that even if 'data' is present, if no valid nutrients
+  // were processed (e.g., mismatch with RDA), it still shows empty state.
+  if (!data || Object.keys(data).length === 0 || allChartData.length === 0) {
+    return (
+      <div className="micronutrient-chart-container">
+        <div className="chart-card">
+          <div className="chart-header">
+            <h2 className="chart-title">Micronutrient Status</h2>
+          </div>
+          <div className="empty-state">
+            <div className="empty-state-icon">📊</div>
+            <h3 className="empty-state-title">No Micronutrient Data Available</h3>
+            <p className="empty-state-description">
+              Once you log some meals, we'll analyze your nutrient intake and show your personalized micronutrient status here.
+            </p>
+          </div>
+        </div>
+        <div className="profile-card">
+          <h3 className="profile-title">User Profile</h3>
+          <div className="profile-grid">
+            <div className="profile-item">
+              <p className="profile-label">Age</p>
+              <p className="profile-value">{userInfo?.age || 'Not specified'} years</p>
+            </div>
+            <div className="profile-item">
+              <p className="profile-label">Gender</p>
+              <p className="profile-value">{userInfo?.gender ? userInfo.gender.charAt(0).toUpperCase() + userInfo.gender.slice(1) : 'Not specified'}</p>
+            </div>
+            <div className="profile-item">
+              <p className="profile-label">BMI</p>
+              <p className="profile-value">{userInfo?.weight && userInfo?.height ?
+                (userInfo.weight / Math.pow(userInfo.height/100, 2)).toFixed(1) : 'N/A'}</p>
+            </div>
+            <div className="profile-item">
+              <p className="profile-label">Activity Level</p>
+              <p className="profile-value">{userInfo?.activity_level || 'Not specified'}</p>
+            </div>
+            <div className="profile-item">
+              <p className="profile-label">Medical Conditions</p>
+              <p className="profile-value">{userInfo?.medical_conditions && userInfo.medical_conditions.length > 0 ?
+                userInfo.medical_conditions.map(c => c.charAt(0).toUpperCase() + c.slice(1)).join(', ') : 'None'}</p>
+            </div>
+            <div className="profile-item">
+              <p className="profile-label">COVID Status</p>
+              <button
+                onClick={toggleCovidSeverity}
+                className="covid-toggle-button"
+                style={{
+                  padding: '8px 12px',
+                  backgroundColor: '#e3f2fd',
+                  border: '2px solid #2196f3',
+                  borderRadius: '6px',
+                  cursor: 'pointer',
+                  fontSize: '14px',
+                  fontWeight: '500',
+                  color: '#1976d2',
+                  transition: 'all 0.2s ease',
+                  minWidth: '120px'
+                }}
+                onMouseEnter={(e) => {
+                  e.target.style.backgroundColor = '#bbdefb';
+                  e.target.style.transform = 'scale(1.02)';
+                }}
+                onMouseLeave={(e) => {
+                  e.target.style.backgroundColor = '#e3f2fd';
+                  e.target.style.transform = 'scale(1)';
+                }}
+              >
+                {getCurrentCovidSeverity()} (Click to change)
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className="loading-container">
-      <div className="loading-indicator">
-        <div className="spinner"></div>
-        <p className="loading-text">Loading personalized micronutrient data...</p>
+    <div className="micronutrient-chart-container">
+      <div className="chart-card">
+        <div className="chart-header">
+          <h2 className="chart-title">Micronutrient Status</h2>
+
+          <div className="display-mode-buttons">
+            <button
+              onClick={() => changeDisplayMode('all')}
+              className={`mode-button ${displayMode === 'all' ? 'mode-button-active' : ''}`}
+            >
+              All ({allChartData.length})
+            </button>
+            <button
+              onClick={() => changeDisplayMode('deficient')}
+              className={`mode-button ${displayMode === 'deficient' ? 'mode-button-deficient' : ''}`}
+            >
+              Deficient ({deficientCount})
+            </button>
+            <button
+              onClick={() => changeDisplayMode('optimal')}
+              className={`mode-button ${displayMode === 'optimal' ? 'mode-button-optimal' : ''}`}
+            >
+              Optimal ({allChartData.filter(item => item.percentOfRDA >= 100).length})
+            </button>
+          </div>
+        </div>
+
+        <div className="category-filter">
+          <button
+            onClick={() => changeCategory('all')}
+            className={`category-button ${selectedCategory === 'all' ? 'category-button-active' : ''}`}
+          >
+            All Nutrients
+          </button>
+          <button
+            onClick={() => changeCategory('vitamins')}
+            className={`category-button ${selectedCategory === 'vitamins' ? 'category-button-active' : ''}`}
+          >
+            Vitamins
+          </button>
+          <button
+            onClick={() => changeCategory('minerals')}
+            className={`category-button ${selectedCategory === 'minerals' ? 'category-button-active' : ''}`}
+          >
+            Minerals
+          </button>
+        </div>
+
+        {deficientCount > 0 && (
+          <div className="deficiency-alert">
+            <p className="deficiency-message">
+              {deficientCount} {deficientCount === 1 ? 'nutrient is' : 'nutrients are'} below recommended levels.
+            </p>
+          </div>
+        )}
+
+        {userInfo.covid_severity && getCurrentCovidSeverity() !== 'None' && (
+          <div className={`covid-alert ${getCovidSeverityClass(userInfo.covid_severity)}`}>
+            <p className="covid-title">Long COVID Condition - {getCurrentCovidSeverity()} Severity</p>
+            <p className="covid-description">Recommended values have been adjusted for immune system support</p>
+          </div>
+        )}
+
+        <div className="chart-content">
+          {chartData.length === 0 && allChartData.length > 0 ? (
+            <div className="no-filter-results">
+              <div className="no-results-icon">🎯</div>
+              <h3 className="no-results-title">Great news!</h3>
+              <p className="no-results-message">
+                You don't have any {getFilterDescription()} to display.
+                {displayMode === 'deficient' && " This means your nutrient levels are doing well in this category!"}
+                {displayMode === 'optimal' && " Try logging more diverse meals to reach optimal levels."}
+              </p>
+              <p className="no-results-suggestion">
+                Try selecting "All" to see your complete nutrient profile.
+              </p>
+            </div>
+          ) : (
+            chartData.map((nutrient) => (
+              <BulletChart
+                key={nutrient.key}
+                data={nutrient}
+                maxPercent={150} // Adjust max percentage for chart visualization if needed (e.g., to 200 or 500)
+                getNutrientStatus={getNutrientStatus}
+                getNutrientInfo={getNutrientInfo}
+              />
+            ))
+          )}
+        </div>
+
+        <div className="chart-legend">
+          <div className="legend-item">
+            <div className="legend-color legend-optimal"></div>
+            <span className="legend-text">≥ 100% (Optimal)</span>
+          </div>
+          <div className="legend-item">
+            <div className="legend-color legend-good"></div>
+            <span className="legend-text">70-99% (Good)</span>
+          </div>
+          <div className="legend-item">
+            <div className="legend-color legend-moderate"></div>
+            <span className="legend-text">50-69% (Moderate)</span>
+          </div>
+          <div className="legend-item">
+            <div className="legend-color legend-low"></div>
+            <span className="legend-text">30-49% (Low)</span>
+          </div>
+          <div className="legend-item">
+            <div className="legend-color legend-very-low"></div>
+            <span className="legend-text">0-29% (Very Low)</span>
+          </div>
+          <div className="legend-item">
+            <div className="legend-target"></div>
+            <span className="legend-text">Target (100% RDA)</span>
+          </div>
+          <div className="legend-item">
+            <div className="legend-threshold"></div>
+            <span className="legend-text">Deficiency Threshold (70%)</span>
+          </div>
+        </div>
+      </div>
+
+      <div className="profile-card">
+        <h3 className="profile-title">User Profile</h3>
+        <div className="profile-grid">
+          <div className="profile-item">
+            <p className="profile-label">Age</p>
+            <p className="profile-value">{userInfo?.age || 'Not specified'} years</p>
+          </div>
+          <div className="profile-item">
+            <p className="profile-label">Gender</p>
+            <p className="profile-value">{userInfo?.gender ? userInfo.gender.charAt(0).toUpperCase() + userInfo.gender.slice(1) : 'Not specified'}</p>
+          </div>
+          <div className="profile-item">
+            <p className="profile-label">BMI</p>
+            <p className="profile-value">{userInfo?.weight && userInfo?.height ?
+              (userInfo.weight / Math.pow(userInfo.height/100, 2)).toFixed(1) : 'N/A'}</p>
+          </div>
+          <div className="profile-item">
+            <p className="profile-label">Activity Level</p>
+            <p className="profile-value">{userInfo?.activity_level || 'Not specified'}</p>
+          </div>
+          <div className="profile-item">
+            <p className="profile-label">Medical Conditions</p>
+            <p className="profile-value">{userInfo?.medical_conditions && userInfo.medical_conditions.length > 0 ?
+              userInfo.medical_conditions.map(c => c.charAt(0).toUpperCase() + c.slice(1)).join(', ') : 'None'}</p>
+          </div>
+          <div className="profile-item">
+            <p className="profile-label">COVID Status</p>
+            <button
+              onClick={toggleCovidSeverity}
+              className="covid-toggle-button"
+              style={{
+                padding: '8px 12px',
+                backgroundColor: '#e3f2fd',
+                border: '2px solid #2196f3',
+                borderRadius: '6px',
+                cursor: 'pointer',
+                fontSize: '14px',
+                fontWeight: '500',
+                color: '#1976d2',
+                transition: 'all 0.2s ease',
+                minWidth: '120px'
+              }}
+              onMouseEnter={(e) => {
+                e.target.style.backgroundColor = '#bbdefb';
+                e.target.style.transform = 'scale(1.02)';
+              }}
+              onMouseLeave={(e) => {
+                e.target.style.backgroundColor = '#e3f2fd';
+                e.target.style.transform = 'scale(1)';
+              }}
+            >
+              {getCurrentCovidSeverity()} (Click to change)
+            </button>
+          </div>
+        </div>
       </div>
     </div>
   );
 }
-
-const deficientCount = chartData.filter(item => item.percentOfRDA < 70).length;
-
-return (
-  <div className="micronutrient-chart-container">
-    <div className="chart-card">
-      <div className="chart-header">
-        <h2 className="chart-title">Micronutrient Status</h2>
-        
-        <div className="display-mode-buttons">
-          <button 
-            onClick={() => changeDisplayMode('all')}
-            className={`mode-button ${displayMode === 'all' ? 'mode-button-active' : ''}`}
-          >
-            All
-          </button>
-          <button 
-            onClick={() => changeDisplayMode('deficient')}
-            className={`mode-button ${displayMode === 'deficient' ? 'mode-button-deficient' : ''}`}
-          >
-            Deficient
-          </button>
-          <button 
-            onClick={() => changeDisplayMode('optimal')}
-            className={`mode-button ${displayMode === 'optimal' ? 'mode-button-optimal' : ''}`}
-          >
-            Optimal
-          </button>
-        </div>
-      </div>
-      
-      <div className="category-filter">
-        <button 
-          onClick={() => changeCategory('all')}
-          className={`category-button ${selectedCategory === 'all' ? 'category-button-active' : ''}`}
-        >
-          All Nutrients
-        </button>
-        <button 
-          onClick={() => changeCategory('vitamins')}
-          className={`category-button ${selectedCategory === 'vitamins' ? 'category-button-active' : ''}`}
-        >
-          Vitamins
-        </button>
-        <button 
-          onClick={() => changeCategory('minerals')}
-          className={`category-button ${selectedCategory === 'minerals' ? 'category-button-active' : ''}`}
-        >
-          Minerals
-        </button>
-      </div>
-      
-      {deficientCount > 0 && (
-        <div className="deficiency-alert">
-          <p className="deficiency-message">
-            {deficientCount} {deficientCount === 1 ? 'nutrient is' : 'nutrients are'} below recommended levels.
-          </p>
-        </div>
-      )}
-      
-      {userInfo.covid_severity && (
-        <div className={`covid-alert ${getCovidSeverityClass(userInfo.covid_severity)}`}>
-          <p className="covid-title">Long COVID Condition - {userInfo.covid_severity} Severity</p>
-          <p className="covid-description">Recommended values have been adjusted for immune system support</p>
-        </div>
-      )}
-      
-      <div className="chart-content">
-        {chartData.map((nutrient) => (
-          <BulletChart 
-            key={nutrient.key} 
-            data={nutrient}
-            maxPercent={150}
-          />
-        ))}
-      </div>
-      
-      <div className="chart-legend">
-        <div className="legend-item">
-          <div className="legend-color legend-optimal"></div>
-          <span className="legend-text">≥ 100% (Optimal)</span>
-        </div>
-        <div className="legend-item">
-          <div className="legend-color legend-good"></div>
-          <span className="legend-text">70-99% (Good)</span>
-        </div>
-        <div className="legend-item">
-          <div className="legend-color legend-moderate"></div>
-          <span className="legend-text">50-69% (Moderate)</span>
-        </div>
-        <div className="legend-item">
-          <div className="legend-color legend-low"></div>
-          <span className="legend-text">30-49% (Low)</span>
-        </div>
-        <div className="legend-item">
-          <div className="legend-color legend-very-low"></div>
-          <span className="legend-text">0-29% (Very Low)</span>
-        </div>
-        <div className="legend-item">
-          <div className="legend-target"></div>
-          <span className="legend-text">Target (100% RDA)</span>
-        </div>
-        <div className="legend-item">
-          <div className="legend-threshold"></div>
-          <span className="legend-text">Deficiency Threshold (70%)</span>
-        </div>
-      </div>
-    </div>
-    
-    <div className="profile-card">
-      <h3 className="profile-title">User Profile</h3>
-      <div className="profile-grid">
-        <div className="profile-item">
-          <p className="profile-label">Age</p>
-          <p className="profile-value">{userInfo.age} years</p>
-        </div>
-        <div className="profile-item">
-          <p className="profile-label">Gender</p>
-          <p className="profile-value">{userInfo.gender ? userInfo.gender.charAt(0).toUpperCase() + userInfo.gender.slice(1) : 'Not specified'}</p>
-        </div>
-        <div className="profile-item">
-          <p className="profile-label">BMI</p>
-          <p className="profile-value">{userInfo.weight && userInfo.height ? 
-            Math.round((userInfo.weight / Math.pow(userInfo.height/100, 2)) * 10) / 10 : 'N/A'}</p>
-        </div>
-        <div className="profile-item">
-          <p className="profile-label">Activity Level</p>
-          <p className="profile-value">{userInfo.activity_level || 'Not specified'}</p>
-        </div>
-        <div className="profile-item">
-          <p className="profile-label">Medical Conditions</p>
-          <p className="profile-value">{userInfo.medical_conditions && userInfo.medical_conditions.length > 0 ? 
-            userInfo.medical_conditions.map(c => c.charAt(0).toUpperCase() + c.slice(1)).join(', ') : 'None'}</p>
-        </div>
-        <div className="profile-item">
-          <p className="profile-label">COVID Status</p>
-          <button 
-  onClick={toggleCovidSeverity} 
-  className="covid-toggle-button"
-  style={{
-    padding: '8px 12px',
-    backgroundColor: '#e3f2fd',
-    border: '2px solid #2196f3',
-    borderRadius: '6px',
-    cursor: 'pointer',
-    fontSize: '14px',
-    fontWeight: '500',
-    color: '#1976d2',
-    transition: 'all 0.2s ease',
-    minWidth: '120px'
-  }}
-  onMouseEnter={(e) => {
-    e.target.style.backgroundColor = '#bbdefb';
-    e.target.style.transform = 'scale(1.02)';
-  }}
-  onMouseLeave={(e) => {
-    e.target.style.backgroundColor = '#e3f2fd';
-    e.target.style.transform = 'scale(1)';
-  }}
->
-  {getCurrentCovidSeverity()} (Click to change)
-</button>
-            
-        </div>
-      </div>
-    </div>
-  </div>
-);
-}
-
 function AnalysisTab({ foodLog, userProfile }) {
 if (!foodLog || !Array.isArray(foodLog)) {
   return (
