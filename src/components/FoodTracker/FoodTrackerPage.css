@@ -152,12 +152,11 @@
 }
 
 /* Enhanced Search Group Positioning */
-.search-group {
+/*.search-group {
   position: relative;
-  margin-bottom: 30px; /* Increased margin to provide more space */
+  margin-bottom: 30px; 
   z-index: 100;
-  isolation: isolate; /* Creates a new stacking context */
-}
+  isolation: isolate; 
 
 .search-input-container {
   position: relative;
@@ -166,7 +165,7 @@
 
 .search-input {
   width: 100%;
-  padding: 12px 120px 12px 12px; /* Added right padding for status indicators */
+  padding: 12px 120px 12px 12px; 
   border: 1px solid #ddd;
   border-radius: 6px;
   font-size: 16px;
@@ -194,9 +193,164 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  pointer-events: none; /* Prevents interference with input focus */
-  max-width: 100px; /* Ensures it doesn't overlap with text */
+  pointer-events: none; 
+  max-width: 100px; 
+}*/
+
+
+
+
+/* Search Status Container */
+.search-status {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  background: #f8f9fa;
+  border: 1px solid #e9ecef;
+  border-radius: 6px;
+  margin-top: 8px;
+  font-size: 0.85rem;
+  color: #6c757d;
+  position: relative;
+  overflow: hidden;
 }
+
+/* Search Hint Paragraph */
+.search-hint {
+  margin: 0;
+  padding: 0;
+  font-style: italic;
+  color: #6c757d;
+  line-height: 1.4;
+}
+
+/* Status variations for different AI states */
+.search-status.ready {
+  background: #d4edda;
+  border-color: #c3e6cb;
+  color: #155724;
+}
+
+.search-status.loading {
+  background: #fff3cd;
+  border-color: #ffeaa7;
+  color: #856404;
+}
+
+.search-status.unavailable {
+  background: #f8d7da;
+  border-color: #f5c6cb;
+  color: #721c24;
+}
+
+/* Individual status indicators */
+.status-ready {
+  color: #28a745;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.status-indexing {
+  color: #ffc107;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.status-loading {
+  color: #fd7e14;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.status-basic {
+  color: #6c757d;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.result-count {
+  color: #495057;
+  font-size: 0.8rem;
+  font-weight: 500;
+  margin-left: auto;
+}
+
+/* Animation for loading states */
+.status-loading::before,
+.status-indexing::before {
+  content: "";
+  width: 12px;
+  height: 12px;
+  border: 2px solid transparent;
+  border-top: 2px solid currentColor;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin-right: 4px;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .search-status {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
+  }
+
+  .result-count {
+    margin-left: 0;
+    align-self: flex-end;
+  }
+
+  .search-hint {
+    font-size: 0.8rem;
+  }
+}
+
+/* For search status within Long COVID side panel */
+.long-covid-side-panel .search-status {
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.long-covid-side-panel .search-hint {
+  color: rgba(255, 255, 255, 0.7);
+}
+
+/* Hover effects for interactive elements */
+.search-status:hover {
+  background: #e9ecef;
+  transition: background-color 0.2s ease;
+}
+
+.search-status.ready:hover {
+  background: #c3e6cb;
+}
+
+.search-status.loading:hover {
+  background: #ffeaa7;
+}
+
+.search-status.unavailable:hover {
+  background: #f5c6cb;
+}
+
+
+
 
 /* Improved suggestions dropdown positioning */
 .suggestions-list {

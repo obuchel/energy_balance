@@ -186,13 +186,18 @@ function Dashboard() {
   };
 
   // Handle button click for activity dashboard
+
   const handleViewActivityData = () => {
+    console.log('handleViewActivityData called - navigating to /fitbit-dashboard');
     navigate('/fitbit-dashboard');
   };
 
   // Handle navigation to personal settings
   const handlePersonalSettings = () => {
     navigate('/personal-settings');
+  };
+  const handleSymptomTracker = () => {
+    navigate('/symptom-tracker');
   };
   
   // Handle logout - Complete logout from both localStorage and Firebase Auth
@@ -250,6 +255,13 @@ function Dashboard() {
       </div>
     );
   }
+
+  console.log('=== DASHBOARD DEBUG INFO ===');
+console.log('userData:', userData);
+console.log('selectedDevice:', userData?.selectedDevice);
+console.log('deviceConnected:', userData?.deviceConnected);
+console.log('isFitbitConnected:', isFitbitConnected);
+console.log('=== END DEBUG INFO ===');
   
   return (
     <div className="dashboard-container">
@@ -287,15 +299,45 @@ function Dashboard() {
             <span className="info-icon" title="One-tap access to common activities for logging your day and managing your condition.">ⓘ</span>
           </h3>
           <div className="quick-actions">
-            <button className="action-button meal" onClick={handleTrackMeal}>
-              📝 Track Meal
-            </button>
-            {isFitbitConnected && (
-              <button className="action-button activity" onClick={handleViewActivityData}>
-                📊 View Activity Data
-              </button>
-            )}
-          </div>
+  <button 
+    className="action-button meal" 
+    onClick={() => {
+      console.log('CLICKED: Track Meal button');
+      handleTrackMeal();
+    }}
+    style={{border: '2px solid red'}} // Temporary visual aid
+  >
+    📝 Track Meal
+  </button>
+  
+  <button 
+    className="action-button symptom" 
+    onClick={() => {
+      console.log('CLICKED: Track Symptoms button');
+      handleSymptomTracker();
+    }}
+    style={{border: '2px solid blue'}} // Temporary visual aid
+  >
+    🩺 Track Symptoms
+  </button>
+  
+  {isFitbitConnected ? (
+    <button 
+      className="action-button activity" 
+      onClick={() => {
+        console.log('CLICKED: View Activity Data button');
+        handleViewActivityData();
+      }}
+      style={{border: '2px solid green'}} // Temporary visual aid
+    >
+      📊 View Activity Data
+    </button>
+  ) : (
+    <div style={{border: '2px dashed orange', padding: '10px'}}>
+      Activity button hidden - Fitbit not connected
+    </div>
+  )}
+</div>
         </div>
         
 

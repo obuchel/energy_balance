@@ -6,6 +6,7 @@ import Dashboard from './components/Dashboard/Dashboard';
 import SignInPage from './components/SignIn/SignInPage';
 import FitbitDashboard from './components/FitbitDashboard/FitbitDashboard';
 import PersonalSettings from './components/Settings/PersonalSettings';
+import SymptomTracker from './components/SymptomTracker/SymptomTracker';
 import './App.css';
 
 // Lazy load components that need Pyodide
@@ -411,6 +412,16 @@ function App() {
             element={
               <ProtectedRoute>
                 <Dashboard />
+              </ProtectedRoute>
+            } 
+          />
+          
+          {/* Symptom Tracker route - Now properly protected */}
+          <Route 
+            path="/symptom-tracker" 
+            element={
+              <ProtectedRoute>
+                <SymptomTracker />
               </ProtectedRoute>
             } 
           />
