@@ -27,12 +27,6 @@ function Dashboard() {
       
       const parsedUserData = JSON.parse(storedUserData);
       
-      // REMOVED: Don't check registrationComplete since we bypassed it in SignIn
-      // if (!parsedUserData.registrationComplete) {
-      //   navigate('/register');
-      //   return;
-      // }
-      
       // Fetch full user data from Firestore using the stored user ID
       if (parsedUserData.id) {
         const userDocRef = doc(db, "users", parsedUserData.id);
@@ -82,7 +76,7 @@ function Dashboard() {
     
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
-  }, [loading, userData]); // Changed dependency to userData instead of ref
+  }, [loading, userData]);
   
   const createForecastChart = () => {
     const margin = { top: 20, right: 20, bottom: 30, left: 40 };
@@ -116,7 +110,10 @@ function Dashboard() {
       
     svg.append("g")
       .attr("transform", `translate(0, ${height})`)
-      .call(d3.axisBottom(x));
+      .call(d3.axisBottom(x))
+      .selectAll("text")
+      .style("fill", "#6b7280")
+      .style("font-size", "12px");
       
     // Y axis scale
     const y = d3.scaleLinear()
@@ -124,7 +121,46 @@ function Dashboard() {
       .range([height, 0]);
       
     svg.append("g")
-      .call(d3.axisLeft(y));
+      .call(d3.axisLeft(y))
+      .selectAll("text")
+      .style("fill", "#6b7280")
+      .style("font-size", "12px");
+      
+    // Style axis lines
+    svg.selectAll(".domain, .tick line")
+      .style("stroke", "#e5e7eb")
+      .style("stroke-width", "1px");
+      
+    // Add gradient for line
+    const gradient = svg.append("defs")
+      .append("linearGradient")
+      .attr("id", "lineGradient")
+      .attr("gradientUnits", "userSpaceOnUse")
+      .attr("x1", 0).attr("y1", 0)
+      .attr("x2", 0).attr("y2", height);
+      
+    gradient.append("stop")
+      .attr("offset", "0%")
+      .attr("stop-color", "#3b82f6")
+      .attr("stop-opacity", 0.8);
+      
+    gradient.append("stop")
+      .attr("offset", "100%")
+      .attr("stop-color", "#2563eb")
+      .attr("stop-opacity", 0.8);
+      
+    // Add area under curve
+    const area = d3.area()
+      .x(d => x(d.hour) + x.bandwidth() / 2)
+      .y0(height)
+      .y1(d => y(d.value))
+      .curve(d3.curveMonotoneX);
+      
+    svg.append("path")
+      .datum(energyData)
+      .attr("fill", "url(#lineGradient)")
+      .attr("opacity", 0.1)
+      .attr("d", area);
       
     // Add line path for forecast
     const line = d3.line()
@@ -135,11 +171,11 @@ function Dashboard() {
     svg.append("path")
       .datum(energyData)
       .attr("fill", "none")
-      .attr("stroke", "#4299e1")
+      .attr("stroke", "url(#lineGradient)")
       .attr("stroke-width", 3)
       .attr("d", line);
       
-    // Add dots
+    // Add dots with enhanced styling
     svg.selectAll(".dot")
       .data(energyData)
       .enter()
@@ -147,10 +183,37 @@ function Dashboard() {
       .attr("class", "dot")
       .attr("cx", d => x(d.hour) + x.bandwidth() / 2)
       .attr("cy", d => y(d.value))
-      .attr("r", 5)
-      .attr("fill", d => d.actual ? "#4299e1" : "#E2E8F0")
-      .attr("stroke", "#4299e1")
-      .attr("stroke-width", 2);
+      .attr("r", 6)
+      .attr("fill", d => d.actual ? "#3b82f6" : "white")
+      .attr("stroke", "#3b82f6")
+      .attr("stroke-width", 3)
+      .style("filter", "drop-shadow(0 2px 4px rgba(0,0,0,0.1))")
+      .on("mouseover", function(event, d) {
+        // Add tooltip on hover
+        const tooltip = svg.append("g")
+          .attr("class", "tooltip");
+          
+       /* const rect = tooltip.append("rect")
+          .attr("x", x(d.hour) + x.bandwidth() / 2 - 25)
+          .attr("y", y(d.value) - 35)
+          .attr("width", 50)
+          .attr("height", 25)
+          .attr("rx", 4)
+          .attr("fill", "#374151")
+          .attr("opacity", 0.9);*/
+          
+        tooltip.append("text")
+          .attr("x", x(d.hour) + x.bandwidth() / 2)
+          .attr("y", y(d.value) - 18)
+          .attr("text-anchor", "middle")
+          .style("fill", "white")
+          .style("font-size", "12px")
+          .style("font-weight", "500")
+          .text(`${d.value}%`);
+      })
+      .on("mouseout", function() {
+        svg.select(".tooltip").remove();
+      });
       
     // Add the current time indicator
     const currentTime = new Date().getHours();
@@ -165,28 +228,29 @@ function Dashboard() {
         .attr("x2", posX)
         .attr("y1", 0)
         .attr("y2", height)
-        .attr("stroke", "#FC8181")
+        .attr("stroke", "#ef4444")
         .attr("stroke-width", 2)
-        .attr("stroke-dasharray", "5,5");
+        .attr("stroke-dasharray", "5,5")
+        .style("filter", "drop-shadow(0 1px 2px rgba(0,0,0,0.1))");
         
       svg.append("text")
         .attr("x", posX)
-        .attr("y", 10)
+        .attr("y", -5)
         .attr("text-anchor", "middle")
-        .style("font-size", "10px")
-        .style("fill", "#FC8181")
+        .style("font-size", "11px")
+        .style("font-weight", "600")
+        .style("fill", "#ef4444")
         .text("Now");
     }
   };
   
   // Handle button click for tracking meal
   const handleTrackMeal = () => {
-    // Navigate to FoodTrackerPage
+    console.log('CLICKED: Track Meal button');
     navigate('/food-tracker');
   };
 
   // Handle button click for activity dashboard
-
   const handleViewActivityData = () => {
     console.log('handleViewActivityData called - navigating to /fitbit-dashboard');
     navigate('/fitbit-dashboard');
@@ -196,7 +260,9 @@ function Dashboard() {
   const handlePersonalSettings = () => {
     navigate('/personal-settings');
   };
+  
   const handleSymptomTracker = () => {
+    console.log('CLICKED: Track Symptoms button');
     navigate('/symptom-tracker');
   };
   
@@ -257,21 +323,34 @@ function Dashboard() {
   }
 
   console.log('=== DASHBOARD DEBUG INFO ===');
-console.log('userData:', userData);
-console.log('selectedDevice:', userData?.selectedDevice);
-console.log('deviceConnected:', userData?.deviceConnected);
-console.log('isFitbitConnected:', isFitbitConnected);
-console.log('=== END DEBUG INFO ===');
+  console.log('userData:', userData);
+  console.log('selectedDevice:', userData?.selectedDevice);
+  console.log('deviceConnected:', userData?.deviceConnected);
+  console.log('isFitbitConnected:', isFitbitConnected);
+  console.log('=== END DEBUG INFO ===');
   
   return (
     <div className="dashboard-container">
+      {/* Animated background elements - matching SignIn page */}
+      <div className="bg-animation">
+        <div className="floating-shape shape-1"></div>
+        <div className="floating-shape shape-2"></div>
+        <div className="floating-shape shape-3"></div>
+        <div className="floating-shape shape-4"></div>
+        <div className="floating-shape shape-5"></div>
+      </div>
+
       <div className="header">
         <h1>Energy Management Dashboard</h1>
         <div className="user-info">
           <span>Welcome, {userData?.name || 'User'}!</span>
           <div className="user-actions">
-            <button onClick={handlePersonalSettings} className="settings-btn">⚙️ Settings</button>
-            <button onClick={handleLogout} className="logout-btn">Logout</button>
+            <button onClick={handlePersonalSettings} className="settings-btn">
+              ⚙️ Settings
+            </button>
+            <button onClick={handleLogout} className="logout-btn">
+              Logout
+            </button>
           </div>
         </div>
         <div className="date" id="current-date">
@@ -286,61 +365,61 @@ console.log('=== END DEBUG INFO ===');
       
       <div className="dashboard">
         <div className="card energy-gauge-container">
-          <h3 className="card-title">
-            Daily Energy Forecast
-            <span className="info-icon" title="Predicts how your energy levels will change throughout the day based on planned activities and historical patterns.">ⓘ</span>
-          </h3>
-          <div id="forecast-chart" ref={forecastChartRef} className="forecast-chart"></div>
+          {/* Large rotating glow effect */}
+          <div className="card-glow"></div>
+          <div className="card-content">
+            <h3 className="card-title">
+              Daily Energy Forecast
+              <span className="info-icon" title="Predicts how your energy levels will change throughout the day based on planned activities and historical patterns.">ⓘ</span>
+            </h3>
+            <div id="forecast-chart" ref={forecastChartRef} className="forecast-chart"></div>
+          </div>
         </div>
 
         <div className="card status-summary-container">
-          <h3 className="card-title">
-            Quick Actions
-            <span className="info-icon" title="One-tap access to common activities for logging your day and managing your condition.">ⓘ</span>
-          </h3>
-          <div className="quick-actions">
-  <button 
-    className="action-button meal" 
-    onClick={() => {
-      console.log('CLICKED: Track Meal button');
-      handleTrackMeal();
-    }}
-    style={{border: '2px solid red'}} // Temporary visual aid
-  >
-    📝 Track Meal
-  </button>
-  
-  <button 
-    className="action-button symptom" 
-    onClick={() => {
-      console.log('CLICKED: Track Symptoms button');
-      handleSymptomTracker();
-    }}
-    style={{border: '2px solid blue'}} // Temporary visual aid
-  >
-    🩺 Track Symptoms
-  </button>
-  
-  {isFitbitConnected ? (
-    <button 
-      className="action-button activity" 
-      onClick={() => {
-        console.log('CLICKED: View Activity Data button');
-        handleViewActivityData();
-      }}
-      style={{border: '2px solid green'}} // Temporary visual aid
-    >
-      📊 View Activity Data
-    </button>
-  ) : (
-    <div style={{border: '2px dashed orange', padding: '10px'}}>
-      Activity button hidden - Fitbit not connected
-    </div>
-  )}
-</div>
+          {/* Large rotating glow effect */}
+          <div className="card-glow"></div>
+          <div className="card-content">
+            <h3 className="card-title">
+              Quick Actions
+              <span className="info-icon" title="One-tap access to common activities for logging your day and managing your condition.">ⓘ</span>
+            </h3>
+            <div className="quick-actions">
+              <button 
+                className="action-button meal" 
+                onClick={handleTrackMeal}
+              >
+                📝 Track Meal
+              </button>
+              
+              <button 
+                className="action-button symptom" 
+                onClick={handleSymptomTracker}
+              >
+                🩺 Track Symptoms
+              </button>
+              
+              {isFitbitConnected ? (
+                <button 
+                  className="action-button activity" 
+                  onClick={handleViewActivityData}
+                >
+                  📊 View Activity Data
+                </button>
+              ) : (
+                <div className="action-button" style={{
+                  background: 'rgba(245, 158, 11, 0.1)',
+                  borderColor: 'rgba(245, 158, 11, 0.3)',
+                  color: 'var(--warning-color)',
+                  cursor: 'not-allowed',
+                  opacity: 0.7
+                }}>
+                  📊 Connect Device First
+                </div>
+              )}
+            </div>
+          </div>
         </div>
-        
-
       </div>
     </div>
   );

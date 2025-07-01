@@ -24,6 +24,54 @@ function SignInPage() {
     }
   }, [prefillEmail]);
 
+  // Add interactive effects
+  React.useEffect(() => {
+    const inputs = document.querySelectorAll('input');
+    const deviceItems = document.querySelectorAll('.device-item');
+
+    // Add input animation effects
+    inputs.forEach(input => {
+      const handleFocus = () => {
+        if (input.parentElement) {
+          input.parentElement.style.transform = 'scale(1.02)';
+        }
+      };
+      
+      const handleBlur = () => {
+        if (input.parentElement) {
+          input.parentElement.style.transform = 'scale(1)';
+        }
+      };
+
+      input.addEventListener('focus', handleFocus);
+      input.addEventListener('blur', handleBlur);
+
+      return () => {
+        input.removeEventListener('focus', handleFocus);
+        input.removeEventListener('blur', handleBlur);
+      };
+    });
+
+    // Device item hover effects
+    deviceItems.forEach(item => {
+      const handleMouseEnter = () => {
+        item.style.transform = 'translateY(-4px) scale(1.05)';
+      };
+      
+      const handleMouseLeave = () => {
+        item.style.transform = 'translateY(0) scale(1)';
+      };
+
+      item.addEventListener('mouseenter', handleMouseEnter);
+      item.addEventListener('mouseleave', handleMouseLeave);
+
+      return () => {
+        item.removeEventListener('mouseenter', handleMouseEnter);
+        item.removeEventListener('mouseleave', handleMouseLeave);
+      };
+    });
+  }, []);
+
   const onSubmit = async (e) => {
     e.preventDefault();
     setError("");
@@ -58,7 +106,7 @@ function SignInPage() {
       // Clear any existing authentication state first
       if (auth.currentUser) {
         console.log('Clearing previous auth state for:', auth.currentUser.email);
-        await signOut(auth); // Fixed: Use signOut(auth) instead of auth.signOut()
+        await signOut(auth);
       }
       
       // Clear any existing session data
@@ -94,7 +142,7 @@ function SignInPage() {
         setError("User profile not found. Please contact support or try registering again.");
         
         // Sign out the user since we can't find their profile
-        await signOut(auth); // Fixed: Use signOut(auth) instead of auth.signOut()
+        await signOut(auth);
         setLoading(false);
         return;
       }
@@ -238,126 +286,142 @@ function SignInPage() {
 
   return (
     <div className="signin-container">
+      {/* Animated background elements */}
+      <div className="bg-animation">
+        <div className="floating-shape shape-1"></div>
+        <div className="floating-shape shape-2"></div>
+        <div className="floating-shape shape-3"></div>
+      </div>
+
       <div className="signin-card">
-        <div className="signin-header">
-          <h1>Welcome Back</h1>
-          <p>Sign in to your Energy Balance account</p>
-        </div>
+        {/* Rotating glow effect */}
+        <div className="card-glow"></div>
         
-        {/* Show registration success message */}
-        {registrationMessage && (
-          <div className="success-message">
-            {registrationMessage}
-          </div>
-        )}
-        
-        {error && <div className="error-message">{error}</div>}
-        
-        <form className="signin-form" onSubmit={onSubmit}>
-          <div className="form-group">
-            <label htmlFor="email">Email Address</label>
-            <input
-              id="email"
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="Enter your email"
-              required
-              autoComplete="email"
-            />
+        <div className="card-content">
+          <div className="signin-header">
+            {/* Enhanced logo */}
+            <div className="logo-container">
+              <div className="logo"></div>
+            </div>
+            <h1>Welcome</h1>
+            <p>Sign in to your Energy Balance account</p>
           </div>
           
-          <div className="form-group">
-            <label htmlFor="password">Password</label>
-            <input
-              id="password"
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="Enter your password"
-              required
-              autoComplete="current-password"
-              minLength="6"
-            />
-            <div className="forgot-password">
-              <a href="#forgot">Forgot your password?</a>
+          {/* Show registration success message */}
+          {registrationMessage && (
+            <div className="success-message">
+              {registrationMessage}
+            </div>
+          )}
+          
+          {error && <div className="error-message">{error}</div>}
+          
+          <form className="signin-form" onSubmit={onSubmit}>
+            <div className="form-group">
+              <input
+                id="email"
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="Enter your email"
+                required
+                autoComplete="email"
+              />
+              <label htmlFor="email">Email Address</label>
+            </div>
+            
+            <div className="form-group">
+              <input
+                id="password"
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="Enter your password"
+                required
+                autoComplete="current-password"
+                minLength="6"
+              />
+              <label htmlFor="password">Password</label>
+              <div className="forgot-password">
+                <a href="#forgot">Forgot your password?</a>
+              </div>
+            </div>
+            
+            <button 
+              type="submit" 
+              className="signin-button"
+              disabled={loading}
+            >
+              {loading && <span className="loading-spinner"></span>}
+              <span>{loading ? "Signing in..." : "Sign In"}</span>
+            </button>
+          </form>
+          
+          <div className="divider"></div>
+          
+          <div className="signup-link">
+            Don't have an account? <Link to="/register">Sign up here</Link>
+          </div>
+          
+          {/* About Energy Balance Section */}
+          <div className="about-section">
+            <h3>About Energy Balance</h3>
+            <p>
+              Energy Balance is a comprehensive health management system designed to help individuals 
+              recovering from Long COVID. Our platform helps you track and manage your energy levels, 
+              physical activity, and overall well-being through seamless integration with your wearable devices.
+            </p>
+            <p>
+              By monitoring your daily activities and energy expenditure, we help you maintain a healthy 
+              balance and prevent post-exertional malaise (PEM) episodes.
+            </p>
+            
+            <div className="supported-devices">
+              <h4>Supported Devices</h4>
+              <div className="device-icons">
+                <div className="device-item">
+                  <span className="device-icon">⌚</span>
+                  <span>Apple Watch</span>
+                </div>
+                <div className="device-item">
+                  <span className="device-icon">📱</span>
+                  <span>Fitbit</span>
+                </div>
+                <div className="device-item">
+                  <span className="device-icon">⌚</span>
+                  <span>Garmin</span>
+                </div>
+                <div className="device-item">
+                  <span className="device-icon">📱</span>
+                  <span>Samsung Health</span>
+                </div>
+                <div className="device-item">
+                  <span className="device-icon">📊</span>
+                  <span>Manual Entry</span>
+                </div>
+              </div>
             </div>
           </div>
           
-          <button 
-            type="submit" 
-            className="signin-button"
-            disabled={loading}
-          >
-            {loading && <span className="loading-spinner"></span>}
-            {loading ? "Signing in..." : "Sign In"}
-          </button>
-        </form>
-        
-        <div className="divider">or</div>
-        
-        <div className="signup-link">
-          Don't have an account? <Link to="/register">Sign up here</Link>
-        </div>
-        
-        {/* About Energy Balance Section */}
-        <div className="about-section">
-          <h3>About Energy Balance</h3>
-          <p>
-            Energy Balance is a comprehensive health management system designed to help individuals 
-            recovering from Long COVID. Our platform helps you track and manage your energy levels, 
-            physical activity, and overall well-being through seamless integration with your wearable devices.
-          </p>
-          <p>
-            By monitoring your daily activities and energy expenditure, we help you maintain a healthy 
-            balance and prevent post-exertional malaise (PEM) episodes.
-          </p>
-          
-          <div className="supported-devices">
-            <h4>Supported Devices</h4>
-            <div className="device-icons">
-              <div className="device-item">
-                <span className="device-icon">⌚</span>
-                <span>Apple Watch</span>
-              </div>
-              <div className="device-item">
-                <span className="device-icon">📱</span>
-                <span>Fitbit</span>
-              </div>
-              <div className="device-item">
-                <span className="device-icon">⌚</span>
-                <span>Garmin</span>
-              </div>
-              <div className="device-item">
-                <span className="device-icon">📱</span>
-                <span>Samsung Health</span>
-              </div>
-              <div className="device-item">
-                <span className="device-icon">📊</span>
-                <span>Manual Entry</span>
-              </div>
+          {/* Debug info in development */}
+          {process.env.NODE_ENV === 'development' && (
+            <div className="debug-info">
+              <strong>Debug Info:</strong><br/>
+              Firebase Auth URL: {auth.config?.authDomain}<br/>
+              Form Email: {email || 'None'}<br/>
+              Current Auth User: {auth.currentUser?.email || 'None'}<br/>
+              LocalStorage User: {(() => {
+                try {
+                  const userData = JSON.parse(localStorage.getItem('userData') || '{}');
+                  return userData.email || 'None';
+                } catch {
+                  return 'Invalid/None';
+                }
+              })()}<br/>
+              Environment: {process.env.NODE_ENV}
             </div>
-          </div>
+          )}
         </div>
-        
-        {/* Debug info in development */}
-        {process.env.NODE_ENV === 'development' && (
-          <div className="debug-info" style={{marginTop: '20px', padding: '10px', backgroundColor: '#f5f5f5', fontSize: '12px'}}>
-            <strong>Debug Info:</strong><br/>
-            Firebase Auth URL: {auth.config?.authDomain}<br/>
-            Form Email: {email || 'None'}<br/>
-            Current Auth User: {auth.currentUser?.email || 'None'}<br/>
-            LocalStorage User: {(() => {
-              try {
-                const userData = JSON.parse(localStorage.getItem('userData') || '{}');
-                return userData.email || 'None';
-              } catch {
-                return 'Invalid/None';
-              }
-            })()}<br/>
-            Environment: {process.env.NODE_ENV}
-          </div>
-        )}
       </div>
     </div>
   );

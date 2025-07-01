@@ -1031,6 +1031,25 @@ const initializeFoodLogData = useCallback(async () => {
     </div>
   );
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
   // Fetch suggestions effect
   useEffect(() => {
     if (debouncedSearch.length < 2) {
@@ -1144,7 +1163,23 @@ const initializeFoodLogData = useCallback(async () => {
   }
 
   return (
+
     <div className="food-tracker-container">
+    {/* Animated background elements */}
+    <div className="bg-animation">
+      <div className="card-glow"></div>
+      <div className="floating-shape shape-1"></div>
+      <div className="floating-shape shape-2"></div>
+      <div className="floating-shape shape-3"></div>
+      <div className="floating-shape shape-4"></div>
+      <div className="floating-shape shape-5"></div>
+      <div className="floating-shape shape-6"></div>
+    </div>
+
+
+
+    {/* EVERYTHING goes inside this unified container */}
+    <div className="food-tracker-content">
       {/* Delete Confirmation Modal */}
       {deleteConfirmId && (
         <DeleteConfirmModal
@@ -1155,6 +1190,7 @@ const initializeFoodLogData = useCallback(async () => {
         />
       )}
 
+      {/* Header - MOVED INSIDE the content container */}
       <div className="tracker-header">
         <button onClick={handleBack} className="back-button">
           ← Back to Dashboard
@@ -1164,14 +1200,20 @@ const initializeFoodLogData = useCallback(async () => {
         </button>
       </div>
       
+      {/* Title - MOVED INSIDE the content container */}
       <h2>🧠 AI-Powered Meal Tracker</h2>
       
       {/* AI Status Banner */}
       <div className={`ai-status-banner ${pyodideStatus}`}>
+
         {pyodideStatus === 'ready' && (
           <div className="ai-ready">
             🚀 <strong>AI Search Enabled:</strong> Advanced food matching with intelligent recommendations
-          </div>
+            </div>
+
+         
+
+          
         )}
         {pyodideStatus === 'loading' && (
           <div className="ai-loading">
@@ -1186,6 +1228,7 @@ const initializeFoodLogData = useCallback(async () => {
       </div>
       
       <div className="food-tabs">
+   
         {TABS.map(t => (
           <button
             key={t}
@@ -1197,9 +1240,31 @@ const initializeFoodLogData = useCallback(async () => {
         ))}
       </div>
 
+     
       {tab === 'Add Food' && (
+        
         <div className="food-form-section">
+           
           <div className="food-form-left">
+
+          <div 
+    className="tab-glow"
+    style={{
+      position: 'absolute',
+      top: '50%',
+      left: '50%',
+      width: '400px',
+      height: '1000px',
+      background: 'radial-gradient(ellipse 60% 60% at center, rgba(102, 126, 234, 0.4) 0%, transparent 70%)',
+      borderRadius: '50%',
+      animation: 'rotatingGlow 10s linear infinite',
+      filter: 'blur(25px)',
+      zIndex: 0,
+      pointerEvents: 'none',
+      transform: 'translate(-50%, -50%)'
+    }}
+  ></div>
+         
             {/* Edit Mode Indicator */}
             {editingEntry && (
               <div className="edit-mode-banner">
@@ -1241,89 +1306,118 @@ const initializeFoodLogData = useCallback(async () => {
 
             {renderSearchInput()}
 
-            {/* Nutrition fields */}
-            <div className="form-row">
-              <div className="form-group">
-                <label>Protein (g)</label>
-                <input 
-                  name="protein" 
-                  value={fields.protein || ''} 
-                  onChange={handleFieldChange} 
-                  type="number"
-                  step="0.1"
-                />
-              </div>
-              <div className="form-group">
-                <label>Carbs (g)</label>
-                <input 
-                  name="carbs" 
-                  value={fields.carbs || ''} 
-                  onChange={handleFieldChange} 
-                  type="number"
-                  step="0.1"
-                />
-              </div>
-              <div className="form-group">
-                <label>Fat (g)</label>
-                <input 
-                  name="fat" 
-                  value={fields.fat || ''} 
-                  onChange={handleFieldChange} 
-                  type="number"
-                  step="0.1"
-                />
-              </div>
-              <div className="form-group">
-                <label>Serving (g)</label>
-                <input 
-                  name="serving" 
-                  value={fields.serving || ''} 
-                  onChange={handleFieldChange}
-                  type="number"
-                  step="1"
-                  className="serving-input"
-                />
-              </div>
-            </div>
 
-            {/* Meal details */}
-            <div className="form-row">
-              <div className="form-group">
-                <label>Meal Type</label>
-                <select value={mealType} onChange={e => setMealType(e.target.value)}>
-                  {mealTypes.map(type => (
-                    <option key={type} value={type}>{type}</option>
-                  ))}
-                </select>
-              </div>
-              <div className="form-group">
-                <label>Time</label>
-                <input 
-                  type="time" 
-                  value={convertTo24Hour(time)} 
-                  onChange={handleTimeChange} 
-                />
-              </div>
-              <div className="form-group">
-                <label>Date</label>
-                <input 
-                  type="date" 
-                  value={date} 
-                  onChange={e => setDate(e.target.value)} 
-                />
-              </div>
-            </div>
 
-            <div className="form-group">
-              <label>Calories</label>
-              <input 
-                name="calories" 
-                value={fields.calories || ''} 
-                onChange={handleFieldChange} 
-                type="number"
-                step="1"
-              />
-            </div>
+
+
+
+
+
+          {/* Nutrition fields - UPDATED for floating labels */}
+<div className="form-row">
+  <div className="form-group">
+    <input 
+      name="protein" 
+      value={fields.protein || ''} 
+      onChange={handleFieldChange} 
+      type="number"
+      step="0.1"
+      placeholder=" "
+    />
+    <label>Protein (g)</label>
+  </div>
+  <div className="form-group">
+    <input 
+      name="carbs" 
+      value={fields.carbs || ''} 
+      onChange={handleFieldChange} 
+      type="number"
+      step="0.1"
+      placeholder=" "
+    />
+    <label>Carbs (g)</label>
+  </div>
+  <div className="form-group">
+    <input 
+      name="fat" 
+      value={fields.fat || ''} 
+      onChange={handleFieldChange} 
+      type="number"
+      step="0.1"
+      placeholder=" "
+    />
+    <label>Fat (g)</label>
+  </div>
+  <div className="form-group">
+    <input 
+      name="serving" 
+      value={fields.serving || ''} 
+      onChange={handleFieldChange}
+      type="number"
+      step="1"
+      className="serving-input"
+      placeholder=" "
+    />
+    <label>Serving (g)</label>
+  </div>
+</div>
+
+
+
+
+
+
+         
+       
+{/* Meal details - UPDATED for floating labels with proper label positioning */}
+<div className="form-row">
+  <div className="form-group">
+    <label htmlFor="meal-type">Meal Type</label>
+    <select 
+      id="meal-type" 
+      value={mealType} 
+      onChange={e => setMealType(e.target.value)}
+    >
+      {mealTypes.map(type => (
+        <option key={type} value={type}>{type}</option>
+      ))}
+    </select>
+  </div>
+  <div className="form-group">
+    <input 
+      type="time" 
+      value={convertTo24Hour(time)} 
+      onChange={handleTimeChange}
+      placeholder=" "
+    />
+    <label>Time</label>
+  </div>
+  <div className="form-group">
+    <input 
+      type="date" 
+      value={date} 
+      onChange={e => setDate(e.target.value)}
+      placeholder=" "
+    />
+    <label>Date</label>
+  </div>
+</div>
+
+{/* Calories field - UPDATED for floating labels */}
+<div className="form-group">
+  <input 
+    name="calories" 
+    value={fields.calories || ''} 
+    onChange={handleFieldChange} 
+    type="number"
+    step="1"
+    placeholder=" "
+  />
+  <label>Calories</label>
+</div>
+
+
+
 
             <div className="form-group">
               <button 
@@ -1514,6 +1608,791 @@ const initializeFoodLogData = useCallback(async () => {
         />
       )}
     </div>
+    <style jsx>{`
+        /* Enhanced rotating glow animation for tabs */
+        @keyframes rotatingGlow {
+          0% { 
+            transform: translate(-50%, -50%) rotate(0deg);
+            opacity: 0.3;
+          }
+          25% { 
+            transform: translate(-50%, -50%) rotate(90deg);
+            opacity: 0.5;
+          }
+          50% { 
+            transform: translate(-50%, -50%) rotate(180deg);
+            opacity: 0.7;
+          }
+          75% { 
+            transform: translate(-50%, -50%) rotate(270deg);
+            opacity: 0.5;
+          }
+          100% { 
+            transform: translate(-50%, -50%) rotate(360deg);
+            opacity: 0.3;
+          }
+        }
+
+        @keyframes tabGlowRotate {
+          0%, 100% { 
+            transform: translate(-50%, -50%) rotate(0deg) scale(1);
+            opacity: 0.4;
+          }
+          50% { 
+            transform: translate(-50%, -50%) rotate(180deg) scale(1.1);
+            opacity: 0.8;
+          }
+        }
+
+        /* Main container with animated background */
+        .food-tracker-container {
+          min-height: 100vh;
+          background: linear-gradient(135deg, #667eea 0%, #5a6fd8 50%, #5a6fd8 100%);
+          padding: 20px;
+          position: relative;
+          overflow: hidden;
+          font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+        }
+
+        .food-tracker-container::before {
+          content: '';
+          position: absolute;
+          top: 0;
+          left: 0;
+          width: 100%;
+          height: 100%;
+          background: 
+            radial-gradient(circle at 20% 80%, rgba(255, 255, 255, 0.1) 0%, transparent 50%),
+            radial-gradient(circle at 80% 20%, rgba(255, 255, 255, 0.1) 0%, transparent 50%),
+            radial-gradient(circle at 40% 40%, rgba(255, 255, 255, 0.05) 0%, transparent 50%);
+          animation: float 8s ease-in-out infinite;
+          z-index: 0;
+        }
+
+        @keyframes float {
+          0%, 100% { transform: translateY(0px) rotate(0deg); }
+          50% { transform: translateY(-10px) rotate(180deg); }
+        }
+
+        @keyframes floatShape {
+          0%, 100% { 
+            transform: translateY(0px) rotate(0deg);
+            opacity: 0.6;
+          }
+          50% { 
+            transform: translateY(-20px) rotate(180deg);
+            opacity: 0.8;
+          }
+        }
+
+        @keyframes pulse {
+          0%, 100% { transform: scale(1); }
+          50% { transform: scale(1.02); }
+        }
+
+        @keyframes slideUp {
+          from {
+            opacity: 0;
+            transform: translateY(30px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
+
+        @keyframes fadeInUp {
+          from {
+            opacity: 0;
+            transform: translateY(20px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
+
+        /* Enhanced animated background with floating circles */
+        .bg-animation {
+          position: absolute;
+          top: 0;
+          left: 0;
+          width: 100%;
+          height: 100%;
+          overflow: hidden;
+          z-index: 0;
+        }
+
+        .card-glow {
+          position: absolute;
+          top: 50%;
+          left: 50%;
+          width: 400px;
+          height: 400px;
+          background: radial-gradient(circle, rgba(102, 126, 234, 0.3) 0%, transparent 70%);
+          border-radius: 50%;
+          transform: translate(-50%, -50%);
+          animation: pulse 4s ease-in-out infinite;
+          filter: blur(20px);
+        }
+
+        .floating-shape {
+          position: absolute;
+          background: rgba(255, 255, 255, 0.1);
+          border-radius: 50%;
+          animation: floatShape 6s ease-in-out infinite;
+        }
+
+        .shape-1 {
+          width: 80px;
+          height: 80px;
+          top: 15%;
+          left: 10%;
+          animation-delay: 0s;
+        }
+
+        .shape-2 {
+          width: 120px;
+          height: 120px;
+          top: 65%;
+          right: 15%;
+          animation-delay: 2s;
+        }
+
+        .shape-3 {
+          width: 60px;
+          height: 60px;
+          top: 35%;
+          right: 25%;
+          animation-delay: 4s;
+        }
+
+        .shape-4 {
+          width: 90px;
+          height: 90px;
+          top: 80%;
+          left: 30%;
+          animation-delay: 1s;
+        }
+
+        .shape-5 {
+          width: 70px;
+          height: 70px;
+          top: 25%;
+          left: 60%;
+          animation-delay: 3s;
+        }
+
+        .shape-6 {
+          width: 100px;
+          height: 100px;
+          top: 50%;
+          right: 5%;
+          animation-delay: 5s;
+        }
+
+        /* Main content wrapper */
+        .food-tracker-content {
+          max-width: 1200px;
+          margin: 0 auto;
+          background: rgba(255, 255, 255, 0.95);
+          backdrop-filter: blur(20px);
+          border-radius: 24px;
+          padding: 32px;
+          box-shadow: 
+            0 8px 32px rgba(0, 0, 0, 0.1),
+            0 1px 0 rgba(255, 255, 255, 0.8) inset;
+          border: 1px solid rgba(255, 255, 255, 0.2);
+          position: relative;
+          animation: slideUp 0.8s ease-out;
+          z-index: 1;
+        }
+
+        /* Header */
+        .tracker-header {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          margin-bottom: 24px;
+          padding: 24px 0;
+          border-bottom: 2px solid rgba(102, 126, 234, 0.2);
+          position: relative;
+          animation: fadeInUp 0.6s ease-out;
+        }
+
+        .tracker-header::after {
+          content: '';
+          position: absolute;
+          bottom: -2px;
+          left: 0;
+          width: 60px;
+          height: 2px;
+          background: linear-gradient(90deg, #667eea, #5a6fd8);
+          border-radius: 1px;
+        }
+
+        .back-button {
+          background: #6c757d;
+          color: white;
+          border: none;
+          padding: 12px 20px;
+          border-radius: 12px;
+          cursor: pointer;
+          font-size: 14px;
+          font-weight: 600;
+          transition: all 0.3s ease;
+          text-decoration: none;
+          display: inline-flex;
+          align-items: center;
+          gap: 8px;
+          box-shadow: 0 4px 16px rgba(108, 117, 125, 0.2);
+        }
+
+        .back-button:hover {
+          background: #5a6268;
+          transform: translateY(-2px);
+          box-shadow: 0 8px 24px rgba(108, 117, 125, 0.3);
+        }
+
+        .logout-btn {
+          background: linear-gradient(135deg, #f44336, #d32f2f);
+          color: white;
+          border: none;
+          padding: 12px 20px;
+          border-radius: 12px;
+          cursor: pointer;
+          font-size: 14px;
+          font-weight: 600;
+          transition: all 0.3s ease;
+          box-shadow: 0 4px 16px rgba(244, 67, 54, 0.3);
+        }
+
+        .logout-btn:hover {
+          transform: translateY(-2px);
+          box-shadow: 0 8px 24px rgba(244, 67, 54, 0.4);
+        }
+
+        h2 {
+          color: #2c3e50;
+          margin: 0 0 30px 0;
+          font-size: 2rem;
+          font-weight: 700;
+          text-align: center;
+          background: linear-gradient(135deg, #667eea, #5a6fd8);
+          -webkit-background-clip: text;
+          -webkit-text-fill-color: transparent;
+          background-clip: text;
+          line-height: 1.2;
+          animation: fadeInUp 0.6s ease-out;
+        }
+
+        /* AI Status Banner */
+        .ai-status-banner {
+          padding: 16px 24px;
+          border-radius: 12px;
+          margin-bottom: 24px;
+          animation: fadeInUp 0.6s ease-out 0.2s both;
+          border: 2px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .ai-status-banner.ready {
+          background: linear-gradient(135deg, rgba(76, 175, 80, 0.1), rgba(69, 160, 73, 0.1));
+          border-color: rgba(76, 175, 80, 0.3);
+        }
+
+        .ai-ready {
+          font-weight: 600;
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          color: #28a745;
+        }
+
+        /* Tab Navigation with Rotating Glow - THIS IS THE KEY PART */
+        .food-tabs {
+          display: flex;
+          justify-content: center;
+          margin-bottom: 24px;
+          border-bottom: 2px solid rgba(255, 255, 255, 0.2);
+          background: rgba(255, 255, 255, 0.1);
+          border-radius: 20px 20px 0 0;
+          backdrop-filter: blur(10px);
+          animation: fadeInUp 0.6s ease-out 0.3s both;
+          padding: 8px;
+          position: relative;
+          overflow: hidden;
+        }
+
+        /* Rotating glow effect for tabs */
+        .food-tabs .tab-glow {
+          position: absolute;
+          top: 50%;
+          left: 50%;
+          width: 300px;
+          height: 300px;
+          background: radial-gradient(ellipse 40% 80% at center, rgba(102, 126, 234, 0.5) 0%, transparent 70%);
+          border-radius: 50%;
+          animation: rotatingGlow 8s linear infinite;
+          filter: blur(20px);
+          z-index: 0;
+        }
+
+        .food-tab {
+          background: none;
+          border: none;
+          padding: 15px 30px;
+          cursor: pointer;
+          font-size: 16px;
+          font-weight: 500;
+          color: rgba(4, 136, 238, 0.8);
+          border-bottom: 3px solid transparent;
+          transition: all 0.3s ease;
+          position: relative;
+          border-radius: 12px;
+          margin: 0 4px;
+          z-index: 1;
+        }
+
+        .food-tab:hover {
+          color: white;
+          background: rgba(255, 255, 255, 0.1);
+          transform: translateY(-2px);
+        }
+
+        .food-tab.active {
+          color: #5a6fd8;
+          background: rgba(255, 255, 255, 0.2);
+          font-weight: 600;
+          box-shadow: 0 4px 16px rgba(255, 255, 255, 0.2);
+          border-bottom-color: white;
+        }
+
+        /* Form sections */
+        .food-form-section {
+          display: grid;
+          grid-template-columns: 2fr 1fr;
+          gap: 30px;
+          margin-bottom: 24px;
+          animation: fadeInUp 0.6s ease-out 0.4s both;
+        }
+
+        .food-form-left,
+        .food-form-right {
+          background: rgba(255, 255, 255, 0.8);
+          backdrop-filter: blur(10px);
+          padding: 28px;
+          border-radius: 16px;
+          box-shadow: 0 4px 20px rgba(0,0,0,0.12);
+          border: 2px solid rgba(255, 255, 255, 0.3);
+          transition: all 0.3s ease;
+        }
+
+        .food-form-left:hover,
+        .food-form-right:hover {
+          box-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
+          transform: translateY(-4px);
+          border-color: rgba(102, 126, 234, 0.3);
+        }
+
+        .food-form-left h3 {
+          margin-top: 0;
+          color: #2c3e50;
+          font-size: 1.25rem;
+          font-weight: 700;
+        }
+
+        /* Form styling */
+        .form-group {
+          margin-bottom: 20px;
+          position: relative;
+          z-index: 1;
+        }
+
+        .form-group label {
+          display: block;
+          margin-bottom: 8px;
+          font-weight: 600;
+          color: #2c3e50;
+          font-size: 14px;
+        }
+
+        .form-group input,
+        .form-group select {
+          width: 100%;
+          padding: 12px 16px;
+          border: 2px solid #e9ecef;
+          border-radius: 12px;
+          font-size: 14px;
+          transition: all 0.3s ease;
+          box-sizing: border-box;
+          background: rgba(255, 255, 255, 0.9);
+          backdrop-filter: blur(10px);
+        }
+
+        .form-group input:focus,
+        .form-group select:focus {
+          outline: none;
+          border-color: #667eea;
+          box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.1);
+          background: rgba(255, 255, 255, 1);
+        }
+
+        .form-row {
+          display: grid;
+          grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+          gap: 15px;
+          margin-bottom: 20px;
+        }
+
+        .search-input-container {
+          position: relative;
+          z-index: 1000;
+        }
+
+        .search-status {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          padding: 12px 16px;
+          background: rgba(248, 250, 252, 0.8);
+          border: 2px solid #e9ecef;
+          border-radius: 12px;
+          margin-top: 8px;
+          font-size: 0.85rem;
+          color: #6c757d;
+          backdrop-filter: blur(10px);
+        }
+
+        .search-status.ready {
+          background: linear-gradient(135deg, rgba(212, 237, 218, 0.8), rgba(195, 230, 203, 0.8));
+          border-color: rgba(195, 230, 203, 0.8);
+          color: #155724;
+        }
+
+        .status-ready {
+          font-weight: 600;
+          display: flex;
+          align-items: center;
+          gap: 4px;
+          color: #28a745;
+        }
+
+        .result-count {
+          color: #495057;
+          font-size: 0.8rem;
+          font-weight: 500;
+        }
+
+        /* Long COVID checkbox styling */
+        .long-covid-checkbox-label {
+          display: flex;
+          align-items: center;
+          gap: 14px;
+          cursor: pointer;
+          font-weight: 600;
+          line-height: 1.4;
+          color: #2c3e50;
+          padding: 16px 20px;
+          background: linear-gradient(135deg, rgba(248, 250, 252, 0.95), rgba(241, 245, 249, 0.95));
+          border: 2px solid rgba(102, 126, 234, 0.25);
+          border-radius: 16px;
+          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+          backdrop-filter: blur(10px);
+          transition: all 0.3s ease;
+        }
+
+        .long-covid-checkbox-label:hover {
+          background: linear-gradient(135deg, rgba(102, 126, 234, 0.12), rgba(118, 75, 162, 0.12));
+          border-color: rgba(102, 126, 234, 0.4);
+          transform: translateY(-1px);
+          box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+        }
+
+        .long-covid-checkbox {
+          width: 20px;
+          height: 20px;
+          cursor: pointer;
+          margin: 0;
+          accent-color: #667eea;
+        }
+
+        .checkbox-text {
+          color: #2c3e50;
+          font-size: 15px;
+          line-height: 1.4;
+          font-weight: 600;
+        }
+
+        .long-covid-info-banner {
+          margin-top: 16px;
+          padding: 16px 20px;
+          background: rgba(33, 150, 243, 0.15);
+          border-radius: 12px;
+          font-size: 13px;
+          color: #1565c0;
+          line-height: 1.5;
+          border: 2px solid rgba(33, 150, 243, 0.3);
+          backdrop-filter: blur(10px);
+          font-weight: 500;
+        }
+
+        /* Submit button */
+        .submit-button {
+          background: linear-gradient(135deg, #4caf50 0%, #45a049 100%);
+          color: white;
+          border: none;
+          padding: 12px 30px;
+          border-radius: 12px;
+          font-size: 16px;
+          font-weight: 600;
+          cursor: pointer;
+          transition: all 0.3s ease;
+          width: 100%;
+          box-shadow: 0 4px 16px rgba(40, 167, 69, 0.3);
+        }
+
+        .submit-button:hover {
+          transform: translateY(-2px);
+          box-shadow: 0 8px 24px rgba(40, 167, 69, 0.4);
+        }
+
+        /* Right panel styling */
+        .long-covid-side-panel {
+          background: linear-gradient(135deg, rgba(33, 150, 243, 0.1), rgba(21, 101, 192, 0.1));
+          backdrop-filter: blur(20px);
+          border-radius: 16px;
+          padding: 28px;
+          border: 2px solid rgba(33, 150, 243, 0.2);
+          box-shadow: 0 4px 20px rgba(0,0,0,0.12);
+          animation: fadeInUp 0.6s ease-out 0.6s both;
+        }
+
+        .long-covid-side-panel h3 {
+          color: #2c3e50;
+          margin: 0 0 20px 0;
+          font-size: 1.25rem;
+          font-weight: 700;
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          background: linear-gradient(135deg, #2196f3, #1976d2);
+          -webkit-background-clip: text;
+          -webkit-text-fill-color: transparent;
+          background-clip: text;
+        }
+
+        .no-food-info {
+          text-align: center;
+          padding: 30px 20px;
+          color: #6c757d;
+          background: rgba(255, 255, 255, 0.8);
+          backdrop-filter: blur(10px);
+          border-radius: 12px;
+          border: 2px dashed rgba(102, 126, 234, 0.3);
+          animation: pulse 2s ease-in-out infinite;
+        }
+
+        .no-data-icon {
+          font-size: 32px;
+          margin-bottom: 10px;
+          color: #dee2e6;
+        }
+
+        .general-tips {
+          text-align: left;
+          margin-top: 10px;
+        }
+
+        .general-tips ul {
+          margin: 8px 0 0 20px;
+          padding: 0;
+        }
+
+        .general-tips li {
+          margin-bottom: 5px;
+          font-size: 13px;
+          color: #495057;
+        }
+
+        /* Food Journal Section */
+        .food-journal-section {
+          background: rgba(255, 255, 255, 0.95);
+          backdrop-filter: blur(20px);
+          padding: 32px;
+          border-radius: 20px;
+          box-shadow: 
+            0 8px 32px rgba(0, 0, 0, 0.1),
+            0 1px 0 rgba(255, 255, 255, 0.8) inset;
+          border: 2px solid rgba(255, 255, 255, 0.2);
+          transition: all 0.3s ease;
+          animation: fadeInUp 0.6s ease-out 0.5s both;
+        }
+
+        .journal-header {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          margin-bottom: 20px;
+          padding-bottom: 15px;
+          border-bottom: 2px solid rgba(255, 255, 255, 0.3);
+        }
+
+        .journal-header h3 {
+          margin: 0;
+          color: #2c3e50;
+          font-size: 1.5rem;
+          font-weight: 700;
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          background: linear-gradient(135deg, #667eea, #5a6fd8);
+          -webkit-background-clip: text;
+          -webkit-text-fill-color: transparent;
+          background-clip: text;
+        }
+
+        .refresh-button {
+          background: linear-gradient(135deg, #2196f3, #1976d2);
+          color: white;
+          border: none;
+          padding: 8px 16px;
+          border-radius: 12px;
+          cursor: pointer;
+          font-size: 14px;
+          font-weight: 500;
+          transition: all 0.3s ease;
+          box-shadow: 0 4px 16px rgba(33, 150, 243, 0.2);
+        }
+
+        .refresh-button:hover {
+          transform: translateY(-2px);
+          box-shadow: 0 8px 24px rgba(33, 150, 243, 0.3);
+        }
+
+        .journal-summary {
+          margin-bottom: 15px;
+          color: #6c757d;
+          font-size: 14px;
+          font-weight: 500;
+        }
+
+        .empty-state {
+          text-align: center;
+          padding: 60px 20px;
+          color: #6c757d;
+          background: rgba(255, 255, 255, 0.8);
+          backdrop-filter: blur(10px);
+          border-radius: 16px;
+          border: 2px dashed rgba(102, 126, 234, 0.3);
+          box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+          animation: pulse 2s ease-in-out infinite;
+        }
+
+        .empty-state p {
+          margin-bottom: 10px;
+          line-height: 1.5;
+          font-weight: 500;
+        }
+
+        /* Responsive Design */
+        @media (max-width: 768px) {
+          .food-tracker-container {
+            padding: 15px;
+          }
+          
+          .food-tracker-content {
+            padding: 24px;
+            border-radius: 20px;
+          }
+          
+          .food-form-section {
+            grid-template-columns: 1fr;
+            gap: 20px;
+          }
+          
+          .form-row {
+            grid-template-columns: 1fr;
+            gap: 12px;
+          }
+          
+          .food-tabs {
+            flex-wrap: wrap;
+            justify-content: flex-start;
+            padding: 4px;
+          }
+          
+          .food-tab {
+            padding: 10px 16px;
+            font-size: 14px;
+            margin: 2px;
+          }
+          
+          .journal-header {
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 10px;
+          }
+        }
+
+        @media (max-width: 480px) {
+          .food-tracker-container {
+            padding: 10px;
+          }
+          
+          .food-tracker-content {
+            padding: 20px;
+            border-radius: 16px;
+          }
+          
+          .food-form-left,
+          .food-form-right {
+            padding: 20px;
+          }
+          
+          .food-tabs {
+            justify-content: center;
+            padding: 4px;
+          }
+          
+          .food-tab {
+            padding: 8px 12px;
+            font-size: 13px;
+          }
+        }
+
+        /* Accessibility */
+        @media (prefers-reduced-motion: reduce) {
+          *, *::before, *::after {
+            animation-duration: 0.01ms !important;
+            animation-iteration-count: 1 !important;
+            transition-duration: 0.01ms !important;
+          }
+          
+          .food-tracker-container::before,
+          .bg-animation,
+          .card-glow,
+          .floating-shape,
+          .tab-glow {
+            animation: none;
+          }
+        }
+
+        /* Focus states for accessibility */
+        .back-button:focus-visible,
+        .logout-btn:focus-visible,
+        .food-tab:focus-visible,
+        .submit-button:focus-visible,
+        .refresh-button:focus-visible {
+          outline: 3px solid #667eea;
+          outline-offset: 2px;
+        }
+      `}</style>
+    </div>
+
+
+
+
+
   );
 }
 

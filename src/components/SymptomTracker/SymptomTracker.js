@@ -3,6 +3,7 @@ import { AlertCircle, Plus, X, Clock } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { db } from '../../firebase-config';
 import { doc, setDoc, getDoc } from 'firebase/firestore';
+import './SymptomTracker.css'; // Import the CSS file
 
 const LongCovidTracker = () => {
   const navigate = useNavigate();
@@ -27,10 +28,10 @@ const LongCovidTracker = () => {
   // Static data
   const severityLevels = useMemo(() => [
     { value: 0, label: 'None', color: '#f3f4f6', textColor: '#6b7280' },
-    { value: 1, label: 'Mild', color: '#dcfce7', textColor: '#166534' },
-    { value: 2, label: 'Mild-Moderate', color: '#fef3c7', textColor: '#92400e' },
-    { value: 3, label: 'Moderate', color: '#fed7aa', textColor: '#9a3412' },
-    { value: 4, label: 'Moderate-Severe', color: '#fecaca', textColor: '#991b1b' },
+    { value: 1, label: 'Mild', color: '#dbeafe', textColor: '#1e40af' },
+    { value: 2, label: 'Mild-Moderate', color: '#a5b4fc', textColor: '#312e81' },
+    { value: 3, label: 'Moderate', color: '#c084fc', textColor: '#581c87' },
+    { value: 4, label: 'Moderate-Severe', color: '#f472b6', textColor: '#831843' },
     { value: 5, label: 'Severe', color: '#fca5a5', textColor: '#7f1d1d' }
   ], []);
 
@@ -539,34 +540,16 @@ const LongCovidTracker = () => {
     const config = statusConfig[syncStatus];
     
     return (
-      <div style={{
-        display: 'flex',
-        alignItems: 'center',
-        gap: '8px',
-        color: config.color,
-        fontSize: '0.875rem'
-      }}>
+      <div className="sync-status" style={{ color: config.color }}>
         <span>{config.icon}</span>
         <span>{config.text}</span>
         {lastSyncDate && syncStatus === 'synced' && (
-          <span style={{ fontSize: '0.75rem', color: '#6b7280' }}>
+          <span className="sync-time">
             {new Date(lastSyncDate).toLocaleTimeString()}
           </span>
         )}
         {syncStatus === 'error' && (
-          <button 
-            onClick={retrySync}
-            style={{
-              marginLeft: '8px',
-              padding: '4px 8px',
-              background: '#fef2f2',
-              color: '#dc2626',
-              border: '1px solid #fecaca',
-              borderRadius: '4px',
-              fontSize: '0.75rem',
-              cursor: 'pointer'
-            }}
-          >
+          <button onClick={retrySync} className="retry-btn">
             Retry
           </button>
         )}
@@ -582,32 +565,12 @@ const LongCovidTracker = () => {
     const severityInfo = severityLevels[maxSeverity];
 
     return (
-      <div style={{
-        background: '#f9fafb',
-        border: '1px solid #e5e7eb',
-        borderRadius: '16px',
-        padding: '24px',
-        position: 'relative'
-      }}>
+      <div className="symptom-card">
         {/* Custom symptom delete button */}
         {symptom.isCustom && (
           <button
             onClick={() => removeCustomSymptom(symptomId)}
-            style={{
-              position: 'absolute',
-              top: '12px',
-              right: '12px',
-              background: '#fef2f2',
-              color: '#dc2626',
-              border: '1px solid #fecaca',
-              borderRadius: '50%',
-              width: '24px',
-              height: '24px',
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center'
-            }}
+            className="delete-custom-btn"
             title="Remove custom symptom"
           >
             <X size={12} />
@@ -615,66 +578,34 @@ const LongCovidTracker = () => {
         )}
 
         {/* Symptom header */}
-        <div style={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          marginBottom: '8px'
-        }}>
-          <h4 style={{
-            fontSize: '1rem',
-            fontWeight: '600',
-            color: '#1f2937',
-            margin: 0
-          }}>
+        <div className="symptom-header">
+          <h4 className="symptom-name">
             {symptom.name}
           </h4>
           {isSymptomOngoing(symptomId) && (
-            <span style={{
-              padding: '2px 6px',
-              background: '#fbbf24',
-              color: '#92400e',
-              borderRadius: '8px',
-              fontSize: '0.6rem',
-              fontWeight: '500'
-            }}>
+            <span className="ongoing-badge">
               ONGOING
             </span>
           )}
         </div>
         
-        <div style={{
-          color: '#6b7280',
-          fontSize: '0.875rem',
-          lineHeight: '1.4',
-          marginBottom: '16px'
-        }}>
+        <div className="symptom-description">
           {symptom.description}
           {symptom.isCustom && (
-            <span style={{
-              marginLeft: '8px',
-              fontSize: '0.75rem',
-              background: '#ddd6fe',
-              color: '#6d28d9',
-              padding: '2px 6px',
-              borderRadius: '10px'
-            }}>
+            <span className="custom-badge">
               Custom
             </span>
           )}
         </div>
         
         {hasInstances && (
-          <div style={{
-            display: 'inline-block',
-            padding: '6px 12px',
-            borderRadius: '20px',
-            fontSize: '0.75rem',
-            fontWeight: '500',
-            marginBottom: '20px',
-            background: severityInfo.color,
-            color: severityInfo.textColor
-          }}>
+          <div 
+            className="severity-badge"
+            style={{
+              background: severityInfo.color,
+              color: severityInfo.textColor
+            }}
+          >
             Max: {severityInfo.label} ({maxSeverity}) • {instances.length} instance{instances.length !== 1 ? 's' : ''}
           </div>
         )}
@@ -695,21 +626,7 @@ const LongCovidTracker = () => {
         {/* Add instance button */}
         <button
           onClick={() => addSymptomInstance(symptomId)}
-          style={{
-            width: '100%',
-            padding: '12px',
-            border: '2px dashed #d1d5db',
-            borderRadius: '8px',
-            background: 'transparent',
-            color: '#6b7280',
-            fontSize: '0.875rem',
-            cursor: 'pointer',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            gap: '8px',
-            marginTop: instances.length > 0 ? '16px' : '0'
-          }}
+          className="add-instance-btn"
         >
           <Plus size={16} />
           {instances.length === 0 ? 'Log this symptom' : 'Add another instance'}
@@ -769,51 +686,23 @@ const LongCovidTracker = () => {
     }, [symptomId, instance.id, instance.triggers, onUpdate]);
 
     return (
-      <div style={{
-        background: 'white',
-        border: '1px solid #e5e7eb',
-        borderRadius: '12px',
-        padding: '16px',
-        marginBottom: '16px',
-        position: 'relative'
-      }}>
+      <div className="symptom-instance">
         {/* Instance header */}
-        <div style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          marginBottom: '12px'
-        }}>
-          <div style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '8px'
-          }}>
+        <div className="instance-header">
+          <div className="instance-time-info">
             <Clock size={14} />
-            <span style={{ fontSize: '0.875rem', color: '#6b7280' }}>
+            <span className="instance-time">
               {instance.startTime || 'No time set'}
             </span>
             {instance.duration && (
-              <span style={{
-                fontSize: '0.75rem',
-                background: '#f3f4f6',
-                color: '#6b7280',
-                padding: '2px 6px',
-                borderRadius: '10px'
-              }}>
+              <span className="instance-duration">
                 {instance.duration}
               </span>
             )}
           </div>
           <button
             onClick={() => onRemove(symptomId, instance.id)}
-            style={{
-              background: 'none',
-              border: 'none',
-              color: '#dc2626',
-              cursor: 'pointer',
-              padding: '4px'
-            }}
+            className="remove-instance-btn"
             title="Remove this instance"
           >
             <X size={16} />
@@ -821,66 +710,32 @@ const LongCovidTracker = () => {
         </div>
 
         {/* Severity indicator */}
-        <div style={{
-          display: 'inline-block',
-          padding: '4px 8px',
-          borderRadius: '16px',
-          fontSize: '0.75rem',
-          fontWeight: '500',
-          marginBottom: '12px',
-          background: severityInfo.color,
-          color: severityInfo.textColor
-        }}>
+        <div 
+          className="instance-severity-badge"
+          style={{
+            background: severityInfo.color,
+            color: severityInfo.textColor
+          }}
+        >
           {severityInfo.label} ({instance.severity})
         </div>
         
         {/* Severity controls */}
-        <div style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: '12px',
-          marginBottom: '12px'
-        }}>
+        <div className="severity-controls">
           <button 
             onClick={() => handleAdjust('decrease')}
             disabled={instance.severity === 0}
-            style={{
-              width: '28px',
-              height: '28px',
-              borderRadius: '6px',
-              border: '1px solid #d1d5db',
-              background: instance.severity === 0 ? '#f3f4f6' : 'white',
-              cursor: instance.severity === 0 ? 'not-allowed' : 'pointer',
-              color: '#6b7280',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              fontSize: '0.875rem',
-              opacity: instance.severity === 0 ? 0.5 : 1
-            }}
+            className={`severity-adjust-btn ${instance.severity === 0 ? 'disabled' : ''}`}
           >
             ➖
           </button>
           
-          <div style={{
-            display: 'flex',
-            gap: '3px',
-            alignItems: 'center'
-          }}>
+          <div className="severity-dots">
             {[1, 2, 3, 4, 5].map(level => (
               <div
                 key={level}
                 onClick={() => handleLevelClick(level)}
-                style={{
-                  width: '16px',
-                  height: '16px',
-                  border: '2px solid #e5e7eb',
-                  borderRadius: '3px',
-                  cursor: 'pointer',
-                  background: level <= instance.severity ? '#8b5cf6' : 'white',
-                  borderColor: level <= instance.severity ? '#8b5cf6' : '#e5e7eb',
-                  transition: 'all 0.2s ease'
-                }}
+                className={`severity-dot ${level <= instance.severity ? 'active' : ''}`}
               />
             ))}
           </div>
@@ -888,20 +743,7 @@ const LongCovidTracker = () => {
           <button 
             onClick={() => handleAdjust('increase')}
             disabled={instance.severity === 5}
-            style={{
-              width: '28px',
-              height: '28px',
-              borderRadius: '6px',
-              border: '1px solid #d1d5db',
-              background: instance.severity === 5 ? '#f3f4f6' : 'white',
-              cursor: instance.severity === 5 ? 'not-allowed' : 'pointer',
-              color: '#6b7280',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              fontSize: '0.875rem',
-              opacity: instance.severity === 5 ? 0.5 : 1
-            }}
+            className={`severity-adjust-btn ${instance.severity === 5 ? 'disabled' : ''}`}
           >
             ➕
           </button>
@@ -911,17 +753,7 @@ const LongCovidTracker = () => {
         {instance.severity > 0 && (
           <button
             onClick={() => setShowDetails(!showDetails)}
-            style={{
-              width: '100%',
-              padding: '6px 10px',
-              border: '1px solid #d1d5db',
-              borderRadius: '6px',
-              background: 'white',
-              color: '#6b7280',
-              fontSize: '0.75rem',
-              cursor: 'pointer',
-              marginBottom: showDetails ? '12px' : '0'
-            }}
+            className="details-toggle-btn"
           >
             {showDetails ? '📋 Hide Details' : '📋 Add Details'}
           </button>
@@ -929,23 +761,9 @@ const LongCovidTracker = () => {
 
         {/* Details section */}
         {showDetails && instance.severity > 0 && (
-          <div style={{
-            background: '#f8fafc',
-            border: '1px solid #e2e8f0',
-            borderRadius: '8px',
-            padding: '12px',
-            display: 'flex',
-            flexDirection: 'column',
-            gap: '12px'
-          }}>
-            <div>
-              <label style={{
-                display: 'block',
-                fontSize: '0.75rem',
-                fontWeight: '500',
-                color: '#374151',
-                marginBottom: '4px'
-              }}>
+          <div className="instance-details">
+            <div className="detail-field">
+              <label className="detail-label">
                 Start Time
               </label>
               <input
@@ -953,25 +771,12 @@ const LongCovidTracker = () => {
                 value={localStartTime}
                 onChange={(e) => setLocalStartTime(e.target.value)}
                 onBlur={handleStartTimeBlur}
-                style={{
-                  width: '100%',
-                  padding: '6px 8px',
-                  border: '1px solid #d1d5db',
-                  borderRadius: '4px',
-                  fontSize: '0.75rem',
-                  background: 'white'
-                }}
+                className="detail-input"
               />
             </div>
 
-            <div>
-              <label style={{
-                display: 'block',
-                fontSize: '0.75rem',
-                fontWeight: '500',
-                color: '#374151',
-                marginBottom: '4px'
-              }}>
+            <div className="detail-field">
+              <label className="detail-label">
                 Duration
               </label>
               <input
@@ -980,67 +785,23 @@ const LongCovidTracker = () => {
                 onChange={(e) => setLocalDuration(e.target.value)}
                 onBlur={handleDurationBlur}
                 placeholder="e.g., 2 hours, 30 minutes"
-                style={{
-                  width: '100%',
-                  padding: '6px 8px',
-                  border: '1px solid #d1d5db',
-                  borderRadius: '4px',
-                  fontSize: '0.75rem',
-                  background: 'white',
-                  boxSizing: 'border-box'
-                }}
+                className="detail-input"
               />
             </div>
 
-            <div>
-              <label style={{
-                display: 'block',
-                fontSize: '0.75rem',
-                fontWeight: '500',
-                color: '#374151',
-                marginBottom: '4px'
-              }}>
+            <div className="detail-field">
+              <label className="detail-label">
                 Triggers
               </label>
               
               {instance.triggers && instance.triggers.length > 0 && (
-                <div style={{
-                  display: 'flex',
-                  flexWrap: 'wrap',
-                  gap: '4px',
-                  marginBottom: '6px'
-                }}>
+                <div className="triggers-list">
                   {instance.triggers.map((trigger, index) => (
-                    <div
-                      key={index}
-                      style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '4px',
-                        background: '#e5e7eb',
-                        padding: '2px 6px',
-                        borderRadius: '12px',
-                        fontSize: '0.75rem',
-                        color: '#374151'
-                      }}
-                    >
+                    <div key={index} className="trigger-item">
                       <span>{trigger}</span>
                       <button
                         onClick={() => removeTrigger(index)}
-                        style={{
-                          background: 'none',
-                          border: 'none',
-                          color: '#6b7280',
-                          cursor: 'pointer',
-                          padding: '0',
-                          width: '12px',
-                          height: '12px',
-                          borderRadius: '50%',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          fontSize: '8px'
-                        }}
+                        className="remove-trigger-btn"
                       >
                         ✕
                       </button>
@@ -1049,33 +810,18 @@ const LongCovidTracker = () => {
                 </div>
               )}
 
-              <form onSubmit={addTrigger} style={{ display: 'flex', gap: '6px' }}>
+              <form onSubmit={addTrigger} className="add-trigger-form">
                 <input
                   type="text"
                   value={newTrigger}
                   onChange={(e) => setNewTrigger(e.target.value)}
                   placeholder="Add trigger"
-                  style={{
-                    flex: 1,
-                    padding: '6px 8px',
-                    border: '1px solid #d1d5db',
-                    borderRadius: '4px',
-                    fontSize: '0.75rem',
-                    background: 'white'
-                  }}
+                  className="trigger-input"
                 />
                 <button
                   type="submit"
                   disabled={!newTrigger.trim()}
-                  style={{
-                    padding: '6px 10px',
-                    background: newTrigger.trim() ? '#8b5cf6' : '#f3f4f6',
-                    color: newTrigger.trim() ? 'white' : '#9ca3af',
-                    border: 'none',
-                    borderRadius: '4px',
-                    fontSize: '0.75rem',
-                    cursor: newTrigger.trim() ? 'pointer' : 'not-allowed'
-                  }}
+                  className={`add-trigger-btn ${!newTrigger.trim() ? 'disabled' : ''}`}
                 >
                   Add
                 </button>
@@ -1103,62 +849,26 @@ const LongCovidTracker = () => {
     if (!showAddSymptom) return null;
 
     return (
-      <div style={{
-        position: 'fixed',
-        top: 0,
-        left: 0,
-        right: 0,
-        bottom: 0,
-        background: 'rgba(0, 0, 0, 0.5)',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        zIndex: 1000
-      }}>
-        <div style={{
-          background: 'white',
-          borderRadius: '16px',
-          padding: '24px',
-          width: '400px',
-          maxWidth: '90vw'
-        }}>
-          <div style={{
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            marginBottom: '20px'
-          }}>
-            <h3 style={{
-              fontSize: '1.25rem',
-              fontWeight: '600',
-              color: '#1f2937',
-              margin: 0
-            }}>
+      <div className="modal-overlay">
+        
+        <div className="modal-content">
+   
+          <div className="modal-header">
+     
+            <h3 className="modal-title">
               Add Custom Symptom
             </h3>
             <button
               onClick={handleClose}
-              style={{
-                background: 'none',
-                border: 'none',
-                color: '#6b7280',
-                cursor: 'pointer',
-                padding: '4px'
-              }}
+              className="modal-close-btn"
             >
               <X size={20} />
             </button>
           </div>
 
           <form onSubmit={handleSubmit}>
-            <div style={{ marginBottom: '16px' }}>
-              <label style={{
-                display: 'block',
-                fontSize: '0.875rem',
-                fontWeight: '500',
-                color: '#374151',
-                marginBottom: '4px'
-              }}>
+            <div className="form-field">
+              <label className="form-label">
                 Symptom Name *
               </label>
               <input
@@ -1167,79 +877,34 @@ const LongCovidTracker = () => {
                 onChange={(e) => setNewSymptomName(e.target.value)}
                 placeholder="e.g., Joint Pain, Nausea, Tinnitus"
                 autoFocus
-                style={{
-                  width: '100%',
-                  padding: '12px',
-                  border: '1px solid #d1d5db',
-                  borderRadius: '8px',
-                  fontSize: '0.875rem',
-                  outline: 'none',
-                  boxSizing: 'border-box'
-                }}
+                className="form-input"
               />
             </div>
 
-            <div style={{ marginBottom: '24px' }}>
-              <label style={{
-                display: 'block',
-                fontSize: '0.875rem',
-                fontWeight: '500',
-                color: '#374151',
-                marginBottom: '4px'
-              }}>
+            <div className="form-field">
+              <label className="form-label">
                 Description (optional)
               </label>
               <textarea
                 value={newSymptomDescription}
                 onChange={(e) => setNewSymptomDescription(e.target.value)}
                 placeholder="Describe the symptom to help with tracking..."
-                style={{
-                  width: '100%',
-                  minHeight: '80px',
-                  padding: '12px',
-                  border: '1px solid #d1d5db',
-                  borderRadius: '8px',
-                  fontSize: '0.875rem',
-                  outline: 'none',
-                  resize: 'vertical',
-                  boxSizing: 'border-box',
-                  fontFamily: 'inherit'
-                }}
+                className="form-textarea"
               />
             </div>
 
-            <div style={{
-              display: 'flex',
-              gap: '12px',
-              justifyContent: 'flex-end'
-            }}>
+            <div className="modal-actions">
               <button
                 type="button"
                 onClick={handleClose}
-                style={{
-                  padding: '10px 20px',
-                  border: '1px solid #d1d5db',
-                  borderRadius: '8px',
-                  background: 'white',
-                  color: '#374151',
-                  cursor: 'pointer',
-                  fontSize: '0.875rem'
-                }}
+                className="btn-secondary"
               >
                 Cancel
               </button>
               <button
                 type="submit"
                 disabled={!newSymptomName.trim()}
-                style={{
-                  padding: '10px 20px',
-                  border: 'none',
-                  borderRadius: '8px',
-                  background: newSymptomName.trim() ? '#8b5cf6' : '#f3f4f6',
-                  color: newSymptomName.trim() ? 'white' : '#9ca3af',
-                  cursor: newSymptomName.trim() ? 'pointer' : 'not-allowed',
-                  fontSize: '0.875rem'
-                }}
+                className={`btn-primary ${!newSymptomName.trim() ? 'disabled' : ''}`}
               >
                 Add Symptom
               </button>
@@ -1253,30 +918,10 @@ const LongCovidTracker = () => {
   // Loading state
   if (loading) {
     return (
-      <div style={{
-        minHeight: '100vh',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        background: 'linear-gradient(135deg, #8b5cf6 0%, #a855f7 50%, #7c3aed 100%)'
-      }}>
-        <div style={{
-          background: 'white',
-          borderRadius: '20px',
-          padding: '48px',
-          textAlign: 'center',
-          boxShadow: '0 8px 32px rgba(0, 0, 0, 0.12)'
-        }}>
-          <div style={{
-            width: '40px',
-            height: '40px',
-            border: '4px solid #f3f4f6',
-            borderTop: '4px solid #8b5cf6',
-            borderRadius: '50%',
-            animation: 'spin 1s linear infinite',
-            margin: '0 auto 16px'
-          }} />
-          <p style={{ color: '#6b7280', margin: 0 }}>Loading symptom tracker...</p>
+      <div className="loading-container">
+        <div className="loading-content">
+          <div className="spinner" />
+          <p className="loading-text">Loading symptom tracker...</p>
         </div>
       </div>
     );
@@ -1288,39 +933,15 @@ const LongCovidTracker = () => {
   
   if (error && !userId) { // Only show this specific error if there's an error and no user ID
     return (
-      <div style={{
-        minHeight: '100vh',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        background: 'linear-gradient(135deg, #8b5cf6 0%, #a855f7 50%, #7c3aed 100%)'
-      }}>
-        <div style={{
-          background: 'white',
-          borderRadius: '20px',
-          padding: '48px',
-          textAlign: 'center',
-          boxShadow: '0 8px 32px rgba(0, 0, 0, 0.12)'
-        }}>
-          <AlertCircle size={48} style={{ color: '#dc2626', margin: '0 auto 16px' }} />
-          <p style={{
-            color: '#dc2626',
-            fontSize: '1rem',
-            marginBottom: '16px'
-          }}>
+      <div className="error-container">
+        <div className="error-content">
+          <AlertCircle size={48} className="error-icon" />
+          <p className="error-message">
             {error}
           </p>
           <button
             onClick={() => navigate('/dashboard')} // Use navigate instead of window.location.href
-            style={{
-              padding: '12px 24px',
-              background: '#8b5cf6',
-              color: 'white',
-              border: 'none',
-              borderRadius: '8px',
-              cursor: 'pointer',
-              fontSize: '0.875rem'
-            }}
+            className="btn-primary"
           >
             Return to Dashboard
           </button>
@@ -1333,101 +954,46 @@ const LongCovidTracker = () => {
   const currentEntry = getCurrentEntry();
 
   return (
-    <div style={{
-      minHeight: '100vh',
-      background: 'linear-gradient(135deg, #8b5cf6 0%, #a855f7 50%, #7c3aed 100%)',
-      padding: '20px'
-    }}>
-      <div style={{
-        maxWidth: '1200px',
-        margin: '0 auto',
-        background: 'white',
-        borderRadius: '20px',
-        padding: '32px',
-        boxShadow: '0 8px 32px rgba(0, 0, 0, 0.12)'
-      }}>
+    <div className="tracker-container">
+    <div className="tracker-content">
+      {/* Animated background elements - similar to SignIn card-glow */}
+      <div className="bg-animation">
+      <div className="card-glow"></div>  {/* Inside the styled container */}
+        <div className="floating-shape shape-1"></div>
+        <div className="floating-shape shape-2"></div>
+        <div className="floating-shape shape-3"></div>
+        <div className="floating-shape shape-4"></div>
+        <div className="floating-shape shape-5"></div>
+        <div className="floating-shape shape-6"></div>
+      </div>
         {/* Header */}
-        <div style={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          marginBottom: '32px',
-          paddingBottom: '24px',
-          borderBottom: '1px solid #e5e7eb'
-        }}>
-          <div>
-            <h1 style={{
-              fontSize: '2rem',
-              fontWeight: '700',
-              color: '#1f2937',
-              margin: '0 0 8px 0'
-            }}>
+        <div className="header">
+          <div className="header-left">
+            <h1 className="main-title">
               Long COVID Symptom Tracker
             </h1>
-            <div style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '16px',
-              color: '#6b7280',
-              fontSize: '0.875rem'
-            }}>
-              <span>📅 {new Date(currentDate).toLocaleDateString()}</span>
+            <div className="header-info">
+              <span className="current-date">📅 {new Date(currentDate).toLocaleDateString()}</span>
               {SyncStatusIndicator}
             </div>
           </div>
-          <div style={{ display: 'flex', gap: '12px' }}>
+          <div className="header-actions">
             <button
               onClick={() => setShowAddSymptom(true)}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '8px',
-                padding: '12px 20px',
-                background: '#8b5cf6',
-                color: 'white',
-                border: 'none',
-                borderRadius: '10px',
-                cursor: 'pointer',
-                fontSize: '0.875rem',
-                fontWeight: '500'
-              }}
+              className="btn-primary header-btn"
             >
               <Plus size={16} />
               Add Symptom
             </button>
             <button
               onClick={handleBackToDashboard}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '8px',
-                padding: '12px 20px',
-                background: '#f3f4f6',
-                color: '#374151',
-                border: '1px solid #d1d5db',
-                borderRadius: '10px',
-                cursor: 'pointer',
-                fontSize: '0.875rem',
-                fontWeight: '500'
-              }}
+              className="btn-secondary header-btn"
             >
               🏠 Dashboard
             </button>
             <button
               onClick={handleLogout}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '8px',
-                padding: '12px 20px',
-                background: '#dc2626',
-                color: 'white',
-                border: 'none',
-                borderRadius: '10px',
-                cursor: 'pointer',
-                fontSize: '0.875rem',
-                fontWeight: '500'
-              }}
+              className="btn-danger header-btn"
             >
               Logout
             </button>
@@ -1435,27 +1001,14 @@ const LongCovidTracker = () => {
         </div>
 
         {/* Date Navigation */}
-        <div style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          gap: '16px',
-          marginBottom: '32px'
-        }}>
+        <div className="date-navigation">
           <button
             onClick={() => {
               const date = new Date(currentDate);
               date.setDate(date.getDate() - 1);
               setCurrentDate(date.toISOString().split('T')[0]);
             }}
-            style={{
-              padding: '8px 12px',
-              background: 'white',
-              border: '1px solid #d1d5db',
-              borderRadius: '8px',
-              cursor: 'pointer',
-              color: '#6b7280'
-            }}
+            className="date-nav-btn"
           >
             ← Previous Day
           </button>
@@ -1465,15 +1018,7 @@ const LongCovidTracker = () => {
             value={currentDate}
             onChange={(e) => setCurrentDate(e.target.value)}
             max={new Date().toISOString().split('T')[0]}
-            style={{
-              padding: '12px 16px',
-              border: '1px solid #d1d5db',
-              borderRadius: '10px',
-              fontSize: '1rem',
-              background: 'white',
-              color: '#374151',
-              outline: 'none'
-            }}
+            className="date-input"
           />
           
           <button
@@ -1486,15 +1031,7 @@ const LongCovidTracker = () => {
               }
             }}
             disabled={currentDate === new Date().toISOString().split('T')[0]}
-            style={{
-              padding: '8px 12px',
-              background: 'white',
-              border: '1px solid #d1d5db',
-              borderRadius: '8px',
-              cursor: currentDate === new Date().toISOString().split('T')[0] ? 'not-allowed' : 'pointer',
-              color: '#6b7280',
-              opacity: currentDate === new Date().toISOString().split('T')[0] ? 0.5 : 1
-            }}
+            className={`date-nav-btn ${currentDate === new Date().toISOString().split('T')[0] ? 'disabled' : ''}`}
           >
             Next Day →
           </button>
@@ -1502,29 +1039,12 @@ const LongCovidTracker = () => {
 
         {/* Ongoing Symptoms Section */}
         {Object.keys(ongoingSymptoms).filter(key => ongoingSymptoms[key].active).length > 0 && (
-          <div style={{
-            background: '#fef3c7',
-            border: '1px solid #f59e0b',
-            borderRadius: '12px',
-            padding: '20px',
-            marginBottom: '24px'
-          }}>
-            <h3 style={{
-              margin: '0 0 16px 0',
-              fontSize: '1.125rem',
-              fontWeight: '600',
-              color: '#92400e',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '8px'
-            }}>
+          <div className="ongoing-symptoms-section">
+            <h3 className="ongoing-title">
               <Clock size={20} />
               Ongoing Symptoms
             </h3>
-            <div style={{
-              display: 'grid',
-              gap: '12px'
-            }}>
+            <div className="ongoing-symptoms-list">
               {Object.entries(ongoingSymptoms)
                 .filter(([_, ongoing]) => ongoing.active)
                 .map(([symptomKey, ongoing]) => {
@@ -1533,79 +1053,39 @@ const LongCovidTracker = () => {
                   const duration = getOngoingDuration(symptomKey);
                   
                   return (
-                    <div key={symptomKey} style={{
-                      background: 'white',
-                      border: '1px solid #d1d5db',
-                      borderRadius: '8px',
-                      padding: '16px',
-                      display: 'flex',
-                      justifyContent: 'space-between',
-                      alignItems: 'center'
-                    }}>
-                      <div style={{ flex: 1 }}>
-                        <div style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '12px',
-                          marginBottom: '4px'
-                        }}>
-                          <span style={{
-                            fontSize: '1rem',
-                            fontWeight: '500',
-                            color: '#1f2937'
-                          }}>
+                    <div key={symptomKey} className="ongoing-symptom-item">
+                      <div className="ongoing-symptom-info">
+                        <div className="ongoing-symptom-header">
+                          <span className="ongoing-symptom-name">
                             {symptom?.name || symptomKey}
                           </span>
-                          <span style={{
-                            padding: '2px 8px',
-                            background: getSeverityColor(ongoing.currentSeverity).background,
-                            color: getSeverityColor(ongoing.currentSeverity).text,
-                            borderRadius: '12px',
-                            fontSize: '0.75rem',
-                            fontWeight: '500'
-                          }}>
+                          <span 
+                            className="ongoing-severity-badge"
+                            style={{
+                              background: getSeverityColor(ongoing.currentSeverity).background,
+                              color: getSeverityColor(ongoing.currentSeverity).text
+                            }}
+                          >
                             Severity {ongoing.currentSeverity}
                           </span>
                         </div>
-                        <div style={{
-                          fontSize: '0.875rem',
-                          color: '#6b7280'
-                        }}>
+                        <div className="ongoing-symptom-details">
                           Started {ongoing.startDate} • Day {duration} • Last updated {ongoing.lastUpdated}
                         </div>
                       </div>
-                      <div style={{
-                        display: 'flex',
-                        gap: '8px'
-                      }}>
+                      <div className="ongoing-symptom-actions">
                         <button
                           onClick={() => {
                             setSelectedOngoingSymptom(symptomKey);
                             setShowOngoingModal(true);
                           }}
-                          style={{
-                            padding: '6px 12px',
-                            background: '#3b82f6',
-                            color: 'white',
-                            border: 'none',
-                            borderRadius: '6px',
-                            fontSize: '0.75rem',
-                            cursor: 'pointer'
-                          }}
+                          className="btn-update"
                         >
                           Update
                         </button>
                         <button
                           onClick={() => endOngoingSymptom(symptomKey)}
-                          style={{
-                            padding: '6px 12px',
-                            background: '#10b981',
-                            color: 'white',
-                            border: 'none',
-                            borderRadius: '6px',
-                            fontSize: '0.75rem',
-                            cursor: 'pointer'
-                          }}
+                          className="btn-resolve"
                         >
                           Mark Resolved
                         </button>
@@ -1618,65 +1098,28 @@ const LongCovidTracker = () => {
         )}
 
         {/* Overall Wellbeing */}
-        <div style={{
-          background: '#f8fafc',
-          border: '1px solid #e2e8f0',
-          borderRadius: '16px',
-          padding: '24px',
-          marginBottom: '32px'
-        }}>
-          <h3 style={{
-            fontSize: '1.125rem',
-            fontWeight: '600',
-            color: '#1e293b',
-            marginBottom: '16px',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '8px'
-          }}>
+        <div className="wellbeing-section">
+          <h3 className="wellbeing-title">
             🌟 Overall Wellbeing Today
           </h3>
           
-          <div style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '16px',
-            marginBottom: '16px'
-          }}>
-            <span style={{ fontSize: '0.875rem', color: '#64748b', minWidth: '80px' }}>
-              Very Poor
-            </span>
-            <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+          <div className="wellbeing-controls">
+            <span className="wellbeing-label">Very Poor</span>
+            <div className="wellbeing-rating">
               {[1, 2, 3, 4, 5].map(rating => {
                 const currentRating = currentEntry.overallWellbeing || 3;
                 return (
                   <button
                     key={rating}
                     onClick={() => updateWellbeing(rating)}
-                    style={{
-                      width: '40px',
-                      height: '40px',
-                      borderRadius: '50%',
-                      border: '2px solid',
-                      borderColor: rating <= currentRating ? '#8b5cf6' : '#e2e8f0',
-                      background: rating <= currentRating ? '#8b5cf6' : 'white',
-                      color: rating <= currentRating ? 'white' : '#64748b',
-                      cursor: 'pointer',
-                      fontSize: '1rem',
-                      fontWeight: '600',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center'
-                    }}
+                    className={`wellbeing-btn ${rating <= currentRating ? 'active' : ''}`}
                   >
                     {rating}
                   </button>
                 );
               })}
             </div>
-            <span style={{ fontSize: '0.875rem', color: '#64748b', minWidth: '80px' }}>
-              Excellent
-            </span>
+            <span className="wellbeing-label">Excellent</span>
           </div>
         </div>
 
@@ -1688,37 +1131,18 @@ const LongCovidTracker = () => {
           }
 
           return (
-            <div key={categoryKey} style={{ marginBottom: '32px' }}>
-              <h2 style={{
-                fontSize: '1.5rem',
-                fontWeight: '600',
-                color: '#1f2937',
-                marginBottom: '20px',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '12px'
-              }}>
-                <span style={{ fontSize: '1.75rem' }}>{category.icon}</span>
+            <div key={categoryKey} className="category-section">
+              <h2 className="category-title">
+                <span className="category-icon">{category.icon}</span>
                 {category.title}
                 {categoryKey === 'custom' && (
-                  <span style={{
-                    fontSize: '0.875rem',
-                    background: '#ddd6fe',
-                    color: '#6d28d9',
-                    padding: '4px 8px',
-                    borderRadius: '12px',
-                    fontWeight: '500'
-                  }}>
+                  <span className="custom-count-badge">
                     {Object.keys(category.symptoms).length} custom
                   </span>
                 )}
               </h2>
               
-              <div style={{
-                display: 'grid',
-                gridTemplateColumns: 'repeat(auto-fit, minmax(400px, 1fr))',
-                gap: '20px'
-              }}>
+              <div className="symptoms-grid">
                 {Object.entries(category.symptoms).map(([symptomId, symptom]) => (
                   <SymptomCard
                     key={`${symptomId}-${currentDate}`}
@@ -1733,21 +1157,8 @@ const LongCovidTracker = () => {
         })}
 
         {/* Notes Section */}
-        <div style={{
-          background: '#f8fafc',
-          border: '1px solid #e2e8f0',
-          borderRadius: '16px',
-          padding: '24px'
-        }}>
-          <h3 style={{
-            fontSize: '1.125rem',
-            fontWeight: '600',
-            color: '#1e293b',
-            marginBottom: '16px',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '8px'
-          }}>
+        <div className="notes-section">
+          <h3 className="notes-title">
             📝 Daily Notes
           </h3>
           
@@ -1755,38 +1166,13 @@ const LongCovidTracker = () => {
             value={currentEntry.notes || ''}
             onChange={(e) => updateNotes(e.target.value)}
             placeholder="How are you feeling today? Any additional observations, triggers, or patterns you've noticed..."
-            style={{
-              width: '100%',
-              minHeight: '120px',
-              padding: '16px',
-              border: '1px solid #d1d5db',
-              borderRadius: '12px',
-              fontSize: '0.875rem',
-              lineHeight: '1.5',
-              background: 'white',
-              color: '#374151',
-              outline: 'none',
-              resize: 'vertical',
-              fontFamily: 'inherit',
-              boxSizing: 'border-box'
-            }}
+            className="notes-textarea"
           />
         </div>
 
         {/* Error Display */}
         {error && (
-          <div style={{
-            marginTop: '20px',
-            padding: '16px',
-            background: '#fef2f2',
-            border: '1px solid #fecaca',
-            borderRadius: '12px',
-            color: '#dc2626',
-            fontSize: '0.875rem',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '8px'
-          }}>
+          <div className="error-display">
             <AlertCircle size={16} />
             {error}
           </div>
@@ -1798,37 +1184,10 @@ const LongCovidTracker = () => {
 
       {/* Update Ongoing Symptom Modal */}
       {showOngoingModal && selectedOngoingSymptom && (
-        <div style={{
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          background: 'rgba(0, 0, 0, 0.5)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          zIndex: 1000
-        }}>
-          <div style={{
-            background: 'white',
-            borderRadius: '16px',
-            padding: '24px',
-            width: '400px',
-            maxWidth: '90vw'
-          }}>
-            <div style={{
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center',
-              marginBottom: '20px'
-            }}>
-              <h3 style={{
-                fontSize: '1.25rem',
-                fontWeight: '600',
-                color: '#1f2937',
-                margin: 0
-              }}>
+        <div className="modal-overlay">
+          <div className="modal-content">
+            <div className="modal-header">
+              <h3 className="modal-title">
                 Update {Object.values(symptomCategories).reduce((acc, cat) => ({...acc, ...cat.symptoms}), {})[selectedOngoingSymptom]?.name || selectedOngoingSymptom}
               </h3>
               <button
@@ -1836,106 +1195,53 @@ const LongCovidTracker = () => {
                   setShowOngoingModal(false);
                   setSelectedOngoingSymptom(null);
                 }}
-                style={{
-                  background: 'none',
-                  border: 'none',
-                  color: '#6b7280',
-                  cursor: 'pointer',
-                  padding: '4px'
-                }}
+                className="modal-close-btn"
               >
                 <X size={20} />
               </button>
             </div>
 
-            <div style={{ marginBottom: '20px' }}>
-              <div style={{
-                fontSize: '0.875rem',
-                color: '#6b7280',
-                marginBottom: '12px'
-              }}>
+            <div className="ongoing-modal-content">
+              <div className="ongoing-duration">
                 Duration: Day {getOngoingDuration(selectedOngoingSymptom)} 
                 {' '}(started {ongoingSymptoms[selectedOngoingSymptom]?.startDate})
               </div>
 
-              <label style={{
-                display: 'block',
-                fontSize: '0.875rem',
-                fontWeight: '500',
-                color: '#374151',
-                marginBottom: '8px'
-              }}>
+              <label className="form-label">
                 Current Severity
               </label>
-              <div style={{
-                display: 'flex',
-                gap: '8px',
-                marginBottom: '16px'
-              }}>
+              <div className="ongoing-severity-controls">
                 {[1, 2, 3, 4, 5].map(severity => (
                   <button
                     key={severity}
                     onClick={() => updateOngoingSymptom(selectedOngoingSymptom, { currentSeverity: severity })}
-                    style={{
-                      flex: 1,
-                      padding: '8px',
-                      border: `2px solid ${ongoingSymptoms[selectedOngoingSymptom]?.currentSeverity === severity ? getSeverityColor(severity).background : '#e5e7eb'}`,
-                      borderRadius: '8px',
-                      background: ongoingSymptoms[selectedOngoingSymptom]?.currentSeverity === severity ? getSeverityColor(severity).background : 'white',
-                      color: ongoingSymptoms[selectedOngoingSymptom]?.currentSeverity === severity ? getSeverityColor(severity).text : '#6b7280',
-                      cursor: 'pointer',
-                      fontSize: '0.875rem',
-                      fontWeight: '500'
-                    }}
+                    className={`ongoing-severity-btn ${ongoingSymptoms[selectedOngoingSymptom]?.currentSeverity === severity ? 'active' : ''}`}
+                    style={ongoingSymptoms[selectedOngoingSymptom]?.currentSeverity === severity ? {
+                      borderColor: getSeverityColor(severity).background,
+                      background: getSeverityColor(severity).background,
+                      color: getSeverityColor(severity).text
+                    } : {}}
                   >
                     {severity}
                   </button>
                 ))}
               </div>
 
-              <label style={{
-                display: 'block',
-                fontSize: '0.875rem',
-                fontWeight: '500',
-                color: '#374151',
-                marginBottom: '4px'
-              }}>
+              <label className="form-label">
                 Notes (optional)
               </label>
               <textarea
                 value={ongoingSymptoms[selectedOngoingSymptom]?.notes || ''}
                 onChange={(e) => updateOngoingSymptom(selectedOngoingSymptom, { notes: e.target.value })}
                 placeholder="Any changes or additional notes..."
-                style={{
-                  width: '100%',
-                  minHeight: '60px',
-                  padding: '8px',
-                  border: '1px solid #d1d5db',
-                  borderRadius: '6px',
-                  fontSize: '0.875rem',
-                  resize: 'vertical',
-                  boxSizing: 'border-box',
-                  fontFamily: 'inherit'
-                }}
+                className="ongoing-notes-textarea"
               />
             </div>
 
-            <div style={{
-              display: 'flex',
-              gap: '12px',
-              justifyContent: 'flex-end'
-            }}>
+            <div className="modal-actions">
               <button
                 onClick={() => endOngoingSymptom(selectedOngoingSymptom)}
-                style={{
-                  padding: '10px 20px',
-                  border: '1px solid #10b981',
-                  borderRadius: '8px',
-                  background: 'white',
-                  color: '#10b981',
-                  cursor: 'pointer',
-                  fontSize: '0.875rem'
-                }}
+                className="btn-resolve"
               >
                 Mark Resolved
               </button>
@@ -1944,15 +1250,7 @@ const LongCovidTracker = () => {
                   setShowOngoingModal(false);
                   setSelectedOngoingSymptom(null);
                 }}
-                style={{
-                  padding: '10px 20px',
-                  border: 'none',
-                  borderRadius: '8px',
-                  background: '#3b82f6',
-                  color: 'white',
-                  cursor: 'pointer',
-                  fontSize: '0.875rem'
-                }}
+                className="btn-primary"
               >
                 Done
               </button>
@@ -1960,13 +1258,6 @@ const LongCovidTracker = () => {
           </div>
         </div>
       )}
-
-      <style>{`
-        @keyframes spin {
-          0% { transform: rotate(0deg); }
-          100% { transform: rotate(360deg); }
-        }
-      `}</style>
     </div>
   );
 };

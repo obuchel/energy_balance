@@ -7,7 +7,60 @@ import { createUserWithEmailAndPassword } from 'firebase/auth';
 import { auth, db } from '../../firebase-config';
 import { collection, query, where, getDocs, doc, setDoc } from 'firebase/firestore';
 
+// Enhanced Progress Summary Component
+const ProgressSummary = ({ step, formData }) => {
+  const progressSteps = [
+    {
+      id: 'personal',
+      label: 'Personal Information',
+      completed: step > 1,
+      active: step === 1
+    },
+    {
+      id: 'device',
+      label: 'Device Connection',
+      completed: step > 2,
+      active: step === 2
+    },
+    {
+      id: 'authorization',
+      label: 'Authorization',
+      completed: formData.authorizationGiven && step >= 3,
+      active: step === 3 && !formData.authorizationGiven
+    }
+  ];
 
+  return (
+    <div className="progress-summary fade-in-up">
+      <h3 className="progress-title">Registration Progress</h3>
+      <div className="progress-items">
+        {progressSteps.map((progressStep, index) => (
+          <div
+            key={progressStep.id}
+            className={`progress-item ${
+              progressStep.completed ? 'completed' : progressStep.active ? 'active' : ''
+            }`}
+          >
+            <div
+              className={`progress-item-status ${
+                progressStep.completed ? 'completed' : ''
+              }`}
+            >
+              {progressStep.completed ? (
+                <Check className="progress-icon completed" />
+              ) : (
+                <div className={`progress-circle ${progressStep.active ? 'active' : 'inactive'}`}>
+                  {!progressStep.active && <span style={{ fontSize: '0.875rem', fontWeight: '600' }}>{index + 1}</span>}
+                </div>
+              )}
+            </div>
+            <span className="progress-item-label">{progressStep.label}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+};
 // Updated StepIndicator component
 const StepIndicator = ({ step }) => (
   <div className="step-indicator">
@@ -173,6 +226,176 @@ function RegisterPage() {
   const [errors, setErrors] = useState({});
   const [loading, setLoading] = useState(false);
   const [connectionStatus, setConnectionStatus] = useState('');
+
+// Replace your useEffect code with this fixed version:
+
+React.useEffect(() => {
+  const inputs = document.querySelectorAll('input, select, textarea');
+  const deviceItems = document.querySelectorAll('.device-card'); // Changed from .device-item
+
+  // Floating label functionality
+  const handleFloatingLabels = (input) => {
+    const formGroup = input.closest('.form-group');
+    const label = formGroup?.querySelector('.form-label');
+    
+    // Return early with null handlers if no form group or label found
+    if (!label || !formGroup) {
+      return {
+        handleFocus: () => {},
+        handleBlur: () => {},
+        handleInput: () => {},
+        updateLabelState: () => {}
+      };
+    }
+
+    const updateLabelState = () => {
+      const hasValue = input.value && input.value.length > 0;
+      const isFocused = document.activeElement === input;
+      
+      if (hasValue || isFocused) {
+        label.classList.add('floating');
+        formGroup.classList.add('has-content');
+      } else {
+        label.classList.remove('floating');
+        formGroup.classList.remove('has-content');
+      }
+    };
+
+    // Initial check for pre-filled values
+    updateLabelState();
+
+    const handleFocus = () => {
+      try {
+        if (input.closest('.form-group')) {
+          input.closest('.form-group').style.transform = 'scale(1.02)';
+        }
+        label.classList.add('floating');
+        formGroup.classList.add('focused');
+        updateLabelState();
+      } catch (error) {
+        console.warn('Error in handleFocus:', error);
+      }
+    };
+    
+    const handleBlur = () => {
+      try {
+        if (input.closest('.form-group')) {
+          input.closest('.form-group').style.transform = 'scale(1)';
+        }
+        formGroup.classList.remove('focused');
+        updateLabelState();
+      } catch (error) {
+        console.warn('Error in handleBlur:', error);
+      }
+    };
+
+    const handleInput = () => {
+      try {
+        updateLabelState();
+      } catch (error) {
+        console.warn('Error in handleInput:', error);
+      }
+    };
+
+    // Always return the handlers object
+    return { handleFocus, handleBlur, handleInput, updateLabelState };
+  };
+
+  // Apply floating label functionality to all inputs
+  const inputHandlers = [];
+  inputs.forEach(input => {
+    try {
+      const handlers = handleFloatingLabels(input);
+      
+      // Only add event listeners if handlers exist
+      if (handlers && handlers.handleFocus) {
+        input.addEventListener('focus', handlers.handleFocus);
+        input.addEventListener('blur', handlers.handleBlur);
+        input.addEventListener('input', handlers.handleInput);
+        
+        inputHandlers.push({ input, handlers });
+      }
+    } catch (error) {
+      console.warn('Error setting up input handlers:', error);
+    }
+  });
+
+  // Device item hover effects
+  const deviceHandlers = [];
+  deviceItems.forEach(item => {
+    try {
+      const handleMouseEnter = () => {
+        item.style.transform = 'translateY(-4px) scale(1.05)';
+      };
+      
+      const handleMouseLeave = () => {
+        item.style.transform = 'translateY(0) scale(1)';
+      };
+
+      item.addEventListener('mouseenter', handleMouseEnter);
+      item.addEventListener('mouseleave', handleMouseLeave);
+      
+      deviceHandlers.push({ item, handleMouseEnter, handleMouseLeave });
+    } catch (error) {
+      console.warn('Error setting up device handlers:', error);
+    }
+  });
+
+  // Cleanup function
+  return () => {
+    // Clean up input handlers
+    inputHandlers.forEach(({ input, handlers }) => {
+      try {
+        if (input && handlers) {
+          input.removeEventListener('focus', handlers.handleFocus);
+          input.removeEventListener('blur', handlers.handleBlur);
+          input.removeEventListener('input', handlers.handleInput);
+        }
+      } catch (error) {
+        console.warn('Error cleaning up input handlers:', error);
+      }
+    });
+
+    // Clean up device handlers
+    deviceHandlers.forEach(({ item, handleMouseEnter, handleMouseLeave }) => {
+      try {
+        if (item) {
+          item.removeEventListener('mouseenter', handleMouseEnter);
+          item.removeEventListener('mouseleave', handleMouseLeave);
+        }
+      } catch (error) {
+        console.warn('Error cleaning up device handlers:', error);
+      }
+    });
+  };
+}, []);
+
+// Also update the second useEffect to handle form data changes:
+React.useEffect(() => {
+  // Update floating labels when formData changes
+  const inputs = document.querySelectorAll('input, select, textarea');
+  inputs.forEach(input => {
+    try {
+      const formGroup = input.closest('.form-group');
+      const label = formGroup?.querySelector('.form-label');
+      
+      if (label && formGroup) {
+        const hasValue = input.value && input.value.length > 0;
+        
+        if (hasValue) {
+          label.classList.add('floating');
+          formGroup.classList.add('has-content');
+        } else {
+          label.classList.remove('floating');
+          formGroup.classList.remove('has-content');
+        }
+      }
+    } catch (error) {
+      console.warn('Error updating floating labels:', error);
+    }
+  });
+}, [formData]); // Re-run when formData changes
+
 
   // Form validation
   const validateStep1 = () => {
@@ -617,6 +840,7 @@ const handleDeviceConnection = async () => {
   const selectedDeviceInfo = deviceOptions.find(d => d.id === formData.selectedDevice);
 
   return (
+    
     <div className="registration-page">
       <div className="registration-container">
         <div className="registration-header">
@@ -624,7 +848,12 @@ const handleDeviceConnection = async () => {
           <p className="registration-subtitle">Set up your personalized energy management system</p>
         </div>
 
-        <StepIndicator step={step} />
+        <div className="bg-animation">
+  <div className="floating-shape shape-1"></div>
+  <div className="floating-shape shape-2"></div>
+  <div className="floating-shape shape-3"></div>
+</div>
+     
 
         <div className="registration-card fade-in-up">
           {step === 1 && (
@@ -639,11 +868,12 @@ const handleDeviceConnection = async () => {
 
               <form onSubmit={(e) => { e.preventDefault(); handleNext(); }} className="space-y-6">
                 <div className="form-grid two-cols">
-                  <div className="form-group">
-                    <label className="form-label">
+                <div className="form-group">
+                   
+
                       <User className="form-label-icon" />
-                      Full Name *
-                    </label>
+                     
+                
                     <input
                       type="text"
                       name="name"
@@ -652,14 +882,16 @@ const handleDeviceConnection = async () => {
                       className={`form-input ${errors.name ? 'error' : ''}`}
                       placeholder="Enter your full name"
                     />
+                     <label className="form-label">
+                      Full Name *
+                    </label>
                     {errors.name && <p className="error-message">{errors.name}</p>}
                   </div>
 
                   <div className="form-group">
-                    <label className="form-label">
+                   
                       <Mail className="form-label-icon" />
-                      Email Address *
-                    </label>
+                     
                     <input
                       type="email"
                       name="email"
@@ -668,14 +900,16 @@ const handleDeviceConnection = async () => {
                       className={`form-input ${errors.email ? 'error' : ''}`}
                       placeholder="Enter your email"
                     />
+                     <label className="form-label">
+                      Email Address *
+                    </label>
                     {errors.email && <p className="error-message">{errors.email}</p>}
                   </div>
 
                   <div className="form-group">
-                    <label className="form-label">
+                   
                       <Lock className="form-label-icon" />
-                      Create Password *
-                    </label>
+                    
                     <input
                       type="password"
                       name="password"
@@ -684,14 +918,16 @@ const handleDeviceConnection = async () => {
                       className={`form-input ${errors.password ? 'error' : ''}`}
                       placeholder="Minimum 6 characters (Firebase requirement)"
                     />
+                      <label className="form-label">
+                      Create Password *
+                    </label>
                     {errors.password && <p className="error-message">{errors.password}</p>}
                   </div>
 
                   <div className="form-group">
-                    <label className="form-label">
+                   
                       <Lock className="form-label-icon" />
-                      Confirm Password *
-                    </label>
+                     
                     <input
                       type="password"
                       name="confirmPassword"
@@ -700,11 +936,14 @@ const handleDeviceConnection = async () => {
                       className={`form-input ${errors.confirmPassword ? 'error' : ''}`}
                       placeholder="Repeat your password"
                     />
+                     <label className="form-label">
+                      Confirm Password *
+                    </label>
                     {errors.confirmPassword && <p className="error-message">{errors.confirmPassword}</p>}
                   </div>
 
                   <div className="form-group">
-                    <label className="form-label">Age *</label>
+                   
                     <input
                       type="number"
                       name="age"
@@ -715,11 +954,12 @@ const handleDeviceConnection = async () => {
                       min="18"
                       max="100"
                     />
+                     <label className="form-label">Age *</label>
                     {errors.age && <p className="error-message">{errors.age}</p>}
                   </div>
 
                   <div className="form-group">
-                    <label className="form-label">Gender *</label>
+                   
                     <select
                       name="gender"
                       value={formData.gender}
@@ -736,10 +976,9 @@ const handleDeviceConnection = async () => {
                   </div>
 
                   <div className="form-group">
-                    <label className="form-label">
+                   
                       <Scale className="form-label-icon" />
-                      Weight (kg)
-                    </label>
+                     
                     <input
                       type="number"
                       name="weight"
@@ -748,13 +987,16 @@ const handleDeviceConnection = async () => {
                       className="form-input"
                       placeholder="Optional"
                     />
+                     <label className="form-label">
+                      Weight (kg)
+                      
+                    </label>
                   </div>
 
                   <div className="form-group">
-                    <label className="form-label">
+                   
                       <Ruler className="form-label-icon" />
-                      Height (cm)
-                    </label>
+                  
                     <input
                       type="number"
                       name="height"
@@ -763,13 +1005,15 @@ const handleDeviceConnection = async () => {
                       className="form-input"
                       placeholder="Optional"
                     />
+                        <label className="form-label">
+                      Height (cm)
+                    </label>
                   </div>
 
                   <div className="form-group">
-                    <label className="form-label">
+                   
                       <Calendar className="form-label-icon" />
-                      When did you first get COVID?
-                    </label>
+                      
                     <input
                       type="date"
                       name="covidDate"
@@ -777,12 +1021,13 @@ const handleDeviceConnection = async () => {
                       onChange={handleInputChange}
                       className="form-input"
                     />
+                    <label className="form-label">
+                      When did you first get COVID?
+                    </label>
                   </div>
 
                   <div className="form-group">
-                    <label className="form-label">
-                      Long COVID duration
-                    </label>
+                
                     <select
                       name="covidDuration"
                       value={formData.covidDuration}
@@ -801,9 +1046,7 @@ const handleDeviceConnection = async () => {
                 </div>
 
                 <div className="form-group">
-                  <label className="form-label">
-                    Symptom severity
-                  </label>
+             
                   <select
                     name="severity"
                     value={formData.severity}
@@ -818,31 +1061,31 @@ const handleDeviceConnection = async () => {
                   </select>
                 </div>
 
-                <div className="form-group">
-                  <label className="form-label">
-                    What symptoms do you experience? (Select all that apply)
-                  </label>
-                  <div className="symptoms-grid">
-                    {symptomOptions.map(symptom => (
-                      <label
-                        key={symptom}
-                        className={`symptom-checkbox ${
-                          formData.symptoms.includes(symptom) ? 'selected' : ''
-                        }`}
-                      >
-                        <input
-                          type="checkbox"
-                          name="symptoms"
-                          value={symptom}
-                          checked={formData.symptoms.includes(symptom)}
-                          onChange={handleInputChange}
-                          className="symptom-checkbox-input"
-                        />
-                        <span className="symptom-checkbox-text">{symptom}</span>
-                      </label>
-                    ))}
-                  </div>
-                </div>
+                <div className="symptoms-section">
+  <label className="form-label">
+    What symptoms do you experience? (Select all that apply)
+  </label>
+  <div className="symptoms-grid">
+    {symptomOptions.map(symptom => (
+      <label
+        key={symptom}
+        className={`symptom-checkbox ${
+          formData.symptoms.includes(symptom) ? 'selected' : ''
+        }`}
+      >
+        <input
+          type="checkbox"
+          name="symptoms"
+          value={symptom}
+          checked={formData.symptoms.includes(symptom)}
+          onChange={handleInputChange}
+          className="symptom-checkbox-input"
+        />
+        <span className="symptom-checkbox-text">{symptom}</span>
+      </label>
+    ))}
+  </div>
+</div>
 
                 <div className="form-group">
                   <label className="form-label">
@@ -1082,42 +1325,8 @@ const handleDeviceConnection = async () => {
           )}
         </div>
 
-        {/* Progress Summary */}
-        <div className="progress-summary fade-in-up">
-          <h3 className="progress-title">Registration Progress</h3>
-          <div className="progress-items">
-            <div className="progress-item">
-              <span className="progress-item-label">Personal Information</span>
-              <div className="progress-item-status">
-                {step > 1 ? (
-                  <Check className="progress-icon completed" />
-                ) : (
-                  <div className={`progress-circle ${step === 1 ? 'active' : 'inactive'}`}></div>
-                )}
-              </div>
-            </div>
-            <div className="progress-item">
-              <span className="progress-item-label">Device Connection</span>
-              <div className="progress-item-status">
-                {step > 2 ? (
-                  <Check className="progress-icon completed" />
-                ) : (
-                  <div className={`progress-circle ${step === 2 ? 'active' : 'inactive'}`}></div>
-                )}
-              </div>
-            </div>
-            <div className="progress-item">
-              <span className="progress-item-label">Authorization</span>
-              <div className="progress-item-status">
-                {formData.authorizationGiven ? (
-                  <Check className="progress-icon completed" />
-                ) : (
-                  <div className={`progress-circle ${step === 3 ? 'active' : 'inactive'}`}></div>
-                )}
-              </div>
-            </div>
-          </div>
-        </div>
+{/* Progress Summary */}
+<ProgressSummary step={step} formData={formData} />
 
         {/* Help Section */}
         <div className="help-section">
