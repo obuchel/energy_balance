@@ -3,6 +3,7 @@ import { AlertCircle, Plus, X, Clock } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { db } from '../../firebase-config';
 import { doc, setDoc, getDoc } from 'firebase/firestore';
+import "../Common.css";
 import './SymptomTracker.css'; // Import the CSS file
 
 const LongCovidTracker = () => {

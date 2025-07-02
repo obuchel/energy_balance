@@ -3,7 +3,9 @@ import { useNavigate, Link, useLocation } from "react-router-dom";
 import { signInWithEmailAndPassword, signOut } from 'firebase/auth';
 import { doc, getDoc, updateDoc } from "firebase/firestore";
 import { auth, db } from "../../firebase-config";
+import "../Common.css";
 import "./SignInPage.css";
+
 
 function SignInPage() {
   const [email, setEmail] = useState("");

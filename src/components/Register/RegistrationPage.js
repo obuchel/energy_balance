@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ChevronRight, ChevronLeft, Check, AlertCircle, Heart, Activity, Smartphone, Watch, User, Mail, Lock, Calendar, Scale, Ruler } from 'lucide-react';
+import "../Common.css";
 import './RegistrationPage.css'; // Import CSS file
 
 import { createUserWithEmailAndPassword } from 'firebase/auth';
@@ -61,61 +62,6 @@ const ProgressSummary = ({ step, formData }) => {
     </div>
   );
 };
-// Updated StepIndicator component
-const StepIndicator = ({ step }) => (
-  <div className="step-indicator">
-    <div className="step-indicator-wrapper">
-      <div className="flex flex-col items-center">
-        <div className={`step-circle ${
-          step >= 1 ? (step > 1 ? 'completed' : 'active') : 'inactive'
-        }`}>
-          {step > 1 ? <Check className="btn-icon" /> : '1'}
-        </div>
-        <div className="step-label">
-          <span className={`step-label-text ${
-            step >= 1 ? (step > 1 ? 'completed' : 'active') : 'inactive'
-          }`}>
-            Personal Details
-          </span>
-        </div>
-      </div>
-      
-      <div className={`step-connector ${step > 1 ? 'completed' : 'inactive'}`}></div>
-      
-      <div className="flex flex-col items-center">
-        <div className={`step-circle ${
-          step >= 2 ? (step > 2 ? 'completed' : 'active') : 'inactive'
-        }`}>
-          {step > 2 ? <Check className="btn-icon" /> : '2'}
-        </div>
-        <div className="step-label">
-          <span className={`step-label-text ${
-            step >= 2 ? (step > 2 ? 'completed' : 'active') : 'inactive'
-          }`}>
-            Connect Device
-          </span>
-        </div>
-      </div>
-      
-      <div className={`step-connector ${step > 2 ? 'completed' : 'inactive'}`}></div>
-      
-      <div className="flex flex-col items-center">
-        <div className={`step-circle ${
-          step >= 3 ? 'active' : 'inactive'
-        }`}>
-          {step > 3 ? <Check className="btn-icon" /> : '3'}
-        </div>
-        <div className="step-label">
-          <span className={`step-label-text ${
-            step >= 3 ? 'active' : 'inactive'
-          }`}>
-            Authorization
-          </span>
-        </div>
-      </div>
-    </div>
-  </div>
-);
 
 // Updated InfoBox component
 const InfoBox = ({ title, children, icon: Icon }) => (

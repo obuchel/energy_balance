@@ -14,6 +14,7 @@ import {
   limit
 } from 'firebase/firestore';
 import { db } from '../../firebase-config';
+import "../Common.css";
 import './FoodTrackerPage.css';
 import { AnalysisTab } from './FoodTrackerAnalysis';
 

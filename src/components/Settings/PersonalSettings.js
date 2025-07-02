@@ -3,6 +3,9 @@ import { useNavigate } from 'react-router-dom';
 import { db, auth } from '../../firebase-config';
 import { doc, updateDoc, getDoc, deleteDoc, collection, query, where, getDocs, writeBatch, limit } from 'firebase/firestore';
 import { updatePassword, reauthenticateWithCredential, EmailAuthProvider, signOut, deleteUser } from 'firebase/auth';
+import "../Common.css";
+import "./PersonalSettings.css";
+
 import { 
   ArrowLeft, 
   Save, 

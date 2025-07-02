@@ -4,7 +4,9 @@ import { db, auth } from '../../firebase-config';
 import { doc, getDoc } from 'firebase/firestore';
 import { signOut } from 'firebase/auth';
 import * as d3 from 'd3';
+import "../Common.css";
 import './Dashboard.css';
+
 
 function Dashboard() {
   const navigate = useNavigate();

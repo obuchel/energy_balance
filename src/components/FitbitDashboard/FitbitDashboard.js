@@ -5,6 +5,7 @@ import { onAuthStateChanged, signOut } from 'firebase/auth';
 import { auth, db } from '../../firebase-config';
 import { doc, getDoc, setDoc, collection, getDocs } from 'firebase/firestore';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import "../Common.css";
 import './FitbitDashboard.css'; // Import the CSS file
 
 const FitbitDashboard = () => {
