@@ -1,19 +1,19 @@
 {
   "files": {
     "main.css": "/energy_balance/static/css/main.b829d4ee.css",
-    "main.js": "/energy_balance/static/js/main.81595c28.js",
+    "main.js": "/energy_balance/static/js/main.a4e06873.js",
     "static/css/924.7241076f.chunk.css": "/energy_balance/static/css/924.7241076f.chunk.css",
-    "static/js/924.2f627fac.chunk.js": "/energy_balance/static/js/924.2f627fac.chunk.js",
+    "static/js/924.71f2e5b6.chunk.js": "/energy_balance/static/js/924.71f2e5b6.chunk.js",
     "static/js/488.182a440e.chunk.js": "/energy_balance/static/js/488.182a440e.chunk.js",
     "index.html": "/energy_balance/index.html",
     "main.b829d4ee.css.map": "/energy_balance/static/css/main.b829d4ee.css.map",
-    "main.81595c28.js.map": "/energy_balance/static/js/main.81595c28.js.map",
+    "main.a4e06873.js.map": "/energy_balance/static/js/main.a4e06873.js.map",
     "924.7241076f.chunk.css.map": "/energy_balance/static/css/924.7241076f.chunk.css.map",
-    "924.2f627fac.chunk.js.map": "/energy_balance/static/js/924.2f627fac.chunk.js.map",
+    "924.71f2e5b6.chunk.js.map": "/energy_balance/static/js/924.71f2e5b6.chunk.js.map",
     "488.182a440e.chunk.js.map": "/energy_balance/static/js/488.182a440e.chunk.js.map"
   },
   "entrypoints": [
     "static/css/main.b829d4ee.css",
-    "static/js/main.81595c28.js"
+    "static/js/main.a4e06873.js"
   ]
 }
