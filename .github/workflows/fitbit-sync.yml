@@ -57,30 +57,31 @@ jobs:
         FIREBASE_SERVICE_ACCOUNT_KEY: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_KEY }}
       run: |
         python -c "
-import os, json, firebase_admin
-from firebase_admin import credentials, firestore
-try:
-    print('🔍 Testing Firebase connection...')
-    service_account_key = os.environ.get('FIREBASE_SERVICE_ACCOUNT_KEY', '')
-    if not service_account_key:
-        raise ValueError('FIREBASE_SERVICE_ACCOUNT_KEY not found')
-    print(f'✅ Secret present ({len(service_account_key)} chars)')
-    service_account_info = json.loads(service_account_key)
-    print(f'✅ JSON valid, project: {service_account_info.get(\"project_id\", \"unknown\")}')
-    cred = credentials.Certificate(service_account_info)
-    firebase_admin.initialize_app(cred)
-    db = firestore.client()
-    users_ref = db.collection('users')
-    test_query = users_ref.limit(1)
-    docs = list(test_query.stream())
-    print(f'✅ Firestore connected, test query returned {len(docs)} documents')
-    fitbit_query = users_ref.where('selectedDevice', '==', 'fitbit').where('deviceConnected', '==', True)
-    fitbit_users = list(fitbit_query.stream())
-    print(f'✅ Found {len(fitbit_users)} Fitbit users ready for sync')
-except Exception as e:
-    print(f'❌ Firebase connection failed: {e}')
-    exit(1)
-"
+        import os, json, firebase_admin
+        from firebase_admin import credentials, firestore
+        try:
+            print('🔍 Testing Firebase connection...')
+            service_account_key = os.environ.get('FIREBASE_SERVICE_ACCOUNT_KEY', '')
+            if not service_account_key:
+                 raise ValueError('FIREBASE_SERVICE_ACCOUNT_KEY not found')
+            print(f'✅ Secret present ({len(service_account_key)} chars)')
+            service_account_info = json.loads(service_account_key)
+            project_id = service_account_info.get('project_id', 'unknown')
+            print(f'✅ JSON valid, project: {project_id}')
+            cred = credentials.Certificate(service_account_info)
+            firebase_admin.initialize_app(cred)
+            db = firestore.client()
+            users_ref = db.collection('users')
+            test_query = users_ref.limit(1)
+            docs = list(test_query.stream())
+            print(f'✅ Firestore connected, test query returned {len(docs)} documents')
+            fitbit_query = users_ref.where('selectedDevice', '==', 'fitbit').where('deviceConnected', '==', True)
+            fitbit_users = list(fitbit_query.stream())
+            print(f'✅ Found {len(fitbit_users)} Fitbit users ready for sync')
+        except Exception as e:
+            print(f'❌ Firebase connection failed: {e}')
+            exit(1)
+        "
         
     - name: Run Fitbit sync
       env:

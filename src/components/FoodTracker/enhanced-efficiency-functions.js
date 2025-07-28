@@ -190,52 +190,7 @@ export const EnhancedEfficiencyChart = ({ data, userData }) => {
   useEffect(() => {
     if (!chartRef.current || !processedData || processedData.length === 0) return;
     
-    // Helper function to convert 12-hour time to 24-hour for proper sorting
-    const convertTo24Hour = (time12h) => {
-      if (!time12h) return '12:00';
-      
-      // Handle various time formats
-      let timeStr = time12h.toString().trim();
-      
-      // Split by space to separate time and AM/PM
-      const parts = timeStr.split(' ');
-      if (parts.length < 2) {
-        // If no AM/PM, assume it's already 24-hour format or missing modifier
-        console.warn('Time format issue:', timeStr);
-        return timeStr;
-      }
-      
-      const [time, modifier] = parts;
-      const timeParts = time.split(':');
-      
-      if (timeParts.length < 2) {
-        console.warn('Invalid time format:', timeStr);
-        return timeStr;
-      }
-      
-      let [hours, minutes] = timeParts;
-      let hour24 = parseInt(hours, 10);
-      
-      if (isNaN(hour24)) {
-        console.warn('Invalid hour:', hours);
-        return timeStr;
-      }
-      
-      // Convert based on AM/PM
-      const mod = modifier.toUpperCase();
-      if (mod === 'AM') {
-        if (hour24 === 12) hour24 = 0; // 12 AM = 0 hours (midnight)
-      } else if (mod === 'PM') {
-        if (hour24 !== 12) hour24 += 12; // Add 12 for PM, except 12 PM stays 12
-      }
-      
-      // Ensure minutes is valid
-      if (!minutes) minutes = '00';
-      
-      const result = `${hour24.toString().padStart(2, '0')}:${minutes}`;
-      console.log(`Converted ${timeStr} to ${result}`);
-      return result;
-    };
+
     
     // Clear previous chart
     d3.select(chartRef.current).selectAll("*").remove();

@@ -1173,7 +1173,7 @@ function MicronutrientChart({ data, userData }) {
   const [allChartData, setAllChartData] = useState([]);
   // FIXED: Use baseRDAData10 from the global scope for ensureCompleteNutrientData
   const [nutrientIntake] = useState(data && Object.keys(data).length > 0 ? ensureCompleteNutrientData(data, baseRDAData10) : {});
-  const [personalizedRDA, setPersonalizedRDA] = useState({});
+  const [, setPersonalizedRDA] = useState({});
   // eslint-disable-next-line no-unused-vars
   const [displayMode, setDisplayMode] = useState('all');
   const [isLoading, setIsLoading] = useState(true);
