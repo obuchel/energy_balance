@@ -20,6 +20,13 @@ on:
           - WARNING
           - ERROR
 
+permissions:
+  id-token: write # Required for Workload Identity
+  contents: read
+
+env:
+  GOOGLE_CLOUD_PROJECT: long-covid-8f42d
+
 jobs:
   sync-fitbit-data:
     runs-on: ubuntu-latest
@@ -63,26 +70,72 @@ jobs:
         python -c "import firebase_admin; print('✅ Firebase Admin SDK installed')"
         python -c "import aiohttp; print('✅ aiohttp installed')"
         python -c "import json; print('✅ json available')"
+
+    # Option A: Workload Identity (Recommended)
+    - id: 'auth'
+      name: '🔐 Authenticate with Workload Identity'
+      if: ${{ vars.USE_WORKLOAD_IDENTITY == 'true' }}
+      uses: 'google-github-actions/auth@v2'
+      with:
+        workload_identity_provider: ${{ secrets.WIF_PROVIDER }}
+        service_account: ${{ secrets.WIF_SERVICE_ACCOUNT }}
+
+    # Option B: Service Account Key (Fallback)
+    - name: '🔐 Authenticate with Service Account Key'
+      if: ${{ vars.USE_WORKLOAD_IDENTITY != 'true' && secrets.GOOGLE_SERVICE_ACCOUNT_KEY }}
+      uses: 'google-github-actions/auth@v2'
+      with:
+        credentials_json: ${{ secrets.GOOGLE_SERVICE_ACCOUNT_KEY }}
+
+    # Option C: Legacy Support (for existing FIREBASE_SERVICE_ACCOUNT_KEY)
+    - name: '🔐 Setup Legacy Firebase Authentication'
+      if: ${{ vars.USE_WORKLOAD_IDENTITY != 'true' && !secrets.GOOGLE_SERVICE_ACCOUNT_KEY && secrets.FIREBASE_SERVICE_ACCOUNT_KEY }}
+      run: |
+        echo "⚠️ Using legacy FIREBASE_SERVICE_ACCOUNT_KEY"
+        echo "💡 Consider upgrading to Workload Identity or GOOGLE_SERVICE_ACCOUNT_KEY"
         
     - name: Test Firebase connection
-      env:
-        FIREBASE_SERVICE_ACCOUNT_KEY: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_KEY }}
       run: |
         python -c "
         import os, json, firebase_admin
         from firebase_admin import credentials, firestore
         try:
             print('🔍 Testing Firebase connection...')
-            service_account_key = os.environ.get('FIREBASE_SERVICE_ACCOUNT_KEY', '')
-            if not service_account_key:
-                raise ValueError('FIREBASE_SERVICE_ACCOUNT_KEY not found')
             
-            print(f'✅ Secret present ({len(service_account_key)} chars)')
-            service_account_info = json.loads(service_account_key)
-            print(f'✅ JSON valid, project: {service_account_info.get(\"project_id\", \"unknown\")}')
+            # Try different authentication methods
+            cred = None
+            auth_method = 'unknown'
             
-            cred = credentials.Certificate(service_account_info)
-            firebase_admin.initialize_app(cred)
+            # Method 1: Workload Identity
+            cred_path = os.environ.get('GOOGLE_APPLICATION_CREDENTIALS')
+            if cred_path and os.path.exists(cred_path):
+                print('🔑 Using Workload Identity credentials')
+                cred = credentials.Certificate(cred_path)
+                auth_method = 'workload_identity'
+            
+            # Method 2: Service Account Key (new format)
+            elif os.environ.get('GOOGLE_SERVICE_ACCOUNT_KEY'):
+                print('🔑 Using GOOGLE_SERVICE_ACCOUNT_KEY')
+                service_account_info = json.loads(os.environ.get('GOOGLE_SERVICE_ACCOUNT_KEY'))
+                cred = credentials.Certificate(service_account_info)
+                auth_method = 'google_service_account_key'
+            
+            # Method 3: Legacy Firebase Service Account Key
+            elif os.environ.get('FIREBASE_SERVICE_ACCOUNT_KEY'):
+                print('🔑 Using legacy FIREBASE_SERVICE_ACCOUNT_KEY')
+                service_account_info = json.loads(os.environ.get('FIREBASE_SERVICE_ACCOUNT_KEY'))
+                cred = credentials.Certificate(service_account_info)
+                auth_method = 'firebase_service_account_key'
+            
+            else:
+                raise ValueError('No authentication credentials found')
+            
+            print(f'✅ Authentication method: {auth_method}')
+            
+            # Initialize Firebase with explicit project
+            firebase_admin.initialize_app(cred, {
+                'projectId': 'long-covid-8f42d'
+            })
             db = firestore.client()
             
             # Test query
@@ -98,17 +151,29 @@ jobs:
             
         except Exception as e:
             print(f'❌ Firebase connection failed: {e}')
+            print('')
+            print('🔍 Debug information:')
+            print(f'GOOGLE_APPLICATION_CREDENTIALS: {\"✅\" if os.environ.get(\"GOOGLE_APPLICATION_CREDENTIALS\") else \"❌\"}')
+            print(f'GOOGLE_SERVICE_ACCOUNT_KEY: {\"✅\" if os.environ.get(\"GOOGLE_SERVICE_ACCOUNT_KEY\") else \"❌\"}')
+            print(f'FIREBASE_SERVICE_ACCOUNT_KEY: {\"✅\" if os.environ.get(\"FIREBASE_SERVICE_ACCOUNT_KEY\") else \"❌\"}')
             exit(1)
         "
+      env:
+        GOOGLE_APPLICATION_CREDENTIALS: ${{ steps.auth.outputs.credentials_file_path }}
+        GOOGLE_SERVICE_ACCOUNT_KEY: ${{ secrets.GOOGLE_SERVICE_ACCOUNT_KEY }}
+        FIREBASE_SERVICE_ACCOUNT_KEY: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_KEY }}
         
     - name: Run Fitbit sync
       env:
+        GOOGLE_APPLICATION_CREDENTIALS: ${{ steps.auth.outputs.credentials_file_path }}
+        GOOGLE_SERVICE_ACCOUNT_KEY: ${{ secrets.GOOGLE_SERVICE_ACCOUNT_KEY }}
         FIREBASE_SERVICE_ACCOUNT_KEY: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_KEY }}
         LOG_LEVEL: ${{ github.event.inputs.log_level || 'INFO' }}
       run: |
         echo "🚀 Starting Fitbit sync..."
         echo "Current directory: $(pwd)"
         echo "Python version: $(python --version)"
+        echo "Project ID: long-covid-8f42d"
         echo "Checking fitbit_sync.py..."
         
         if [ ! -f "fitbit_sync.py" ]; then
@@ -130,13 +195,16 @@ jobs:
           *.log
         retention-days: 7
 
-    # Optional: Send notification on failure
     - name: Notify on failure
       if: failure()
       run: |
         echo "::error::Fitbit sync failed at $(date)"
+        echo "💡 Common solutions:"
+        echo "1. Set up Workload Identity (recommended)"
+        echo "2. Update GOOGLE_SERVICE_ACCOUNT_KEY secret"
+        echo "3. Contact organization admin for access"
 
-  # Health check job to monitor sync performance
+  # Health check job
   health-check:
     runs-on: ubuntu-latest
     needs: sync-fitbit-data
@@ -155,23 +223,18 @@ jobs:
           echo "::error::Sync failed at $(date)"
           echo ""
           echo "🔍 Common failure reasons:"
-          echo "1. fitbit_sync.py file not found in repository"
-          echo "2. Missing or invalid FIREBASE_SERVICE_ACCOUNT_KEY secret"
-          echo "3. Python import errors or missing dependencies"
-          echo "4. Firebase connection issues"
-          echo "5. API connectivity problems"
+          echo "1. Authentication issues (organization policies)"
+          echo "2. Missing or invalid credentials"
+          echo "3. Firebase connection problems"
+          echo "4. Project moved to organization - permissions changed"
           echo ""
           echo "📋 Next steps:"
-          echo "1. Check the 'sync-fitbit-data' job logs above"
-          echo "2. Verify fitbit_sync.py is in your repository root"
-          echo "3. Verify your GitHub secret is set correctly"
-          exit 1
-        elif [ "${{ needs.sync-fitbit-data.result }}" == "cancelled" ]; then
-          echo "⚠️ Fitbit sync was cancelled"
-          echo "::warning::Sync cancelled at $(date)"
+          echo "1. Set up Workload Identity authentication"
+          echo "2. Get new service account key from organization admin"
+          echo "3. Check GitHub secrets are correctly set"
           exit 1
         else
-          echo "❓ Unknown sync result: ${{ needs.sync-fitbit-data.result }}"
+          echo "⚠️ Sync result: ${{ needs.sync-fitbit-data.result }}"
           exit 1
         fi
         
@@ -179,51 +242,8 @@ jobs:
       if: needs.sync-fitbit-data.result == 'success'
       run: |
         echo "📊 Sync Summary:"
+        echo "- Project: long-covid-8f42d"
         echo "- Workflow: ${{ github.workflow }}"
         echo "- Run number: ${{ github.run_number }}"
         echo "- Triggered by: ${{ github.event_name }}"
-        echo "- Branch: ${{ github.ref_name }}"
-        echo "- Commit: ${{ github.sha }}"
-        echo "- Runner: ${{ runner.os }}"
-        echo "- Python version: 3.11"
         echo "- Timestamp: $(date -u)"
-
-  # Optional: Cleanup old workflow runs (runs monthly)
-  cleanup:
-    runs-on: ubuntu-latest
-    if: github.event_name == 'schedule' && github.event.schedule == '0 0 1 * *'
-    
-    steps:
-    - name: Delete old workflow runs
-      uses: actions/github-script@v6
-      with:
-        script: |
-          const { data: workflows } = await github.rest.actions.listRepoWorkflows({
-            owner: context.repo.owner,
-            repo: context.repo.repo,
-          });
-          
-          for (const workflow of workflows.workflows) {
-            if (workflow.name === 'Fitbit Data Sync') {
-              const { data: runs } = await github.rest.actions.listWorkflowRuns({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                workflow_id: workflow.id,
-                per_page: 100,
-              });
-              
-              // Keep only the latest 50 runs, delete the rest
-              const runsToDelete = runs.workflow_runs.slice(50);
-              
-              for (const run of runsToDelete) {
-                if (run.status === 'completed') {
-                  await github.rest.actions.deleteWorkflowRun({
-                    owner: context.repo.owner,
-                    repo: context.repo.repo,
-                    run_id: run.id,
-                  });
-                  console.log(`Deleted run ${run.id}`);
-                }
-              }
-            }
-          }
