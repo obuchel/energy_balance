@@ -142,9 +142,9 @@
 /* ===== DASHBOARD CONTENT GRID ===== */
 .dashboard {
   padding: 32px;
-  display: grid;
+  display: flex;
+  flex-direction: column;
   gap: 24px;
-  grid-template-columns: 1fr 1fr; /* Force two equal columns */
   position: relative;
   z-index: 1;
   animation: fadeInUp 0.8s ease-out 0.2s both;
@@ -169,6 +169,13 @@
   position: relative;
   overflow: hidden;
   transition: all 0.3s ease;
+}
+
+/* Make the quick actions card wider */
+.quick-actions-card {
+  max-width: 800px;
+  margin: 0 auto;
+  width: 100%;
 }
 
 .card::before {
@@ -246,8 +253,8 @@
 /* ===== QUICK ACTIONS STYLING ===== */
 .quick-actions {
   display: grid;
-  gap: 16px;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 20px;
+  grid-template-columns: repeat(3, 1fr); /* Force 3 equal columns */
 }
 
 .action-button {
@@ -255,7 +262,7 @@
   background: linear-gradient(135deg, rgba(255, 255, 255, 0.9), rgba(255, 255, 255, 0.7));
   border: 2px solid rgba(59, 130, 246, 0.2);
   border-radius: var(--border-radius-lg);
-  padding: 20px 24px;
+  padding: 24px 28px;
   font-size: 1rem;
   font-weight: 600;
   cursor: pointer;
@@ -268,6 +275,7 @@
   backdrop-filter: blur(10px);
   position: relative;
   overflow: hidden;
+  min-height: 80px;
 }
 
 .action-button::before {
@@ -385,9 +393,7 @@ div[style*="border: 2px dashed orange"] {
   
   .dashboard {
     padding: 24px;
-    grid-template-columns: 1fr; /* Single column on mobile */
     gap: 20px;
-    max-width: none;
   }
   
   .card {
@@ -395,19 +401,25 @@ div[style*="border: 2px dashed orange"] {
   }
   
   .quick-actions {
-    grid-template-columns: 1fr;
+    grid-template-columns: 1fr; /* Single column on mobile */
+    gap: 16px;
   }
   
   .action-button {
     padding: 18px 20px;
     font-size: 0.95rem;
+    min-height: 60px;
   }
 }
 
 @media (min-width: 769px) and (max-width: 1024px) {
-  .dashboard {
-    grid-template-columns: 1fr 1fr; /* Two columns for tablets */
-    max-width: 900px;
+  .quick-actions {
+    grid-template-columns: repeat(3, 1fr); /* Keep 3 columns for tablets */
+    gap: 18px;
+  }
+  
+  .quick-actions-card {
+    max-width: 700px;
   }
 }
 
@@ -440,6 +452,7 @@ div[style*="border: 2px dashed orange"] {
   .action-button {
     padding: 16px;
     font-size: 0.9rem;
+    min-height: 50px;
   }
   
   .settings-btn, .logout-btn {

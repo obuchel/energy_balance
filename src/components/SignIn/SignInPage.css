@@ -1,5 +1,4 @@
-/* SignInPage.css - Enhanced Sign In Page Styles (without common classes) */
-/* Import common styles: @import url('./Common.css'); */
+/* SignInPage.css - Fixed Floating Labels */
 
 /* ===== SIGN IN SPECIFIC STYLES ===== */
 
@@ -73,6 +72,72 @@
   margin-bottom: 32px;
 }
 
+/* FIXED: Form group with proper floating label positioning */
+.signin-form .form-group {
+  position: relative;
+  margin-bottom: 1.5rem;
+}
+
+/* FIXED: Form input with proper padding for floating labels */
+.signin-form .form-input {
+  width: 100%;
+  padding: 1.25rem 1rem 0.75rem 1rem; /* More top padding for label space */
+  border: 2px solid var(--gray-300);
+  border-radius: var(--border-radius-lg);
+  font-size: 1rem;
+  background: rgba(255, 255, 255, 0.9);
+  backdrop-filter: blur(10px);
+  transition: all 0.3s ease;
+  box-sizing: border-box;
+  color: var(--gray-900);
+}
+
+.signin-form .form-input:focus {
+  outline: none;
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.1);
+  background: rgba(255, 255, 255, 1);
+}
+
+/* FIXED: Form label positioning */
+.signin-form .form-label {
+  position: absolute;
+  left: 1rem;
+  top: 1.25rem;
+  color: var(--gray-500);
+  font-size: 1rem;
+  font-weight: 500;
+  pointer-events: none;
+  transition: all 0.3s ease;
+  background: transparent;
+  z-index: 1;
+  transform-origin: left top;
+}
+
+/* FIXED: Floating label state - moved higher */
+.signin-form .form-input:focus + .form-label,
+.signin-form .form-input:not(:placeholder-shown) + .form-label {
+  top: 0.05rem; /* Moved higher from 0.5rem */
+  left: 1rem;
+  font-size: 0.75rem;
+  color: var(--primary-color);
+  font-weight: 600;
+  background: rgba(255, 255, 255, 0.9);
+  padding: 0 0.25rem;
+  border-radius: 4px;
+}
+
+/* FIXED: Placeholder should be transparent initially */
+.signin-form .form-input::placeholder {
+  color: transparent;
+}
+
+/* FIXED: Show placeholder only when focused */
+.signin-form .form-input:focus::placeholder {
+  color: var(--gray-400);
+  transition: color 0.3s ease 0.1s;
+}
+
 .forgot-password {
   text-align: right;
   margin-top: 8px;
@@ -109,6 +174,8 @@
   position: relative;
   overflow: hidden;
   box-shadow: 0 4px 16px rgba(59, 130, 246, 0.3);
+  width: 100%;
+  min-height: 56px;
 }
 
 .signin-button::before {

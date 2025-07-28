@@ -9,6 +9,11 @@ import PersonalSettings from './components/Settings/PersonalSettings';
 import SymptomTracker from './components/SymptomTracker/SymptomTracker';
 import './App.css';
 
+// In your App.js or main routing file
+import FitbitDebugTool from './components/Debug/FitbitDebugTool';
+
+
+
 // Lazy load components that need Pyodide
 const FoodTrackerPage = lazy(() => import('./components/FoodTracker/FoodTrackerPage'));
 
@@ -374,6 +379,8 @@ function App() {
         )}
         
         <Routes>
+
+
           {/* Public routes */}
           <Route 
             path="/login" 
@@ -383,7 +390,8 @@ function App() {
               </PublicRoute>
             } 
           />
-          
+     
+<Route path="/debug" element={<FitbitDebugTool />} />
           <Route 
             path="/register" 
             element={

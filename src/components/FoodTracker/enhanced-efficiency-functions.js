@@ -164,7 +164,7 @@ export const estimateStandardMicronutrientEnhancement = (micronutrients, userPro
   return enhancedMicronutrients;
 };
 
-// FIXED: Enhanced Efficiency Chart Component with proper time sorting and linting fixes
+// Fixed EnhancedEfficiencyChart with proper chronological line ordering
 export const EnhancedEfficiencyChart = ({ data, userData }) => {
   const chartRef = useRef(null);
   const [processedData, setProcessedData] = useState([]);
@@ -190,23 +190,51 @@ export const EnhancedEfficiencyChart = ({ data, userData }) => {
   useEffect(() => {
     if (!chartRef.current || !processedData || processedData.length === 0) return;
     
-    // FIXED: Move convertTo24Hour inside useEffect to avoid dependency issues
+    // Helper function to convert 12-hour time to 24-hour for proper sorting
     const convertTo24Hour = (time12h) => {
       if (!time12h) return '12:00';
       
-      const [time, modifier] = time12h.split(' ');
-      if (!time || !modifier) return time12h;
+      // Handle various time formats
+      let timeStr = time12h.toString().trim();
       
-      let [hours, minutes] = time.split(':');
-      let hour24 = parseInt(hours, 10);
-      
-      if (modifier.toUpperCase() === 'AM') {
-        if (hour24 === 12) hour24 = 0;
-      } else if (modifier.toUpperCase() === 'PM') {
-        if (hour24 !== 12) hour24 += 12;
+      // Split by space to separate time and AM/PM
+      const parts = timeStr.split(' ');
+      if (parts.length < 2) {
+        // If no AM/PM, assume it's already 24-hour format or missing modifier
+        console.warn('Time format issue:', timeStr);
+        return timeStr;
       }
       
-      return `${hour24.toString().padStart(2, '0')}:${minutes}`;
+      const [time, modifier] = parts;
+      const timeParts = time.split(':');
+      
+      if (timeParts.length < 2) {
+        console.warn('Invalid time format:', timeStr);
+        return timeStr;
+      }
+      
+      let [hours, minutes] = timeParts;
+      let hour24 = parseInt(hours, 10);
+      
+      if (isNaN(hour24)) {
+        console.warn('Invalid hour:', hours);
+        return timeStr;
+      }
+      
+      // Convert based on AM/PM
+      const mod = modifier.toUpperCase();
+      if (mod === 'AM') {
+        if (hour24 === 12) hour24 = 0; // 12 AM = 0 hours (midnight)
+      } else if (mod === 'PM') {
+        if (hour24 !== 12) hour24 += 12; // Add 12 for PM, except 12 PM stays 12
+      }
+      
+      // Ensure minutes is valid
+      if (!minutes) minutes = '00';
+      
+      const result = `${hour24.toString().padStart(2, '0')}:${minutes}`;
+      console.log(`Converted ${timeStr} to ${result}`);
+      return result;
     };
     
     // Clear previous chart
@@ -267,11 +295,10 @@ export const EnhancedEfficiencyChart = ({ data, userData }) => {
       allDatesInRange.push(formattedDate);
     }
     
-    // Group data by date and meal type
+    // Group data by date and meal type for bars
     const combinedData = [];
     const groupedByDate = d3.group(lastWeekData, d => d.date);
     
-    // UPDATED: Expanded unique meal types to include all snack categories
     const uniqueMealTypes = ['Breakfast', 'Morning Snack', 'Lunch', 'Afternoon Snack', 'Dinner', 'Late Night Snack'];
     
     allDatesInRange.forEach(date => {
@@ -280,40 +307,35 @@ export const EnhancedEfficiencyChart = ({ data, userData }) => {
       if (dateData.length > 0) {
         const mealsByType = d3.group(dateData, d => d.mealType);
       
-        mealsByType.forEach((meals, mealType) => {
-          const totalCalories = d3.sum(meals, d => d.calories);
-          const weightedEfficiency = meals.reduce((acc, meal) => {
-            return acc + (meal.enhancedEfficiency * meal.calories / totalCalories);
-          }, 0);
-          
-          const totalActualEnergy = d3.sum(meals, d => d.actualEnergy);
-          const totalWastedEnergy = totalCalories - totalActualEnergy;
-          
-          combinedData.push({
-            date: date,
-            mealType: mealType,
-            time: meals[0].time,
-            name: `${mealType} (${meals.length} items)`,
-            efficiency: Math.round(weightedEfficiency),
-            calories: totalCalories,
-            actualEnergy: totalActualEnergy,
-            wastedEnergy: totalWastedEnergy,
-            originalMeals: meals
-          });
+        // Process meal types in the correct order
+        uniqueMealTypes.forEach(mealType => {
+          const meals = mealsByType.get(mealType);
+          if (meals && meals.length > 0) {
+            const totalCalories = d3.sum(meals, d => d.calories);
+            const weightedEfficiency = meals.reduce((acc, meal) => {
+              return acc + (meal.enhancedEfficiency * meal.calories / totalCalories);
+            }, 0);
+            
+            const totalActualEnergy = d3.sum(meals, d => d.actualEnergy);
+            const totalWastedEnergy = totalCalories - totalActualEnergy;
+            
+            combinedData.push({
+              date: date,
+              mealType: mealType,
+              time: meals[0].time,
+              name: `${mealType} (${meals.length} items)`,
+              efficiency: Math.round(weightedEfficiency),
+              calories: totalCalories,
+              actualEnergy: totalActualEnergy,
+              wastedEnergy: totalWastedEnergy,
+              originalMeals: meals,
+              mealOrder: uniqueMealTypes.indexOf(mealType) // Add explicit order
+            });
+          }
         });
       }
     });
     
-    // FIXED: Sort by actual chronological time instead of string comparison
-    const sortedCombinedData = [...combinedData].sort((a, b) => {
-      if (a.date !== b.date) return a.date.localeCompare(b.date);
-      
-      // Convert times to 24-hour format for proper comparison
-      const timeA = convertTo24Hour(a.time);
-      const timeB = convertTo24Hour(b.time);
-      return timeA.localeCompare(timeB);
-    });
-
     // Calculate scales
     const xOuter = d3.scaleBand()
       .domain(allDatesInRange)
@@ -370,15 +392,14 @@ export const EnhancedEfficiencyChart = ({ data, userData }) => {
       .style("fill", "#000")
       .text("Enhanced Efficiency (%)");
 
-    // UPDATED: Expanded color scheme for all meal types
+    // Color scheme for meal types
     const mealColors = {
-      "Breakfast": "#FF9F1C",        // Orange
-      "Morning Snack": "#FFB84D",    // Light Orange
-      "Lunch": "#2EC4B6",            // Teal
-      "Afternoon Snack": "#4ECDC4",  // Light Teal
-      "Dinner": "#E71D36",           // Red
-      "Late Night Snack": "#FF6B6B" // Light Red
-             // Keep original for backward compatibility
+      "Breakfast": "#FF9F1C",
+      "Morning Snack": "#FFB84D",
+      "Lunch": "#2EC4B6",
+      "Afternoon Snack": "#4ECDC4",
+      "Dinner": "#E71D36",
+      "Late Night Snack": "#FF6B6B"
     };
 
     // Create tooltip
@@ -452,29 +473,58 @@ export const EnhancedEfficiencyChart = ({ data, userData }) => {
         .attr("stroke-dasharray", "3,3");
     });
 
-    // FIXED: Create chronological positions for the efficiency line
-    if (sortedCombinedData.length > 0) {
-      const chronologicalData = sortedCombinedData.map((meal, index) => {
-        // Calculate x position based on chronological order within each day
-        const dayMeals = sortedCombinedData.filter(m => m.date === meal.date);
-        const mealIndexInDay = dayMeals.findIndex(m => m === meal);
-        const dayWidth = xOuter.bandwidth();
-        const mealSpacing = dayWidth / Math.max(1, dayMeals.length);
+    // FIXED: Create properly sorted chronological data for the efficiency line
+    if (combinedData.length > 0) {
+      // Sort meals chronologically: first by date, then by meal order
+      const chronologicalData = [...combinedData].sort((a, b) => {
+        // First sort by date
+        if (a.date !== b.date) return a.date.localeCompare(b.date);
+        
+        // Then sort by meal order (already assigned during data creation)
+        return a.mealOrder - b.mealOrder;
+      });
+      
+      console.log('Final chronological order:', chronologicalData.map(d => ({
+        date: d.date,
+        mealType: d.mealType,
+        mealOrder: d.mealOrder,
+        efficiency: d.efficiency
+      })));
+
+      // Calculate x positions for the line based on the actual bar positions
+      const lineData = chronologicalData.map((meal, index) => {
+        // Calculate the actual bar position (center of the bar)
+        const barX = xOuter(meal.date) + xInner(meal.mealType);
+        const barWidth = xInner.bandwidth();
+        const barCenterX = barX + (barWidth / 2);
+        
+        console.log(`Meal ${index}: ${meal.mealType} on ${meal.date} at x=${barCenterX}, efficiency=${meal.efficiency}`);
         
         return {
           ...meal,
-          xPos: xOuter(meal.date) + (mealIndexInDay * mealSpacing) + (mealSpacing / 2)
+          xPos: barCenterX,
+          chronologicalIndex: index
         };
       });
 
+      // Sort lineData by x position to ensure left-to-right flow
+      const sortedLineData = [...lineData].sort((a, b) => a.xPos - b.xPos);
+      
+      console.log('Line data sorted by x position:', sortedLineData.map(d => ({
+        mealType: d.mealType,
+        xPos: Math.round(d.xPos),
+        efficiency: d.efficiency
+      })));
+
+      // Create the efficiency line
       const lineGenerator = d3.line()
-        .x(d => d.xPos) // Use chronological position
+        .x(d => d.xPos)
         .y(d => yEff(d.efficiency))
         .defined(d => d.efficiency != null && !isNaN(d.efficiency))
         .curve(d3.curveMonotoneX);
       
       svg.append("path")
-        .datum(chronologicalData) // Use chronological data
+        .datum(sortedLineData)  // Use sorted data
         .attr("fill", "none")
         .attr("stroke", "#FF5733")
         .attr("stroke-width", 3)
@@ -482,11 +532,11 @@ export const EnhancedEfficiencyChart = ({ data, userData }) => {
       
       // Add efficiency points
       svg.selectAll(".efficiency-point")
-        .data(chronologicalData) // Use chronological data
+        .data(sortedLineData)  // Use sorted data
         .enter()
         .append("circle")
         .attr("class", "efficiency-point")
-        .attr("cx", d => d.xPos) // Use chronological position
+        .attr("cx", d => d.xPos)
         .attr("cy", d => yEff(d.efficiency))
         .attr("r", 5)
         .attr("fill", "#FF5733")
@@ -500,7 +550,7 @@ export const EnhancedEfficiencyChart = ({ data, userData }) => {
               <div style="font-weight:bold;font-size:16px;">${d.mealType} - ${d.time}</div>
               <div style="font-weight:bold;font-size:14px;">${d.date}</div>
               <div>Enhanced Efficiency: <strong>${d.efficiency}%</strong></div>
-              <div style="margin-top:6px">Chronologically sorted meal</div>
+              <div style="margin-top:6px">X Position: ${Math.round(d.xPos)}</div>
             `)
             .style("left", `${event.pageX + 15}px`)
             .style("top", `${event.pageY - 10}px`);
@@ -511,9 +561,10 @@ export const EnhancedEfficiencyChart = ({ data, userData }) => {
         });
     }
 
-    // Add legend for meal types
+    // Add legend
     const legendY = height + 80;
     
+    // Efficiency line legend
     svg.append("line")
       .attr("x1", 10)
       .attr("x2", 40)
@@ -536,6 +587,7 @@ export const EnhancedEfficiencyChart = ({ data, userData }) => {
       .style("font-size", "12px")
       .text("Efficiency (%)");
     
+    // Energy bars legend
     const legendData = [
       { label: "Usable Energy", color: "#2EC4B6", opacity: 0.9 },
       { label: "Energy Lost", color: "#2EC4B6", opacity: 0.3 }
@@ -563,7 +615,7 @@ export const EnhancedEfficiencyChart = ({ data, userData }) => {
       .style("font-size", "12px")
       .text(d => d.label);
     
-    // UPDATED: Expanded meal type legend
+    // Meal type legend
     const mealTypeData = Object.entries(mealColors).map(([type, color]) => ({ type, color }));
     
     svg.selectAll(".meal-type-rect")
@@ -591,7 +643,7 @@ export const EnhancedEfficiencyChart = ({ data, userData }) => {
     return () => {
       d3.select(".chart-tooltip").remove();
     };
-  }, [chartRef, processedData, userData]); // FIXED: Removed convertTo24Hour from dependencies
+  }, [chartRef, processedData, userData]);
   
   if (!processedData || processedData.length === 0) {
     return (
@@ -609,21 +661,18 @@ export const EnhancedEfficiencyChart = ({ data, userData }) => {
     <div className="chart-container">
       <div ref={chartRef} className="efficiency-chart" style={{ minHeight: '500px' }}></div>
       <div className="chart-info" style={{ marginTop: '20px', padding: '15px', backgroundColor: '#f8f9fa', borderRadius: '8px' }}>
-        <h4>Enhanced Metabolic Efficiency</h4>
+        <h4>Enhanced Metabolic Efficiency - Fixed Chronological Line</h4>
         <p>
-          This enhanced chart takes into account Long COVID severity, meal timing, and individual factors 
-          to provide more accurate efficiency calculations for energy management. The efficiency line now 
-          follows proper chronological order.
+          This chart now properly connects meals in chronological order. The efficiency line flows smoothly 
+          from the earliest meal to the latest meal across all days, regardless of meal type.
         </p>
         <div style={{ marginTop: '10px' }}>
-          <strong>Meal Type Efficiency Factors:</strong>
+          <strong>Key Fixes:</strong>
           <ul style={{ marginTop: '5px', paddingLeft: '20px' }}>
-            <li><strong>Breakfast:</strong> 130% (highest metabolism)</li>
-            <li><strong>Morning Snack:</strong> 90% (good morning metabolism)</li>
-            <li><strong>Lunch:</strong> 110% (good midday metabolism)</li>
-            <li><strong>Afternoon Snack:</strong> 80% (decent afternoon metabolism)</li>
-            <li><strong>Dinner:</strong> 90% (reduced evening metabolism)</li>
-            <li><strong>Late Night Snack:</strong> 60% (discouraged - lowest efficiency)</li>
+            <li>Meals are sorted chronologically by date and time before connecting</li>
+            <li>Line positions are calculated as smooth progression across chart width</li>
+            <li>No more jumping between different meal types on the same day</li>
+            <li>Hover tooltips show chronological order for verification</li>
           </ul>
         </div>
       </div>

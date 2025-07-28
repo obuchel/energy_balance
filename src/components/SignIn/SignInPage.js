@@ -6,7 +6,6 @@ import { auth, db } from "../../firebase-config";
 import "../Common.css";
 import "./SignInPage.css";
 
-
 function SignInPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -287,7 +286,7 @@ function SignInPage() {
   };
 
   return (
-    <div className="signin-container">
+    <div className="signin-container animated-page-container">
       {/* Animated background elements */}
       <div className="bg-animation">
         <div className="floating-shape shape-1"></div>
@@ -295,11 +294,8 @@ function SignInPage() {
         <div className="floating-shape shape-3"></div>
       </div>
 
-      <div className="signin-card">
-        {/* Rotating glow effect */}
-        <div className="card-glow"></div>
-        
-        <div className="card-content">
+      <div className="signin-card glass-card">
+        <div className="glass-card-content">
           <div className="signin-header">
             {/* Enhanced logo */}
             <div className="logo-container">
@@ -328,8 +324,9 @@ function SignInPage() {
                 placeholder="Enter your email"
                 required
                 autoComplete="email"
+                className="form-input"
               />
-              <label htmlFor="email">Email Address</label>
+              <label htmlFor="email" className="form-label">Email Address</label>
             </div>
             
             <div className="form-group">
@@ -342,8 +339,9 @@ function SignInPage() {
                 required
                 autoComplete="current-password"
                 minLength="6"
+                className="form-input"
               />
-              <label htmlFor="password">Password</label>
+              <label htmlFor="password" className="form-label">Password</label>
               <div className="forgot-password">
                 <a href="#forgot">Forgot your password?</a>
               </div>
@@ -351,10 +349,10 @@ function SignInPage() {
             
             <button 
               type="submit" 
-              className="signin-button"
+              className="signin-button btn btn-primary"
               disabled={loading}
             >
-              {loading && <span className="loading-spinner"></span>}
+              {loading && <span className="loading-spinner-small"></span>}
               <span>{loading ? "Signing in..." : "Sign In"}</span>
             </button>
           </form>

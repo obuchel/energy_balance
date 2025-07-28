@@ -1,4 +1,4 @@
-// FitbitDashboard.js - JavaScript component without embedded CSS
+// FitbitDashboard.js - Complete Fixed Version with Debug Tools
 import React, { useEffect, useState, useCallback } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { onAuthStateChanged, signOut } from 'firebase/auth';
@@ -6,7 +6,40 @@ import { auth, db } from '../../firebase-config';
 import { doc, getDoc, setDoc, collection, getDocs } from 'firebase/firestore';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import "../Common.css";
-import './FitbitDashboard.css'; // Import the CSS file
+import './FitbitDashboard.css';
+
+// Helper function to get today's date in user's timezone
+const getTodayInUserTimezone = () => {
+  const userTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+  const today = new Date();
+  
+  // Use toLocaleDateString to get the correct local date
+  const localDateString = today.toLocaleDateString('en-CA', {timeZone: userTimezone}); // en-CA gives YYYY-MM-DD format
+  
+  console.log('🌍 Timezone debug:', {
+    userTimezone,
+    utcTime: today.toISOString(),
+    localDateString: localDateString
+  });
+  
+  return localDateString;
+};
+
+// Update user timezone function
+const updateUserTimezone = async (userId) => {
+  try {
+    const userTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    
+    await setDoc(doc(db, 'users', userId), {
+      timezone: userTimezone,
+      timezoneUpdatedAt: new Date().toISOString()
+    }, { merge: true });
+    
+    console.log('✅ User timezone saved:', userTimezone);
+  } catch (error) {
+    console.error('❌ Error saving user timezone:', error);
+  }
+};
 
 const FitbitDashboard = () => {
   const [user, setUser] = useState(null);
@@ -15,18 +48,359 @@ const FitbitDashboard = () => {
   const [loading, setLoading] = useState(true);
   const [connecting, setConnecting] = useState(false);
   const [error, setError] = useState('');
-  const [status, setStatus] = useState('checking'); // checking, needs_connection, connected, error
+  const [status, setStatus] = useState('checking');
   const [timeseriesData, setTimeseriesData] = useState([]);
-  const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
+  const [selectedDateMetrics, setSelectedDateMetrics] = useState(null);
+  
+  // Initialize with correct local date
+  const [selectedDate, setSelectedDate] = useState(() => getTodayInUserTimezone());
   const [timeseriesLoading, setTimeseriesLoading] = useState(false);
   
   const navigate = useNavigate();
   const location = useLocation();
 
-  // Your serverless API base URL
   const API_BASE_URL = 'https://6zfuwxqp01.execute-api.us-east-1.amazonaws.com/dev';
 
-  // Fetch timeseries data from Firestore using document ID pattern
+  // DEBUG FUNCTIONS - Must be defined before they're used
+  // Wrap debugState in useCallback for stable reference
+  const debugState = useCallback(() => {
+    console.log('🐛 DEBUG STATE:', {
+      user: user?.uid || 'No user',
+      status: status,
+      connecting: connecting,
+      error: error,
+      userData: userData ? 'User data exists' : 'No user data',
+      fitbitData: fitbitData ? 'Fitbit data exists' : 'No fitbit data',
+      clientId: process.env.REACT_APP_FITBIT_CLIENT_ID ? 'Present' : 'Missing'
+    });
+  }, [user, status, connecting, error, userData, fitbitData]);
+
+  // Test button component
+  const TestButton = () => (
+    <button
+      onClick={() => {
+        console.log('🧪 Test button clicked!');
+        alert('Test button works! Check console for details.');
+        debugState();
+      }}
+      style={{
+        background: 'green',
+        color: 'white',
+        padding: '10px 20px',
+        margin: '10px',
+        border: 'none',
+        cursor: 'pointer',
+        borderRadius: '4px',
+        fontSize: '14px'
+      }}
+    >
+      🧪 Test Click Handler
+    </button>
+  );
+
+  // Diagnostic tool component - MUST be defined before ConnectionError uses it
+  const DiagnosticTool = () => {
+    const [testResult, setTestResult] = useState('');
+    
+    const runDiagnostics = () => {
+      const results = [];
+      
+      // Test environment variables
+      const clientId = process.env.REACT_APP_FITBIT_CLIENT_ID;
+      results.push(`Client ID: ${clientId ? '✅ Present' : '❌ Missing'}`);
+      
+      // Test user state
+      results.push(`User: ${user?.uid ? '✅ Authenticated (' + user.uid + ')' : '❌ Not authenticated'}`);
+      
+      // Test component state
+      results.push(`Status: ${status}`);
+      results.push(`Connecting: ${connecting}`);
+      results.push(`Error: ${error || 'None'}`);
+      
+      // Test functions exist
+      results.push(`startFitbitConnection: ${typeof startFitbitConnection === 'function' ? '✅ Function exists' : '❌ Not function'}`);
+      results.push(`forceReconnection: ${typeof forceReconnection === 'function' ? '✅ Function exists' : '❌ Not function'}`);
+      
+      // Test DOM elements
+      const buttons = document.querySelectorAll('.error-actions button');
+      results.push(`Error action buttons found: ${buttons.length}`);
+      
+      // Test CSS
+      const errorCard = document.querySelector('.connection-error-card');
+      if (errorCard) {
+        const computedStyle = window.getComputedStyle(errorCard);
+        results.push(`Error card pointer-events: ${computedStyle.pointerEvents}`);
+        results.push(`Error card z-index: ${computedStyle.zIndex}`);
+      }
+      
+      setTestResult(results.join('\n'));
+    };
+    
+    return (
+      <div style={{ 
+        background: '#f8f9fa', 
+        padding: '1rem', 
+        margin: '1rem 0', 
+        border: '2px solid #007bff',
+        borderRadius: '8px',
+        fontFamily: 'monospace',
+        fontSize: '0.9rem'
+      }}>
+        <h3 style={{ color: '#007bff', margin: '0 0 1rem 0' }}>🔧 Debug Panel</h3>
+        
+        <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', marginBottom: '1rem' }}>
+          <button 
+            onClick={runDiagnostics}
+            style={{
+              background: '#007bff',
+              color: 'white',
+              padding: '8px 16px',
+              border: 'none',
+              borderRadius: '4px',
+              cursor: 'pointer'
+            }}
+          >
+            🔍 Run Diagnostics
+          </button>
+          
+          <button 
+            onClick={() => {
+              console.clear();
+              console.log('🧹 Console cleared');
+              debugState();
+            }}
+            style={{
+              background: '#6c757d',
+              color: 'white',
+              padding: '8px 16px',
+              border: 'none',
+              borderRadius: '4px',
+              cursor: 'pointer'
+            }}
+          >
+            🧹 Clear Console
+          </button>
+          
+          <button 
+            onClick={() => {
+              console.log('🚀 Testing startFitbitConnection...');
+              console.log('🚀 Function type:', typeof startFitbitConnection);
+              if (typeof startFitbitConnection === 'function') {
+                console.log('🚀 Calling startFitbitConnection...');
+                startFitbitConnection();
+              } else {
+                console.error('❌ startFitbitConnection is not a function!');
+                alert('startFitbitConnection function is missing!');
+              }
+            }}
+            style={{
+              background: '#28a745',
+              color: 'white',
+              padding: '8px 16px',
+              border: 'none',
+              borderRadius: '4px',
+              cursor: 'pointer'
+            }}
+          >
+            🚀 Test Connection
+          </button>
+
+          <button 
+            onClick={() => {
+              console.log('🔄 Testing forceReconnection...');
+              console.log('🔄 Function type:', typeof forceReconnection);
+              if (typeof forceReconnection === 'function') {
+                console.log('🔄 Calling forceReconnection...');
+                forceReconnection();
+              } else {
+                console.error('❌ forceReconnection is not a function!');
+                alert('forceReconnection function is missing!');
+              }
+            }}
+            style={{
+              background: '#dc3545',
+              color: 'white',
+              padding: '8px 16px',
+              border: 'none',
+              borderRadius: '4px',
+              cursor: 'pointer'
+            }}
+          >
+            🔄 Test Force Reset
+          </button>
+        </div>
+        
+        <TestButton />
+        
+        {testResult && (
+          <pre style={{ 
+            background: 'white', 
+            padding: '1rem', 
+            marginTop: '1rem',
+            whiteSpace: 'pre-wrap',
+            borderRadius: '4px',
+            border: '1px solid #ccc',
+            fontSize: '0.8rem'
+          }}>
+            {testResult}
+          </pre>
+        )}
+      </div>
+    );
+  };
+
+  // Debug monitoring useEffect (separate from functions)
+  useEffect(() => {
+    debugState();
+  }, [debugState]);
+
+  // Enhanced startFitbitConnection function with debugging
+  // Replace your startFitbitConnection function with this enhanced version:
+
+const startFitbitConnection = () => {
+  console.log('🚀 startFitbitConnection called');
+  console.log('🚀 Current state:', { 
+    user: user?.uid, 
+    connecting, 
+    status,
+    error: error || 'none'
+  });
+  
+  if (!user?.uid) {
+    console.error('❌ No user authenticated');
+    setError('User not authenticated');
+    return;
+  }
+
+  console.log('🚀 Setting connecting to true');
+  setConnecting(true);
+  setError('');
+
+  const clientId = process.env.REACT_APP_FITBIT_CLIENT_ID;
+  console.log('🚀 Client ID check:', clientId ? 'Present' : 'Missing');
+  
+  if (!clientId) {
+    console.error('❌ No client ID found');
+    setError('Fitbit Client ID not configured. Please check environment variables.');
+    setConnecting(false);
+    return;
+  }
+
+  // Clear any existing session data first
+  sessionStorage.removeItem('fitbitOAuthState');
+  sessionStorage.removeItem('fitbitAuthStartTime');
+  
+  // Generate a new state with timestamp for uniqueness
+  const timestamp = Date.now().toString();
+  const randomPart = Math.random().toString(36).substring(2, 15);
+  const state = `${timestamp}_${randomPart}_${user.uid.substring(0, 8)}`;
+  
+  console.log('🚀 Generated OAuth state:', state);
+  
+  // Store state and timestamp
+  sessionStorage.setItem('fitbitOAuthState', state);
+  sessionStorage.setItem('fitbitAuthStartTime', timestamp);
+  
+  // Verify storage worked
+  const storedState = sessionStorage.getItem('fitbitOAuthState');
+  console.log('🚀 Verified stored state:', storedState);
+  
+  if (storedState !== state) {
+    console.error('❌ Failed to store OAuth state');
+    setError('Failed to initialize OAuth flow. Please try again.');
+    setConnecting(false);
+    return;
+  }
+
+  const redirectUri = window.location.origin + window.location.pathname;
+  const scope = 'activity heartrate sleep weight profile';
+
+  const authUrl = `https://www.fitbit.com/oauth2/authorize?` +
+    `response_type=code&` +
+    `client_id=${clientId}&` +
+    `redirect_uri=${encodeURIComponent(redirectUri)}&` +
+    `scope=${encodeURIComponent(scope)}&` +
+    `state=${encodeURIComponent(state)}`;
+
+  console.log('🚀 Auth URL generated:', authUrl);
+  console.log('🚀 Redirect URI:', redirectUri);
+  console.log('🚀 State in URL:', encodeURIComponent(state));
+  
+  // Add a small delay to ensure state is stored
+  setTimeout(() => {
+    console.log('🚀 Redirecting to Fitbit...');
+    window.location.href = authUrl;
+  }, 100);
+};
+
+  // Enhanced token validation and refresh
+  const validateAndRefreshToken = useCallback(async (userId) => {
+    try {
+      const userDoc = await getDoc(doc(db, 'users', userId));
+      const userData = userDoc.data();
+      const tokenData = userData?.fitbitData;
+      
+      if (!tokenData?.accessToken) {
+        console.log('❌ No access token found');
+        setStatus('needs_connection');
+        setError('Please connect your Fitbit account to continue.');
+        return null;
+      }
+      
+      // Check if token will expire in the next 30 minutes
+      const tokenExpiresAt = tokenData.tokenExpiresAt;
+      const willExpireSoon = tokenExpiresAt && 
+        (new Date(tokenExpiresAt).getTime() - Date.now()) < (30 * 60 * 1000);
+      
+      if (willExpireSoon && tokenData.refreshToken) {
+        console.log('🔄 Token expiring soon, refreshing...');
+        
+        try {
+          const newTokenData = await refreshFitbitToken(tokenData.refreshToken);
+          
+          // Save new tokens
+          await setDoc(doc(db, 'users', userId), {
+            fitbitData: {
+              ...tokenData,
+              accessToken: newTokenData.accessToken,
+              refreshToken: newTokenData.refreshToken,
+              tokenExpiresAt: newTokenData.tokenExpiresAt,
+            }
+          }, { merge: true });
+          
+          // Update local state
+          setUserData(prev => ({
+            ...prev,
+            fitbitData: {
+              ...prev.fitbitData,
+              accessToken: newTokenData.accessToken,
+              refreshToken: newTokenData.refreshToken,
+              tokenExpiresAt: newTokenData.tokenExpiresAt,
+            }
+          }));
+          
+          console.log('✅ Token refreshed successfully');
+          return newTokenData.accessToken;
+          
+        } catch (refreshError) {
+          console.error('❌ Token refresh failed:', refreshError);
+          setError('Your Fitbit connection has expired. Please reconnect your account.');
+          setStatus('needs_connection');
+          return null;
+        }
+      }
+      
+      return tokenData.accessToken;
+      
+    } catch (error) {
+      console.error('❌ Error validating token:', error);
+      setStatus('needs_connection');
+      setError('Unable to validate your Fitbit connection. Please reconnect.');
+      return null;
+    }
+  }, []);
+
+  // Enhanced timezone-aware fetchTimeseriesData
   const fetchTimeseriesData = useCallback(async (date, userId) => {
     if (!userId) return;
     
@@ -34,10 +408,37 @@ const FitbitDashboard = () => {
       setTimeseriesLoading(true);
       console.log('📊 Fetching timeseries data for date:', date);
       
-      const dateString = date.replace(/-/g, ''); // Convert 2025-06-18 to 20250618
-      const timeseriesRef = collection(db, 'fitbit_timeseries');
+      // Get user's stored timezone preference, fallback to browser detection
+      let userTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
       
-      // Get all documents and filter by document ID pattern
+      try {
+        const userDoc = await getDoc(doc(db, 'users', userId));
+        if (userDoc.exists() && userDoc.data().timezone) {
+          userTimezone = userDoc.data().timezone;
+          console.log('✅ Using stored user timezone:', userTimezone);
+        } else {
+          console.log('⚠️ No stored timezone, using browser detection:', userTimezone);
+          await updateUserTimezone(userId);
+        }
+      } catch (timezoneError) {
+        console.warn('⚠️ Could not fetch user timezone, using browser default:', timezoneError);
+      }
+      
+      // Create date range that spans potential timezone boundaries
+      const selectedDate = new Date(date + 'T00:00:00');
+      
+      // Generate date strings for timezone overlap (previous, current, next day)
+      const dateStrings = [];
+      for (let dayOffset = -1; dayOffset <= 1; dayOffset++) {
+        const checkDate = new Date(selectedDate);
+        checkDate.setDate(checkDate.getDate() + dayOffset);
+        const dateString = checkDate.toISOString().slice(0, 10).replace(/-/g, '');
+        dateStrings.push(dateString);
+      }
+      
+      console.log('🔍 Searching date strings for', userTimezone, ':', dateStrings);
+      
+      const timeseriesRef = collection(db, 'fitbit_timeseries');
       const querySnapshot = await getDocs(timeseriesRef);
       const data = [];
       
@@ -45,80 +446,223 @@ const FitbitDashboard = () => {
         const docId = docSnapshot.id;
         const docData = docSnapshot.data();
         
-        // Check if document ID matches our pattern: userId_date_time
-        if (docId.startsWith(`${userId}_${dateString}_`)) {
-          console.log('📊 Found matching document:', docId, docData);
+        // Check if document matches any of our date patterns
+        const matchesAnyDate = dateStrings.some(dateStr => 
+          docId.startsWith(`${userId}_${dateStr}_`)
+        );
+        
+        if (matchesAnyDate) {
+          console.log('📊 Found matching document:', docId);
           
-          // Extract calories from the actual data structure
+          // Extract calories and other metrics
           let calories = 0;
-          if (docData.metrics && docData.metrics.calories !== undefined) {
-            calories = docData.metrics.calories;
-          } else if (docData.calories !== undefined) {
-            calories = docData.calories;
+          let steps = 0;
+          let distance = 0;
+          let activeMinutes = 0;
+          
+          if (docData.metrics) {
+            calories = docData.metrics.calories || 0;
+            steps = docData.metrics.steps || 0;
+            distance = docData.metrics.distance || 0;
+            activeMinutes = docData.metrics.activeMinutes || 0;
+          } else {
+            calories = docData.calories || 0;
+            steps = docData.steps || 0;
+            distance = docData.distance || 0;
+            activeMinutes = docData.activeMinutes || 0;
           }
           
-          // Fix: Use actual timestamp and convert to local time
-          let displayTime = '';
-          let sortableTime = '';
+          // Parse timestamp
+          let actualTimestamp = null;
           
           if (docData.timestamp || docData.syncedAt) {
-            const timestamp = new Date(docData.timestamp || docData.syncedAt);
-            // Convert to local time for display
-            displayTime = timestamp.toLocaleTimeString('en-US', {
-              hour: '2-digit',
-              minute: '2-digit',
-              hour12: false
-            });
-            sortableTime = timestamp.getTime(); // For sorting
+            actualTimestamp = new Date(docData.timestamp || docData.syncedAt);
           } else {
-            // Fallback: extract from document ID but note it's UTC
-            const timePart = docId.split('_')[2];
-            if (timePart && timePart.length === 6) {
-              const hours = timePart.substring(0, 2);
-              const minutes = timePart.substring(2, 4);
-              displayTime = `${hours}:${minutes} (UTC)`;
-              sortableTime = parseInt(hours) * 60 + parseInt(minutes); // For sorting
+            // Reconstruct from document ID
+            const parts = docId.split('_');
+            if (parts.length >= 3) {
+              const datePart = parts[1];
+              const timePart = parts[2];
+              
+              if (datePart.length === 8 && timePart.length >= 6) {
+                const year = datePart.substring(0, 4);
+                const month = datePart.substring(4, 6);
+                const day = datePart.substring(6, 8);
+                const hours = timePart.substring(0, 2);
+                const minutes = timePart.substring(2, 4);
+                const seconds = timePart.substring(4, 6);
+                
+                actualTimestamp = new Date(`${year}-${month}-${day}T${hours}:${minutes}:${seconds}Z`);
+              }
             }
           }
           
-          data.push({
-            time: displayTime,
-            calories: calories,
-            timestamp: docData.timestamp || docData.syncedAt || new Date().toISOString(),
-            sortableTime: sortableTime,
-            docId: docId
-          });
+          if (actualTimestamp) {
+            // Convert UTC to user's timezone
+            const userLocalTime = new Date(actualTimestamp.toLocaleString("en-US", {timeZone: userTimezone}));
+            
+            // Check if this data point belongs to the selected date in user's timezone
+            const pointDateLocal = userLocalTime.toDateString();
+            const targetDateLocal = selectedDate.toDateString();
+            
+            console.log('🌍 Timezone conversion:', {
+              docId: docId,
+              utcTime: actualTimestamp.toISOString(),
+              userLocalTime: userLocalTime.toISOString(),
+              pointDate: pointDateLocal,
+              targetDate: targetDateLocal,
+              matches: pointDateLocal === targetDateLocal,
+              userTimezone: userTimezone
+            });
+            
+            if (pointDateLocal === targetDateLocal) {
+              // Display in user's timezone
+              const displayTime = actualTimestamp.toLocaleTimeString('en-US', {
+                hour: '2-digit',
+                minute: '2-digit',
+                hour12: false,
+                timeZone: userTimezone
+              });
+              
+              const sortableTime = userLocalTime.getTime();
+              
+              data.push({
+                time: displayTime,
+                calories: calories,
+                steps: steps,
+                distance: distance,
+                activeMinutes: activeMinutes,
+                timestamp: actualTimestamp.toISOString(),
+                sortableTime: sortableTime,
+                docId: docId,
+                actualTimestamp: actualTimestamp,
+                userLocalTime: userLocalTime,
+                userTimezone: userTimezone
+              });
+            }
+          }
         }
       });
       
-      // Sort by actual time (not string comparison)
-      data.sort((a, b) => {
-        if (typeof a.sortableTime === 'number' && typeof b.sortableTime === 'number') {
-          return a.sortableTime - b.sortableTime;
-        }
-        return a.time.localeCompare(b.time);
+      // Sort by user's local time
+      data.sort((a, b) => a.sortableTime - b.sortableTime);
+      
+      // Calculate daily totals for the selected date
+      const dailyTotals = {
+        steps: 0,
+        calories: 0,
+        distance: 0,
+        activeMinutes: 0,
+        dataPoints: data.length
+      };
+
+      // Since Fitbit data is cumulative, take the HIGHEST value (end of day total)
+      data.forEach(point => {
+        dailyTotals.calories = Math.max(dailyTotals.calories, point.calories || 0);
+        dailyTotals.steps = Math.max(dailyTotals.steps, point.steps || 0);
+        dailyTotals.distance = Math.max(dailyTotals.distance, point.distance || 0);
+        dailyTotals.activeMinutes = Math.max(dailyTotals.activeMinutes, point.activeMinutes || 0);
       });
       
-      console.log(`📊 Found ${data.length} data points for ${date}:`, data);
+      console.log(`📊 Found ${data.length} data points for ${date} (${userTimezone}):`, data);
+      console.log('📊 Daily totals for selected date:', dailyTotals);
+      
       setTimeseriesData(data);
+      setSelectedDateMetrics(dailyTotals);
       
     } catch (err) {
       console.error('❌ Error fetching timeseries data:', err);
       setTimeseriesData([]);
+      setSelectedDateMetrics(null);
     } finally {
       setTimeseriesLoading(false);
     }
   }, []);
 
-  // Check if data exists for a specific date using document ID pattern
+  // Proactive token refresh
+  useEffect(() => {
+    const checkTokenExpiration = async () => {
+      if (!user?.uid || !userData?.fitbitData?.tokenExpiresAt) return;
+      
+      const tokenExpiresAt = new Date(userData.fitbitData.tokenExpiresAt);
+      const timeUntilExpiry = tokenExpiresAt.getTime() - Date.now();
+      
+      // If token expires in less than 1 hour, refresh it
+      if (timeUntilExpiry < (60 * 60 * 1000) && timeUntilExpiry > 0) {
+        console.log('🔄 Token expiring soon, refreshing proactively...');
+        
+        try {
+          const newTokenData = await refreshFitbitToken(userData.fitbitData.refreshToken);
+          
+          await setDoc(doc(db, 'users', user.uid), {
+            fitbitData: {
+              ...userData.fitbitData,
+              accessToken: newTokenData.accessToken,
+              refreshToken: newTokenData.refreshToken,
+              tokenExpiresAt: newTokenData.tokenExpiresAt,
+            }
+          }, { merge: true });
+          
+          setUserData(prev => ({
+            ...prev,
+            fitbitData: {
+              ...prev.fitbitData,
+              accessToken: newTokenData.accessToken,
+              refreshToken: newTokenData.refreshToken,
+              tokenExpiresAt: newTokenData.tokenExpiresAt,
+            }
+          }));
+          
+          console.log('✅ Token refreshed proactively');
+          
+        } catch (error) {
+          console.error('❌ Proactive refresh failed:', error);
+          // Let it fail naturally on next API call
+        }
+      }
+    };
+    
+    // Check immediately and then every 30 minutes
+    checkTokenExpiration();
+    const interval = setInterval(checkTokenExpiration, 30 * 60 * 1000);
+    
+    return () => clearInterval(interval);
+  }, [user?.uid, userData?.fitbitData]);
+
+  // Auto-save user timezone on login
+  useEffect(() => {
+    const saveUserTimezoneOnLogin = async () => {
+      if (user?.uid) {
+        console.log('👤 User logged in, checking timezone...');
+        try {
+          const userDoc = await getDoc(doc(db, 'users', user.uid));
+          
+          const userData = userDoc.data();
+          const shouldUpdateTimezone = !userData?.timezone || 
+            !userData?.timezoneUpdatedAt || 
+            (new Date() - new Date(userData.timezoneUpdatedAt)) > (30 * 24 * 60 * 60 * 1000);
+          
+          if (shouldUpdateTimezone) {
+            await updateUserTimezone(user.uid);
+          } else {
+            console.log('✅ User timezone already up to date:', userData.timezone);
+          }
+        } catch (error) {
+          console.error('❌ Error checking user timezone:', error);
+        }
+      }
+    };
+    
+    saveUserTimezoneOnLogin();
+  }, [user]);
+
+  // Check if data exists for a specific date
   const checkDateHasData = useCallback(async (date, userId) => {
     if (!userId) return false;
     
     try {
-      const dateString = date.replace(/-/g, ''); // Convert 2025-06-18 to 20250618
+      const dateString = date.replace(/-/g, '');
       const timeseriesRef = collection(db, 'fitbit_timeseries');
-      
-      // Get all documents and check if any match our pattern
       const querySnapshot = await getDocs(timeseriesRef);
       let hasData = false;
       
@@ -142,7 +686,6 @@ const FitbitDashboard = () => {
     const currentDate = new Date(selectedDate);
     let newDate = new Date(currentDate);
     
-    // Look for data in the specified direction (up to 30 days)
     for (let i = 1; i <= 30; i++) {
       if (direction === 'prev') {
         newDate.setDate(currentDate.getDate() - i);
@@ -163,16 +706,51 @@ const FitbitDashboard = () => {
     console.log('📊 No data found in the specified direction');
   }, [selectedDate, user?.uid, checkDateHasData, fetchTimeseriesData]);
 
-  // Go directly to today
+  // Go to today with correct timezone
   const goToToday = useCallback(async () => {
-    const today = new Date().toISOString().split('T')[0];
-    setSelectedDate(today);
+    const todayString = getTodayInUserTimezone();
+    setSelectedDate(todayString);
     if (user?.uid) {
-      await fetchTimeseriesData(today, user.uid);
+      await fetchTimeseriesData(todayString, user.uid);
     }
   }, [user?.uid, fetchTimeseriesData]);
 
-  // Fetch Fitbit data from your serverless API
+  // Force reconnection function
+  const forceReconnection = useCallback(async () => {
+    if (!user?.uid) return;
+    
+    try {
+      console.log('🔄 Forcing Fitbit reconnection...');
+      
+      // Clear local state
+      setUserData(prev => ({
+        ...prev,
+        fitbitData: null
+      }));
+      
+      // Clear Firebase user data
+      await setDoc(doc(db, 'users', user.uid), {
+        fitbitData: null,
+        deviceConnected: false,
+        latestFitbitData: null
+      }, { merge: true });
+      
+      // Reset status
+      setStatus('needs_connection');
+      setError('');
+      setFitbitData(null);
+      setTimeseriesData([]);
+      setSelectedDateMetrics(null);
+      
+      console.log('✅ Forced reconnection completed');
+      
+    } catch (error) {
+      console.error('❌ Error during forced reconnection:', error);
+      setError('Failed to reset connection. Please refresh the page.');
+    }
+  }, [user?.uid]);
+
+  // Fetch Fitbit data from serverless API
   const fetchFitbitDataFromAPI = async (accessToken) => {
     console.log('📡 Fetching Fitbit data from serverless API...');
     
@@ -210,13 +788,9 @@ const FitbitDashboard = () => {
     }
   };
 
-  // Refresh Fitbit token using your serverless API
+  // Refresh Fitbit token
   const refreshFitbitToken = async (refreshToken) => {
     console.log('🔄 Refreshing Fitbit token...');
-    console.log('🐛 DEBUG: Refresh token details:');
-    console.log('- refreshToken exists:', !!refreshToken);
-    console.log('- refreshToken length:', refreshToken?.length || 0);
-    console.log('- API_BASE_URL:', API_BASE_URL);
     
     try {
       const response = await fetch(`${API_BASE_URL}/refresh`, {
@@ -229,29 +803,13 @@ const FitbitDashboard = () => {
         })
       });
 
-      console.log('🐛 DEBUG: Refresh API response:');
-      console.log('- status:', response.status);
-      console.log('- statusText:', response.statusText);
-      console.log('- ok:', response.ok);
-
       if (!response.ok) {
         const errorText = await response.text();
-        console.log('🐛 DEBUG: Refresh API error response:', errorText);
-        
-        // Try to parse as JSON for more details
-        try {
-          const errorJson = JSON.parse(errorText);
-          console.log('🐛 DEBUG: Parsed error JSON:', errorJson);
-        } catch (parseErr) {
-          console.log('🐛 DEBUG: Error response is not JSON');
-        }
-        
         throw new Error(`Token refresh failed (${response.status}): ${errorText}`);
       }
 
       const tokenData = await response.json();
       console.log('✅ Token refreshed successfully');
-      console.log('🐛 DEBUG: New token data structure:', Object.keys(tokenData));
 
       return {
         accessToken: tokenData.access_token,
@@ -261,93 +819,26 @@ const FitbitDashboard = () => {
       };
     } catch (error) {
       console.error('❌ Error refreshing token:', error);
-      console.log('🐛 DEBUG: Network or parsing error during refresh');
       throw error;
     }
   };
 
-  // Enhanced fetch Fitbit data function with debugging
+  // Enhanced fetch Fitbit data function with better token management
   const fetchFitbitData = useCallback(async (accessToken, userId, refreshToken = null) => {
     try {
       console.log('🔄 Fetching fresh Fitbit data...');
       
-      // Enhanced debug logging
-      console.log('🐛 DEBUG: Token Debug Info:');
-      console.log('- accessToken exists:', !!accessToken);
-      console.log('- accessToken length:', accessToken?.length || 0);
-      console.log('- refreshToken exists:', !!refreshToken);
-      console.log('- refreshToken length:', refreshToken?.length || 0);
-      console.log('- userId:', userId);
-
       setLoading(true);
       setError('');
 
-      // Check if token is expired
-      const tokenData = userData?.fitbitData;
-      console.log('🐛 DEBUG: Token Data:');
-      console.log('- tokenData exists:', !!tokenData);
-      console.log('- tokenExpiresAt:', tokenData?.tokenExpiresAt);
-      console.log('- current time:', new Date().toISOString());
-
-      const tokenExpired = tokenData?.tokenExpiresAt && new Date() > new Date(tokenData.tokenExpiresAt);
-      console.log('🐛 DEBUG: Token expired?', tokenExpired);
-
-      let currentAccessToken = accessToken;
-
-      // Refresh token if expired
-      if (tokenExpired && refreshToken) {
-        try {
-          console.log('🔄 Token expired, refreshing...');
-          console.log('🐛 DEBUG: About to call refreshFitbitToken with refreshToken length:', refreshToken.length);
-          
-          const newTokenData = await refreshFitbitToken(refreshToken);
-          
-          console.log('🐛 DEBUG: Refresh response:');
-          console.log('- new accessToken exists:', !!newTokenData.accessToken);
-          console.log('- new refreshToken exists:', !!newTokenData.refreshToken);
-          console.log('- new tokenExpiresAt:', newTokenData.tokenExpiresAt);
-
-          // Update Firestore with new tokens
-          await setDoc(doc(db, 'users', userId), {
-            fitbitData: {
-              ...tokenData,
-              accessToken: newTokenData.accessToken,
-              refreshToken: newTokenData.refreshToken,
-              tokenExpiresAt: newTokenData.tokenExpiresAt,
-            }
-          }, { merge: true });
-
-          // Update local state
-          setUserData(prev => ({
-            ...prev,
-            fitbitData: {
-              ...prev.fitbitData,
-              accessToken: newTokenData.accessToken,
-              refreshToken: newTokenData.refreshToken,
-              tokenExpiresAt: newTokenData.tokenExpiresAt,
-            }
-          }));
-
-          currentAccessToken = newTokenData.accessToken;
-          console.log('✅ Token refreshed and saved');
-        } catch (refreshError) {
-          console.error('❌ Token refresh failed:', refreshError);
-          console.log('🐛 DEBUG: Refresh error details:');
-          console.log('- error message:', refreshError.message);
-          console.log('- error stack:', refreshError.stack);
-          console.log('- refresh token used:', refreshToken?.substring(0, 10) + '...');
-          
-          setError('Your Fitbit connection has expired. Please reconnect your account.');
-          setStatus('needs_connection');
-          return;
-        }
+      // Validate token first
+      const validToken = await validateAndRefreshToken(userId);
+      if (!validToken) {
+        return; // Error already set in validateAndRefreshToken
       }
 
-      // Fetch data using current/refreshed token
-      console.log('🐛 DEBUG: About to fetch data with token length:', currentAccessToken?.length || 0);
-      const data = await fetchFitbitDataFromAPI(currentAccessToken);
+      const data = await fetchFitbitDataFromAPI(validToken);
 
-      // Save the fetched data
       await setDoc(doc(db, 'users', userId), {
         latestFitbitData: data,
         lastUpdated: new Date().toISOString()
@@ -356,19 +847,12 @@ const FitbitDashboard = () => {
       setFitbitData(data);
       console.log('✅ Fitbit data updated successfully');
 
-      // Also refresh timeseries data for selected date
       await fetchTimeseriesData(selectedDate, userId);
 
     } catch (err) {
       console.error('❌ Error fetching Fitbit data:', err);
-      console.log('🐛 DEBUG: Main fetch error details:');
-      console.log('- error message:', err.message);
-      console.log('- error name:', err.name);
-      console.log('- error stack:', err.stack);
 
-      // Handle specific error cases
       if (err.message.includes('401') || err.message.includes('Unauthorized')) {
-        console.log('🐛 DEBUG: 401/Unauthorized error detected');
         setError('Your Fitbit connection has expired. Please reconnect your account.');
         setStatus('needs_connection');
       } else {
@@ -377,7 +861,7 @@ const FitbitDashboard = () => {
     } finally {
       setLoading(false);
     }
-  }, [userData?.fitbitData, selectedDate, fetchTimeseriesData]);
+  }, [validateAndRefreshToken, selectedDate, fetchTimeseriesData]);
 
   // Load user data from Firestore
   const loadUserData = useCallback(async (userId) => {
@@ -390,24 +874,18 @@ const FitbitDashboard = () => {
       if (userDoc.exists()) {
         const data = userDoc.data();
         console.log('✅ User data loaded:', data.email);
-        console.log('🔗 Has Fitbit tokens:', !!data.fitbitData?.accessToken);
         
         setUserData(data);
         
         if (data.fitbitData?.accessToken) {
-          // User has Fitbit connected
           setStatus('connected');
           
-          // Load existing data from Firestore if available
           if (data.latestFitbitData) {
             setFitbitData(data.latestFitbitData);
           }
           
-          // Load timeseries data for today
-          console.log('📊 About to fetch timeseries data for userId:', userId, 'and date:', selectedDate);
           await fetchTimeseriesData(selectedDate, userId);
         } else {
-          // User needs to connect Fitbit
           setStatus('needs_connection');
         }
       } else {
@@ -423,57 +901,12 @@ const FitbitDashboard = () => {
     }
   }, [fetchTimeseriesData, selectedDate]);
 
-  // Start Fitbit OAuth connection
-  const startFitbitConnection = () => {
-    if (!user?.uid) {
-      setError('User not authenticated');
-      return;
-    }
-
-    setConnecting(true);
-    setError('');
-
-    // Only need client ID for frontend OAuth initiation
-    const clientId = process.env.REACT_APP_FITBIT_CLIENT_ID;
-    if (!clientId) {
-      setError('Fitbit Client ID not configured. Please check environment variables.');
-      setConnecting(false);
-      return;
-    }
-
-    // Generate state for CSRF protection
-    const state = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
-    sessionStorage.setItem('fitbitOAuthState', state);
-    sessionStorage.setItem('fitbitAuthStartTime', Date.now().toString());
-
-    const redirectUri = window.location.origin + window.location.pathname;
-    const scope = 'activity heartrate sleep weight profile';
-
-    // Use authorization code flow (more secure than implicit)
-    const authUrl = `https://www.fitbit.com/oauth2/authorize?` +
-      `response_type=code&` +
-      `client_id=${clientId}&` +
-      `redirect_uri=${encodeURIComponent(redirectUri)}&` +
-      `scope=${encodeURIComponent(scope)}&` +
-      `state=${state}`;
-
-    console.log('🚀 Starting Fitbit OAuth flow');
-    console.log('Auth URL:', authUrl);
-    console.log('Redirect URI:', redirectUri);
-
-    // Redirect to Fitbit
-    window.location.href = authUrl;
-  };
-
-  // Secure token exchange through backend
+  // Secure token exchange
   const exchangeCodeForTokens = async (authCode) => {
     console.log('🔧 Starting secure token exchange...');
     const redirectUri = window.location.origin + window.location.pathname;
 
     try {
-      console.log('📡 Calling serverless token exchange endpoint...');
-      
-      // Only send code and redirect_uri - backend handles client credentials securely
       const response = await fetch(`${API_BASE_URL}/token-exchange`, {
         method: 'POST',
         headers: {
@@ -482,21 +915,19 @@ const FitbitDashboard = () => {
         body: JSON.stringify({
           code: authCode,
           redirect_uri: redirectUri
-          // Note: No client_secret sent from frontend - backend handles this securely
         }),
       });
 
       if (!response.ok) {
         const errorText = await response.text();
-        console.error('❌ Token exchange failed:', errorText);
         throw new Error(`Token exchange failed (${response.status}): ${errorText}`);
       }
 
       const tokenData = await response.json();
-      console.log('✅ Token exchange successful via secure backend!');
+      console.log('✅ Token exchange successful');
       return tokenData;
     } catch (fetchError) {
-      console.error('❌ Error during secure token exchange:', fetchError);
+      console.error('❌ Error during token exchange:', fetchError);
       throw new Error(`Token exchange failed: ${fetchError.message}`);
     }
   };
@@ -507,19 +938,15 @@ const FitbitDashboard = () => {
       setConnecting(true);
       setError('');
 
-      // Verify state parameter
       const storedState = sessionStorage.getItem('fitbitOAuthState');
       if (state !== storedState) {
         throw new Error('Security validation failed. Please try again.');
       }
 
-      console.log('🔄 Processing OAuth callback with secure backend...');
+      console.log('🔄 Processing OAuth callback...');
 
-      // Exchange code for tokens using secure backend
       const tokenData = await exchangeCodeForTokens(code);
-      console.log('✅ Token exchange successful! Saving connection...');
 
-      // Save tokens to Firestore
       const fitbitData = {
         accessToken: tokenData.access_token,
         refreshToken: tokenData.refresh_token,
@@ -536,20 +963,15 @@ const FitbitDashboard = () => {
         lastUpdated: new Date().toISOString()
       }, { merge: true });
 
-      // Update local state
       setUserData(prev => ({ ...prev, fitbitData }));
       setStatus('connected');
 
-      // Cleanup session storage
       sessionStorage.removeItem('fitbitOAuthState');
       sessionStorage.removeItem('fitbitAuthStartTime');
-
-      // Clear URL parameters
       window.history.replaceState({}, document.title, window.location.pathname);
 
-      console.log('✅ Fitbit connection completed successfully via secure backend!');
+      console.log('✅ Fitbit connection completed');
 
-      // Fetch initial data
       await fetchFitbitData(tokenData.access_token, user.uid, tokenData.refresh_token);
     } catch (err) {
       console.error('❌ Error processing OAuth:', err);
@@ -563,17 +985,11 @@ const FitbitDashboard = () => {
   // Logout function
   const handleLogout = async () => {
     try {
-      // 1. Sign out from Firebase
       await signOut(auth);
-      
-      // 2. Clear local storage
       localStorage.removeItem('userData');
-      
-      // 3. Navigate to login
       navigate('/login');
     } catch (error) {
       console.error('Error signing out:', error);
-      // Even if Firebase logout fails, clear local storage
       localStorage.removeItem('userData');
       navigate('/login');
       setError('Failed to logout. Please try again.');
@@ -582,7 +998,7 @@ const FitbitDashboard = () => {
 
   // Navigation functions
   const handleBackToDashboard = () => {
-    navigate('/dashboard'); // Adjust this path to match your main dashboard route
+    navigate('/dashboard');
   };
 
   // Refresh data
@@ -593,7 +1009,6 @@ const FitbitDashboard = () => {
         user.uid, 
         userData.fitbitData.refreshToken
       );
-      // Also refresh timeseries data
       fetchTimeseriesData(selectedDate, user.uid);
     }
   }, [userData?.fitbitData?.accessToken, userData?.fitbitData?.refreshToken, user?.uid, fetchFitbitData, selectedDate, fetchTimeseriesData]);
@@ -603,7 +1018,6 @@ const FitbitDashboard = () => {
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
       if (currentUser) {
         console.log('✅ User authenticated with UID:', currentUser.uid);
-        console.log('📊 This UID should match the document IDs in fitbit_timeseries collection');
         setUser(currentUser);
         await loadUserData(currentUser.uid);
       } else {
@@ -638,6 +1052,271 @@ const FitbitDashboard = () => {
     }
   }, [user, location.search, processFitbitOAuth]);
 
+  // Enhanced Connection Error Component with better click handling
+  const ConnectionError = ({ error, onReconnect, onForceReconnect }) => {
+    console.log('🔧 ConnectionError rendered with:', { 
+      error, 
+      onReconnect: !!onReconnect, 
+      onForceReconnect: !!onForceReconnect,
+      connecting 
+    });
+    
+    return (
+      <div className="dashboard-card connection-error-card" style={{ position: 'relative', zIndex: 100 }}>
+        <div className="card-glow" style={{ pointerEvents: 'none' }}></div>
+        <div className="card-content-wrapper">
+          <div className="error-icon">⚠️</div>
+          <h2 className="error-title">Connection Issue</h2>
+          <p className="error-description">
+            {error.includes('expired') 
+              ? 'Your Fitbit connection has expired for security reasons. This is normal and happens every few hours.'
+              : error
+            }
+          </p>
+          
+          {/* Add debug panel */}
+          <DiagnosticTool />
+          
+          <div className="error-actions" style={{ 
+            position: 'relative', 
+            zIndex: 200, 
+            pointerEvents: 'auto',
+            display: 'flex',
+            gap: '1rem',
+            justifyContent: 'center',
+            margin: '1.5rem 0'
+          }}>
+            {/* Add this button to your DiagnosticTool component: */}
+
+<button 
+  onClick={() => {
+    console.log('🧹 FULL SESSION RESET');
+    
+    // Clear all OAuth-related session data
+    const sessionKeys = ['fitbitOAuthState', 'fitbitAuthStartTime'];
+    sessionKeys.forEach(key => {
+      const value = sessionStorage.getItem(key);
+      console.log(`🧹 Clearing ${key}:`, value);
+      sessionStorage.removeItem(key);
+    });
+    
+    // Clear URL parameters
+    const currentUrl = window.location.href;
+    const cleanUrl = window.location.pathname;
+    console.log('🧹 URL before:', currentUrl);
+    console.log('🧹 URL after:', cleanUrl);
+    window.history.replaceState({}, document.title, cleanUrl);
+    
+    // Reset all relevant state
+    setError('');
+    setConnecting(false);
+    setStatus('needs_connection');
+    
+    // Clear any fitbit data
+    setFitbitData(null);
+    setTimeseriesData([]);
+    setSelectedDateMetrics(null);
+    
+    console.log('✅ Complete session reset finished');
+    alert('Complete session reset! Now try connecting again.');
+  }}
+  style={{
+    background: '#dc3545',
+    color: 'white',
+    padding: '8px 16px',
+    border: 'none',
+    borderRadius: '4px',
+    cursor: 'pointer',
+    fontWeight: 'bold'
+  }}
+>
+  🧹 FULL RESET & RETRY
+</button>
+
+<button 
+  onClick={() => {
+    console.log('🔍 OAUTH STATE DEBUG');
+    
+    // Check current session storage
+    const storedState = sessionStorage.getItem('fitbitOAuthState');
+    const authStartTime = sessionStorage.getItem('fitbitAuthStartTime');
+    
+    // Check URL parameters
+    const urlParams = new URLSearchParams(location.search);
+    const urlCode = urlParams.get('code');
+    const urlState = urlParams.get('state');
+    const urlError = urlParams.get('error');
+    
+    const debugInfo = {
+      sessionStorage: {
+        fitbitOAuthState: storedState,
+        fitbitAuthStartTime: authStartTime
+      },
+      urlParameters: {
+        code: urlCode ? 'Present' : 'Missing',
+        state: urlState,
+        error: urlError
+      },
+      stateComparison: {
+        stored: storedState,
+        fromUrl: urlState,
+        match: storedState === urlState
+      },
+      currentUrl: window.location.href,
+      user: user?.uid
+    };
+    
+    console.table(debugInfo);
+    alert('OAuth debug info logged to console - check F12');
+  }}
+  style={{
+    background: '#8b5cf6',
+    color: 'white',
+    padding: '8px 16px',
+    border: 'none',
+    borderRadius: '4px',
+    cursor: 'pointer'
+  }}
+>
+  🔍 Debug OAuth State
+</button>
+            <button
+              onClick={(e) => {
+                console.log('🔗 Reconnect button clicked', e);
+                console.log('🔗 onReconnect function:', typeof onReconnect);
+                e.preventDefault();
+                e.stopPropagation();
+                
+                if (onReconnect && typeof onReconnect === 'function') {
+                  console.log('🔗 Calling onReconnect...');
+                  onReconnect();
+                } else {
+                  console.error('❌ No onReconnect function provided');
+                  alert('onReconnect function is missing! Check console.');
+                }
+              }}
+              className="reconnect-button primary"
+              disabled={connecting}
+              style={{ 
+                cursor: 'pointer', 
+                pointerEvents: 'auto',
+                position: 'relative',
+                zIndex: 300,
+                background: connecting ? '#6c757d' : '#28a745',
+                color: 'white',
+                padding: '12px 24px',
+                border: 'none',
+                borderRadius: '6px',
+                fontSize: '14px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px'
+              }}
+            >
+              {connecting ? (
+                <>
+                  <div className="loading-spinner-small"></div>
+                  Connecting...
+                </>
+              ) : (
+                <>🔗 Reconnect Fitbit</>
+              )}
+            </button>
+            
+            <button
+              onClick={(e) => {
+                console.log('🔄 Force Reset button clicked', e);
+                console.log('🔄 onForceReconnect function:', typeof onForceReconnect);
+                e.preventDefault();
+                e.stopPropagation();
+                
+                if (onForceReconnect && typeof onForceReconnect === 'function') {
+                  console.log('🔄 Calling onForceReconnect...');
+                  onForceReconnect();
+                } else {
+                  console.error('❌ No onForceReconnect function provided');
+                  alert('onForceReconnect function is missing! Check console.');
+                }
+              }}
+              className="force-reconnect-button secondary"
+              disabled={connecting}
+              style={{ 
+                cursor: 'pointer', 
+                pointerEvents: 'auto',
+                position: 'relative',
+                zIndex: 300,
+                background: connecting ? '#6c757d' : '#dc3545',
+                color: 'white',
+                padding: '12px 24px',
+                border: 'none',
+                borderRadius: '6px',
+                fontSize: '14px'
+              }}
+            >
+              🔄 Force Reset
+            </button>
+            
+            <button
+              onClick={(e) => {
+                console.log('🔄 Try Again button clicked', e);
+                e.preventDefault();
+                e.stopPropagation();
+                
+                setError('');
+                setStatus('checking');
+                if (user?.uid) {
+                  loadUserData(user.uid);
+                }
+              }}
+              className="retry-button secondary"
+              disabled={connecting}
+              style={{ 
+                cursor: 'pointer', 
+                pointerEvents: 'auto',
+                position: 'relative',
+                zIndex: 300,
+                background: connecting ? '#6c757d' : '#6c757d',
+                color: 'white',
+                padding: '12px 24px',
+                border: 'none',
+                borderRadius: '6px',
+                fontSize: '14px'
+              }}
+            >
+              🔄 Try Again
+            </button>
+          </div>
+          
+          <div className="help-text">
+            <strong>Why did this happen?</strong><br/>
+            Fitbit tokens expire every 8 hours for security. Simply reconnect to continue.
+            <br/><br/>
+            <strong>Still having issues?</strong><br/>
+            Try "Force Reset" to completely clear your connection and start fresh.
+          </div>
+          
+          {/* Debug info */}
+          <div style={{ 
+            marginTop: '1rem', 
+            padding: '1rem', 
+            background: '#f0f0f0', 
+            fontSize: '0.8rem',
+            borderRadius: '4px',
+            fontFamily: 'monospace'
+          }}>
+            <strong>🐛 Debug Info:</strong><br/>
+            User: {user?.uid || 'None'}<br/>
+            Status: {status}<br/>
+            Connecting: {connecting.toString()}<br/>
+            Error: {error}<br/>
+            Client ID: {process.env.REACT_APP_FITBIT_CLIENT_ID ? 'Present' : 'Missing'}<br/>
+            Functions: onReconnect={typeof onReconnect}, onForceReconnect={typeof onForceReconnect}
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   // Timeseries Chart Component
   const TimeseriesChart = () => (
     <div className="dashboard-card enhanced-card">
@@ -667,13 +1346,13 @@ const FitbitDashboard = () => {
           
           <button
             onClick={() => navigateDate('next')}
-            disabled={timeseriesLoading || selectedDate >= new Date().toISOString().split('T')[0]}
+            disabled={timeseriesLoading || selectedDate >= getTodayInUserTimezone()}
             className="nav-button"
           >
             Next →
           </button>
           
-          {selectedDate !== new Date().toISOString().split('T')[0] && (
+          {selectedDate !== getTodayInUserTimezone() && (
             <button
               onClick={goToToday}
               disabled={timeseriesLoading}
@@ -747,7 +1426,7 @@ const FitbitDashboard = () => {
             No calorie data available for {selectedDate}
           </p>
           <p className="no-data-subtitle">
-            {selectedDate === new Date().toISOString().split('T')[0] 
+            {selectedDate === getTodayInUserTimezone() 
               ? 'Click "🐛 Debug Fetch" to check data loading'
               : 'Use the navigation buttons to find dates with data'
             }
@@ -765,8 +1444,9 @@ const FitbitDashboard = () => {
       
       {timeseriesData.length > 0 && (
         <div className="chart-summary">
-          <strong>📈 Summary for {new Date(fitbitData.lastSync).toLocaleString()}:</strong><br />
-          Data points: {timeseriesData.length} | 
+          <strong>📈 Summary for {selectedDate}:</strong><br />
+          Data points: {selectedDateMetrics?.dataPoints || 0} | 
+          Total Calories: {selectedDateMetrics?.calories?.toLocaleString() || 0} cal | 
           Peak: {Math.max(...timeseriesData.map(d => d.calories)).toLocaleString()} cal | 
           Latest: {timeseriesData[timeseriesData.length - 1]?.calories.toLocaleString()} cal
         </div>
@@ -807,7 +1487,6 @@ const FitbitDashboard = () => {
   if (loading && status === 'checking') {
     return (
       <div className="dashboard-container checking">
-        {/* Animated background elements */}
         <div className="bg-animation">
           <div className="floating-shape shape-1"></div>
           <div className="floating-shape shape-2"></div>
@@ -824,7 +1503,6 @@ const FitbitDashboard = () => {
 
   return (
     <div className="dashboard-container">
-      {/* Animated background elements */}
       <div className="bg-animation">
         <div className="floating-shape shape-1"></div>
         <div className="floating-shape shape-2"></div>
@@ -883,192 +1561,220 @@ const FitbitDashboard = () => {
                   <>🔄 Refresh All Data</>
                 )}
               </button>
+
+              {/* Force Reconnect Button for Testing */}
+              {status === 'connected' && (
+                <button
+                  onClick={forceReconnection}
+                  className="force-reconnect-button-header"
+                  title="Reset Fitbit connection (for testing)"
+                >
+                  🔧 Force Reset
+                </button>
+              )}
             </div>
           </div>
         </div>
 
-        {/* Error Display */}
-        {error && (
+        {/* Enhanced Error Display */}
+        {error && status !== 'needs_connection' && (
           <ErrorDisplay 
             error={error} 
             onRetry={status === 'connected' ? refreshData : null}
           />
         )}
 
-        {/* Connection Status */}
+        {/* Enhanced Connection Status */}
         {status === 'needs_connection' && (
-          <div className="dashboard-card connection-card">
+          <ConnectionError 
+            error={error || 'Please connect your Fitbit account to continue.'} 
+            onReconnect={startFitbitConnection}
+            onForceReconnect={forceReconnection}
+          />
+        )}
+
+        {/* Connection in Progress */}
+        {connecting && (
+          <div className="dashboard-card connecting-card">
             <div className="card-glow"></div>
-            <div className="card-content-wrapper connection-content">
-              <div className="connection-icon">⌚</div>
-              <h2 className="connection-title">Connect Your Fitbit</h2>
-              <p className="connection-description">
-                Connect your Fitbit account to start tracking your fitness data and view detailed analytics.
-              </p>
-              <button
-                onClick={startFitbitConnection}
-                disabled={connecting}
-                className="connect-button"
-              >
-                {connecting ? (
-                  <>
-                    <div className="loading-spinner-small"></div>
-                    Connecting...
-                  </>
-                ) : (
-                  <>🔗 Connect Fitbit</>
-                )}
-              </button>
+            <div className="card-content-wrapper">
+              <div className="loading-spinner-large"></div>
+              <h2>Connecting to Fitbit...</h2>
+              <p>Please complete the authorization in the popup window.</p>
             </div>
           </div>
         )}
 
         {/* Connected Dashboard */}
-        {status === 'connected' && fitbitData && (
+        {status === 'connected' && !connecting && (
           <>
             {/* Timeseries Chart */}
             <TimeseriesChart />
             
-            {/* Metrics Grid */}
+            {/* Metrics Grid - Shows selected date data */}
             <div className="metrics-grid">
               <MetricCard
-                title="Steps Today"
-                value={fitbitData.steps?.toLocaleString() || '0'}
+                title={`Steps (${selectedDate})`}
+                value={selectedDateMetrics?.steps?.toLocaleString() || '0'}
                 unit="steps"
                 icon="👟"
                 color="#10b981"
               />
               
               <MetricCard
-                title="Calories Burned"
-                value={fitbitData.calories?.toLocaleString() || '0'}
+                title={`Calories (${selectedDate})`}
+                value={selectedDateMetrics?.calories?.toLocaleString() || '0'}
                 unit="calories"
                 icon="🔥"
                 color="#ef4444"
               />
               
               <MetricCard
-                title="Distance"
-                value={fitbitData.distance ? (fitbitData.distance).toFixed(2) : '0'}
+                title={`Distance (${selectedDate})`}
+                value={selectedDateMetrics?.distance ? selectedDateMetrics.distance.toFixed(2) : '0'}
                 unit="km"
                 icon="🏃‍♂️"
                 color="#3b82f6"
               />
               
               <MetricCard
-                title="Active Minutes"
-                value={fitbitData.activeMinutes?.toString() || '0'}
+                title={`Active Minutes (${selectedDate})`}
+                value={selectedDateMetrics?.activeMinutes?.toString() || '0'}
                 unit="minutes"
                 icon="⚡"
                 color="#f59e0b"
               />
             </div>
 
-            {/* Additional Data Cards */}
-            <div className="additional-cards-grid">
-              
-              {/* Heart Rate Card */}
-              {fitbitData.heartRate && (
-                <div className="dashboard-card data-card heart-rate-card">
-                  <h3 className="data-card-title">
-                    <span className="data-card-icon">❤️</span>
-                    Heart Rate
-                  </h3>
-                  
-                  <div className="heart-rate-grid">
-                    <div className="heart-rate-stat">
-                      <div className="heart-rate-value">
-                        {fitbitData.heartRate.restingHeartRate || 'N/A'}
-                      </div>
-                      <div className="heart-rate-label">Resting BPM</div>
-                    </div>
+            {/* Additional Data Cards - Only show if we have recent sync data */}
+            {fitbitData && (
+              <div className="additional-cards-grid">
+                
+                {/* Heart Rate Card */}
+                {fitbitData.heartRate && (
+                  <div className="dashboard-card data-card heart-rate-card">
+                    <h3 className="data-card-title">
+                      <span className="data-card-icon">❤️</span>
+                      Heart Rate (Latest Sync)
+                    </h3>
                     
-                    {fitbitData.heartRate.zones && (
+                    <div className="heart-rate-grid">
                       <div className="heart-rate-stat">
                         <div className="heart-rate-value">
-                          {fitbitData.heartRate.zones.length}
+                          {fitbitData.heartRate.restingHeartRate || 'N/A'}
                         </div>
-                        <div className="heart-rate-label">HR Zones</div>
+                        <div className="heart-rate-label">Resting BPM</div>
+                      </div>
+                      
+                      {fitbitData.heartRate.zones && (
+                        <div className="heart-rate-stat">
+                          <div className="heart-rate-value">
+                            {fitbitData.heartRate.zones.length}
+                          </div>
+                          <div className="heart-rate-label">HR Zones</div>
+                        </div>
+                      )}
+                    </div>
+                    
+                    {fitbitData.heartRate.zones && fitbitData.heartRate.zones.length > 0 && (
+                      <div className="heart-rate-zones">
+                        <div className="zones-title">Heart Rate Zones:</div>
+                        {fitbitData.heartRate.zones.map((zone, index) => (
+                          <div key={index} className="zone-item">
+                            <span>{zone.name}:</span>
+                            <span>{zone.minutes} min</span>
+                          </div>
+                        ))}
                       </div>
                     )}
                   </div>
-                  
-                  {fitbitData.heartRate.zones && fitbitData.heartRate.zones.length > 0 && (
-                    <div className="heart-rate-zones">
-                      <div className="zones-title">Heart Rate Zones:</div>
-                      {fitbitData.heartRate.zones.map((zone, index) => (
-                        <div key={index} className="zone-item">
-                          <span>{zone.name}:</span>
-                          <span>{zone.minutes} min</span>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              )}
+                )}
 
-              {/* Sleep Card */}
-              {fitbitData.sleep && (
-                <div className="dashboard-card data-card sleep-card">
-                  <h3 className="data-card-title">
-                    <span className="data-card-icon">😴</span>
-                    Sleep
-                  </h3>
-                  
-                  <div className="sleep-grid">
-                    <div className="sleep-stat">
-                      <div className="sleep-value">
-                        {fitbitData.sleep.totalMinutes ? 
-                          Math.floor(fitbitData.sleep.totalMinutes / 60) + 'h ' + 
-                          (fitbitData.sleep.totalMinutes % 60) + 'm' : 'N/A'}
+                {/* Sleep Card */}
+                {fitbitData.sleep && (
+                  <div className="dashboard-card data-card sleep-card">
+                    <h3 className="data-card-title">
+                      <span className="data-card-icon">😴</span>
+                      Sleep (Latest Sync)
+                    </h3>
+                    
+                    <div className="sleep-grid">
+                      <div className="sleep-stat">
+                        <div className="sleep-value">
+                          {fitbitData.sleep.totalMinutes ? 
+                            Math.floor(fitbitData.sleep.totalMinutes / 60) + 'h ' + 
+                            (fitbitData.sleep.totalMinutes % 60) + 'm' : 'N/A'}
+                        </div>
+                        <div className="sleep-label">Total Sleep</div>
                       </div>
-                      <div className="sleep-label">Total Sleep</div>
+                      
+                      <div className="sleep-stat">
+                        <div className="sleep-value">
+                          {fitbitData.sleep.efficiency || 'N/A'}%
+                        </div>
+                        <div className="sleep-label">Efficiency</div>
+                      </div>
                     </div>
                     
-                    <div className="sleep-stat">
-                      <div className="sleep-value">
-                        {fitbitData.sleep.efficiency || 'N/A'}%
-                      </div>
-                      <div className="sleep-label">Efficiency</div>
-                    </div>
-                  </div>
-                  
-                  {fitbitData.sleep.stages && (
-                    <div className="sleep-stages">
-                      <div className="stages-title">Sleep Stages:</div>
-                      {Object.entries(fitbitData.sleep.stages).map(([stage, minutes]) => (
-                        <div key={stage} className="stage-item">
-                          <span className="stage-name">{stage}:</span>
-                          <span>{minutes} min</span>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {/* Weight Card */}
-              {fitbitData.weight && (
-                <div className="dashboard-card data-card weight-card">
-                  <h3 className="data-card-title">
-                    <span className="data-card-icon">⚖️</span>
-                    Weight
-                  </h3>
-                  
-                  <div className="weight-content">
-                    <div className="weight-value">
-                      {fitbitData.weight.weight ? fitbitData.weight.weight.toFixed(1) : 'N/A'}
-                    </div>
-                    <div className="weight-unit">kg</div>
-                    
-                    {fitbitData.weight.date && (
-                      <div className="weight-date">
-                        Last measured: {new Date(fitbitData.weight.date).toLocaleDateString()}
+                    {fitbitData.sleep.stages && (
+                      <div className="sleep-stages">
+                        <div className="stages-title">Sleep Stages:</div>
+                        {Object.entries(fitbitData.sleep.stages).map(([stage, minutes]) => (
+                          <div key={stage} className="stage-item">
+                            <span className="stage-name">{stage}:</span>
+                            <span>{minutes} min</span>
+                          </div>
+                        ))}
                       </div>
                     )}
                   </div>
+                )}
+
+                {/* Weight Card */}
+                {fitbitData.weight && (
+                  <div className="dashboard-card data-card weight-card">
+                    <h3 className="data-card-title">
+                      <span className="data-card-icon">⚖️</span>
+                      Weight (Latest Sync)
+                    </h3>
+                    
+                    <div className="weight-content">
+                      <div className="weight-value">
+                        {fitbitData.weight.weight ? fitbitData.weight.weight.toFixed(1) : 'N/A'}
+                      </div>
+                      <div className="weight-unit">kg</div>
+                      
+                      {fitbitData.weight.date && (
+                        <div className="weight-date">
+                          Last measured: {new Date(fitbitData.weight.date).toLocaleDateString()}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Connection Status Info */}
+            <div className="dashboard-card status-card">
+              <div className="status-content">
+                <div className="status-indicator connected">
+                  <div className="status-dot"></div>
+                  <span>Connected to Fitbit</span>
                 </div>
-              )}
+                
+                {userData?.fitbitData?.connectedAt && (
+                  <div className="connection-details">
+                    <strong>Connected since:</strong> {new Date(userData.fitbitData.connectedAt).toLocaleDateString()}
+                  </div>
+                )}
+                
+                {userData?.fitbitData?.tokenExpiresAt && (
+                  <div className="token-expiry">
+                    <strong>Token expires:</strong> {new Date(userData.fitbitData.tokenExpiresAt).toLocaleString()}
+                  </div>
+                )}
+              </div>
             </div>
           </>
         )}
@@ -1079,11 +1785,17 @@ const FitbitDashboard = () => {
             🔒 Your data is securely stored and synchronized with Fitbit's official API
           </p>
           
-          {userData?.fitbitData?.connectedAt && (
-            <p className="footer-connected">
-              Connected since: {new Date(userData.fitbitData.connectedAt).toLocaleDateString()}
-            </p>
-          )}
+          <div className="footer-info">
+            <div>
+              <strong>Status:</strong> {status === 'connected' ? '✅ Connected' : '❌ Not Connected'}
+            </div>
+            
+            {userData?.fitbitData?.scope && (
+              <div>
+                <strong>Permissions:</strong> {userData.fitbitData.scope}
+              </div>
+            )}
+          </div>
         </div>
       </div>
     </div>

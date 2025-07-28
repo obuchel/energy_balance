@@ -37,32 +37,66 @@ class FitbitDataSync:
         self.initialize_firebase()
     
     def initialize_firebase(self):
-        """Initialize Firebase Admin SDK"""
+        """Initialize Firebase Admin SDK with multiple auth methods"""
         try:
-            # Initialize Firebase Admin SDK
-            # For GitHub Actions, use service account key from environment variable
-            service_account_info = json.loads(os.environ.get('FIREBASE_SERVICE_ACCOUNT_KEY', '{}'))
+            cred = None
+            auth_method = "unknown"
             
-            if not service_account_info:
-                # Fallback to service account file if available
-                cred_path = os.environ.get('GOOGLE_APPLICATION_CREDENTIALS')
-                if cred_path and os.path.exists(cred_path):
-                    cred = credentials.Certificate(cred_path)
-                else:
-                    raise ValueError("Firebase credentials not found")
-            else:
-                cred = credentials.Certificate(service_account_info)
+            # Method 1: Workload Identity (GitHub Actions with organization)
+            cred_path = os.environ.get('GOOGLE_APPLICATION_CREDENTIALS')
+            if cred_path and os.path.exists(cred_path):
+                logger.info("🔑 Using Workload Identity credentials")
+                cred = credentials.Certificate(cred_path)
+                auth_method = "workload_identity"
             
+            # Method 2: Service Account Key (Environment Variable - legacy)
+            elif os.environ.get('FIREBASE_SERVICE_ACCOUNT_KEY'):
+                logger.info("🔑 Using service account key from environment")
+                try:
+                    service_account_info = json.loads(os.environ.get('FIREBASE_SERVICE_ACCOUNT_KEY'))
+                    cred = credentials.Certificate(service_account_info)
+                    auth_method = "service_account_key"
+                except Exception as e:
+                    logger.warning(f"⚠️ Service account key invalid: {e}")
+            
+            # Method 3: Application Default Credentials (Local development)
+            if cred is None:
+                logger.info("🔑 Using Application Default Credentials")
+                try:
+                    # Try with explicit project first
+                    project_id = os.environ.get('GOOGLE_CLOUD_PROJECT', 'long-covid-8f42d')
+                    cred = credentials.ApplicationDefault()
+                    auth_method = "application_default"
+                except Exception as e:
+                    logger.error(f"❌ Application Default Credentials failed: {e}")
+                    logger.error("💡 This might be a quota project permission issue")
+                    logger.error("💡 Try running without quota project or contact project admin")
+                    raise ValueError("No valid Firebase credentials found")
+            
+            # Initialize Firebase with explicit project ID to avoid quota issues
             if not firebase_admin._apps:
-                firebase_admin.initialize_app(cred)
+                firebase_admin.initialize_app(cred, {
+                    'projectId': 'long-covid-8f42d'
+                })
             
             self.db = firestore.client()
-            logger.info("✅ Firebase initialized successfully")
+            logger.info(f"✅ Firebase initialized successfully using {auth_method}")
+            
+            # Test the connection
+            try:
+                test_query = self.db.collection('users').limit(1).get()
+                logger.info("✅ Firestore connection test passed")
+            except Exception as e:
+                logger.warning(f"⚠️ Firestore connection test failed: {e}")
+                logger.warning("💡 This might still work for your specific operations")
             
         except Exception as e:
             logger.error(f"❌ Failed to initialize Firebase: {e}")
+            logger.error("💡 Solutions:")
+            logger.error("   1. Run 'gcloud auth application-default login' for local development")
+            logger.error("   2. Ask organization admin to grant you 'roles/serviceusage.serviceUsageConsumer'")
+            logger.error("   3. Set up Workload Identity for GitHub Actions")
             raise
-    
     async def create_session(self):
         """Create aiohttp session for API calls"""
         connector = aiohttp.TCPConnector(limit=20, limit_per_host=10)

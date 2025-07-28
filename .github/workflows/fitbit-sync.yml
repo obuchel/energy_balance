@@ -1,8 +1,12 @@
+# .github/workflows/fitbit-sync.yml
 name: Fitbit Data Sync
 
 on:
   schedule:
+    # Run every 15 minutes
     - cron: '*/15 * * * *'
+  
+  # Allow manual triggering
   workflow_dispatch:
     inputs:
       log_level:
@@ -16,13 +20,6 @@ on:
           - WARNING
           - ERROR
 
-permissions:
-  id-token: write
-  contents: read
-
-env:
-  GOOGLE_CLOUD_PROJECT: long-covid-8f42d
-
 jobs:
   sync-fitbit-data:
     runs-on: ubuntu-latest
@@ -32,6 +29,13 @@ jobs:
     - name: Checkout repository
       uses: actions/checkout@v4
       
+    - name: Show repository structure (debug)
+      run: |
+        echo "=== Repository Structure ==="
+        ls -la
+        echo "=== Python files ==="
+        find . -name "*.py" -type f | head -10
+
     - name: Set up Python
       uses: actions/setup-python@v4
       with:
@@ -41,26 +45,159 @@ jobs:
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
-        pip install firebase-admin>=6.2.0 aiohttp>=3.8.0
+        pip install -r requirements.txt
+        
+    - name: Verify installations
+      run: |
+        python -c "import firebase_admin; print('✅ Firebase Admin SDK installed')"
+        python -c "import aiohttp; print('✅ aiohttp installed')"
 
-    - id: 'auth'
-      name: 'Authenticate with Workload Identity'
-      if: vars.USE_WORKLOAD_IDENTITY == 'true'
-      uses: 'google-github-actions/auth@v2'
-      with:
-        workload_identity_provider: ${{ secrets.WIF_PROVIDER }}
-        service_account: ${{ secrets.WIF_SERVICE_ACCOUNT }}
-
+    - name: Test Firebase connection
+      env:
+        FIREBASE_SERVICE_ACCOUNT_KEY: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_KEY }}
+      run: |
+        python -c "
+import os, json, firebase_admin
+from firebase_admin import credentials, firestore
+try:
+    print('🔍 Testing Firebase connection...')
+    service_account_key = os.environ.get('FIREBASE_SERVICE_ACCOUNT_KEY', '')
+    if not service_account_key:
+        raise ValueError('FIREBASE_SERVICE_ACCOUNT_KEY not found')
+    print(f'✅ Secret present ({len(service_account_key)} chars)')
+    service_account_info = json.loads(service_account_key)
+    print(f'✅ JSON valid, project: {service_account_info.get(\"project_id\", \"unknown\")}')
+    cred = credentials.Certificate(service_account_info)
+    firebase_admin.initialize_app(cred)
+    db = firestore.client()
+    users_ref = db.collection('users')
+    test_query = users_ref.limit(1)
+    docs = list(test_query.stream())
+    print(f'✅ Firestore connected, test query returned {len(docs)} documents')
+    fitbit_query = users_ref.where('selectedDevice', '==', 'fitbit').where('deviceConnected', '==', True)
+    fitbit_users = list(fitbit_query.stream())
+    print(f'✅ Found {len(fitbit_users)} Fitbit users ready for sync')
+except Exception as e:
+    print(f'❌ Firebase connection failed: {e}')
+    exit(1)
+"
+        
     - name: Run Fitbit sync
       env:
-        GOOGLE_APPLICATION_CREDENTIALS: ${{ steps.auth.outputs.credentials_file_path }}
+        FIREBASE_SERVICE_ACCOUNT_KEY: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_KEY }}
+        LOG_LEVEL: ${{ github.event.inputs.log_level }}
       run: |
         echo "🚀 Starting Fitbit sync..."
-        
         if [ ! -f "fitbit_sync.py" ]; then
-          echo "❌ ERROR: fitbit_sync.py not found"
+          echo "❌ ERROR: fitbit_sync.py not found in repository"
           ls -la
           exit 1
         fi
-        
         python fitbit_sync.py
+        
+    - name: Upload logs on failure
+      if: failure()
+      uses: actions/upload-artifact@v4
+      with:
+        name: sync-logs-${{ github.run_number }}
+        path: |
+          *.log
+        retention-days: 7
+
+    # Optional: Send notification on failure
+    - name: Notify on failure
+      if: failure()
+      run: |
+        echo "::error::Fitbit sync failed at $(date)"
+
+  # Health check job to monitor sync performance
+  health-check:
+    runs-on: ubuntu-latest
+    needs: sync-fitbit-data
+    if: always()
+    
+    steps:
+    - name: Check sync health
+      run: |
+        echo "🔍 Checking sync job result: ${{ needs.sync-fitbit-data.result }}"
+        
+        if [ "${{ needs.sync-fitbit-data.result }}" == "success" ]; then
+          echo "✅ Fitbit sync completed successfully"
+          echo "::notice::Sync successful at $(date)"
+        elif [ "${{ needs.sync-fitbit-data.result }}" == "failure" ]; then
+          echo "❌ Fitbit sync failed"
+          echo "::error::Sync failed at $(date)"
+          echo ""
+          echo "🔍 Common failure reasons:"
+          echo "1. fitbit_sync.py file not found in repository"
+          echo "2. Missing or invalid FIREBASE_SERVICE_ACCOUNT_KEY secret"
+          echo "3. Python import errors or missing dependencies"
+          echo "4. Firebase connection issues"
+          echo "5. API connectivity problems"
+          echo ""
+          echo "📋 Next steps:"
+          echo "1. Check the 'sync-fitbit-data' job logs above"
+          echo "2. Verify fitbit_sync.py is in your repository root"
+          echo "3. Verify your GitHub secret is set correctly"
+          exit 1
+        elif [ "${{ needs.sync-fitbit-data.result }}" == "cancelled" ]; then
+          echo "⚠️ Fitbit sync was cancelled"
+          echo "::warning::Sync cancelled at $(date)"
+          exit 1
+        else
+          echo "❓ Unknown sync result: ${{ needs.sync-fitbit-data.result }}"
+          exit 1
+        fi
+        
+    - name: Post-sync summary
+      if: needs.sync-fitbit-data.result == 'success'
+      run: |
+        echo "📊 Sync Summary:"
+        echo "- Workflow: ${{ github.workflow }}"
+        echo "- Run number: ${{ github.run_number }}"
+        echo "- Triggered by: ${{ github.event_name }}"
+        echo "- Branch: ${{ github.ref_name }}"
+        echo "- Commit: ${{ github.sha }}"
+        echo "- Runner: ${{ runner.os }}"
+        echo "- Python version: 3.11"
+        echo "- Timestamp: $(date -u)"
+
+  # Optional: Cleanup old workflow runs (runs monthly)
+  cleanup:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'schedule' && github.event.schedule == '0 0 1 * *'
+    
+    steps:
+    - name: Delete old workflow runs
+      uses: actions/github-script@v6
+      with:
+        script: |
+          const { data: workflows } = await github.rest.actions.listRepoWorkflows({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+          });
+          
+          for (const workflow of workflows.workflows) {
+            if (workflow.name === 'Fitbit Data Sync') {
+              const { data: runs } = await github.rest.actions.listWorkflowRuns({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                workflow_id: workflow.id,
+                per_page: 100,
+              });
+              
+              // Keep only the latest 50 runs, delete the rest
+              const runsToDelete = runs.workflow_runs.slice(50);
+              
+              for (const run of runsToDelete) {
+                if (run.status === 'completed') {
+                  await github.rest.actions.deleteWorkflowRun({
+                    owner: context.repo.owner,
+                    repo: context.repo.repo,
+                    run_id: run.id,
+                  });
+                  console.log(`Deleted run ${run.id}`);
+                }
+              }
+            }
+          }
