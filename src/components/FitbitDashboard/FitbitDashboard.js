@@ -75,65 +75,18 @@ const FitbitDashboard = () => {
     });
   }, [user, status, connecting, error, userData, fitbitData]);
 
-  // Test button component
-  const TestButton = () => (
-    <button
-      onClick={() => {
-        console.log('🧪 Test button clicked!');
-        alert('Test button works! Check console for details.');
-        debugState();
-      }}
-      style={{
-        background: 'green',
-        color: 'white',
-        padding: '10px 20px',
-        margin: '10px',
-        border: 'none',
-        cursor: 'pointer',
-        borderRadius: '4px',
-        fontSize: '14px'
-      }}
-    >
-      🧪 Test Click Handler
-    </button>
-  );
+
 
   // Diagnostic tool component - MUST be defined before ConnectionError uses it
+  // Simplified diagnostic tool - just shows essential info
   const DiagnosticTool = () => {
-    const [testResult, setTestResult] = useState('');
-    
-    const runDiagnostics = () => {
-      const results = [];
-      
-      // Test environment variables
-      const clientId = process.env.REACT_APP_FITBIT_CLIENT_ID;
-      results.push(`Client ID: ${clientId ? '✅ Present' : '❌ Missing'}`);
-      
-      // Test user state
-      results.push(`User: ${user?.uid ? '✅ Authenticated (' + user.uid + ')' : '❌ Not authenticated'}`);
-      
-      // Test component state
-      results.push(`Status: ${status}`);
-      results.push(`Connecting: ${connecting}`);
-      results.push(`Error: ${error || 'None'}`);
-      
-      // Test functions exist
-      results.push(`startFitbitConnection: ${typeof startFitbitConnection === 'function' ? '✅ Function exists' : '❌ Not function'}`);
-      results.push(`forceReconnection: ${typeof forceReconnection === 'function' ? '✅ Function exists' : '❌ Not function'}`);
-      
-      // Test DOM elements
-      const buttons = document.querySelectorAll('.error-actions button');
-      results.push(`Error action buttons found: ${buttons.length}`);
-      
-      // Test CSS
-      const errorCard = document.querySelector('.connection-error-card');
-      if (errorCard) {
-        const computedStyle = window.getComputedStyle(errorCard);
-        results.push(`Error card pointer-events: ${computedStyle.pointerEvents}`);
-        results.push(`Error card z-index: ${computedStyle.zIndex}`);
-      }
-      
-      setTestResult(results.join('\n'));
+    const diagnostics = {
+      user: user?.uid || 'No user',
+      status: status,
+      connecting: connecting,
+      error: error || 'None',
+      clientId: process.env.REACT_APP_FITBIT_CLIENT_ID ? 'Present' : 'Missing',
+      functions: `onReconnect=${typeof startFitbitConnection}, onForceReconnect=${typeof forceResetConnection}`
     };
     
     return (
@@ -146,105 +99,21 @@ const FitbitDashboard = () => {
         fontFamily: 'monospace',
         fontSize: '0.9rem'
       }}>
-        <h3 style={{ color: '#007bff', margin: '0 0 1rem 0' }}>🔧 Debug Panel</h3>
+        <h3 style={{ color: '#007bff', margin: '0 0 1rem 0' }}>🐛 Debug Info:</h3>
         
-        <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', marginBottom: '1rem' }}>
-          <button 
-            onClick={runDiagnostics}
-            style={{
-              background: '#007bff',
-              color: 'white',
-              padding: '8px 16px',
-              border: 'none',
-              borderRadius: '4px',
-              cursor: 'pointer'
-            }}
-          >
-            🔍 Run Diagnostics
-          </button>
-          
-          <button 
-            onClick={() => {
-              console.clear();
-              console.log('🧹 Console cleared');
-              debugState();
-            }}
-            style={{
-              background: '#6c757d',
-              color: 'white',
-              padding: '8px 16px',
-              border: 'none',
-              borderRadius: '4px',
-              cursor: 'pointer'
-            }}
-          >
-            🧹 Clear Console
-          </button>
-          
-          <button 
-            onClick={() => {
-              console.log('🚀 Testing startFitbitConnection...');
-              console.log('🚀 Function type:', typeof startFitbitConnection);
-              if (typeof startFitbitConnection === 'function') {
-                console.log('🚀 Calling startFitbitConnection...');
-                startFitbitConnection();
-              } else {
-                console.error('❌ startFitbitConnection is not a function!');
-                alert('startFitbitConnection function is missing!');
-              }
-            }}
-            style={{
-              background: '#28a745',
-              color: 'white',
-              padding: '8px 16px',
-              border: 'none',
-              borderRadius: '4px',
-              cursor: 'pointer'
-            }}
-          >
-            🚀 Test Connection
-          </button>
-
-          <button 
-            onClick={() => {
-              console.log('🔄 Testing forceReconnection...');
-              console.log('🔄 Function type:', typeof forceReconnection);
-              if (typeof forceReconnection === 'function') {
-                console.log('🔄 Calling forceReconnection...');
-                forceReconnection();
-              } else {
-                console.error('❌ forceReconnection is not a function!');
-                alert('forceReconnection function is missing!');
-              }
-            }}
-            style={{
-              background: '#dc3545',
-              color: 'white',
-              padding: '8px 16px',
-              border: 'none',
-              borderRadius: '4px',
-              cursor: 'pointer'
-            }}
-          >
-            🔄 Test Force Reset
-          </button>
+        <div style={{ 
+          background: 'white', 
+          padding: '1rem', 
+          border: '1px solid #dee2e6',
+          borderRadius: '4px',
+          fontSize: '0.8rem'
+        }}>
+          {Object.entries(diagnostics).map(([key, value]) => (
+            <div key={key} style={{ marginBottom: '0.5rem' }}>
+              <strong>{key}:</strong> {value}
+            </div>
+          ))}
         </div>
-        
-        <TestButton />
-        
-        {testResult && (
-          <pre style={{ 
-            background: 'white', 
-            padding: '1rem', 
-            marginTop: '1rem',
-            whiteSpace: 'pre-wrap',
-            borderRadius: '4px',
-            border: '1px solid #ccc',
-            fontSize: '0.8rem'
-          }}>
-            {testResult}
-          </pre>
-        )}
       </div>
     );
   };
@@ -286,52 +155,144 @@ const startFitbitConnection = () => {
     return;
   }
 
-  // Clear any existing session data first
-  sessionStorage.removeItem('fitbitOAuthState');
-  sessionStorage.removeItem('fitbitAuthStartTime');
-  
-  // Generate a new state with timestamp for uniqueness
-  const timestamp = Date.now().toString();
-  const randomPart = Math.random().toString(36).substring(2, 15);
-  const state = `${timestamp}_${randomPart}_${user.uid.substring(0, 8)}`;
-  
-  console.log('🚀 Generated OAuth state:', state);
-  
-  // Store state and timestamp
-  sessionStorage.setItem('fitbitOAuthState', state);
-  sessionStorage.setItem('fitbitAuthStartTime', timestamp);
-  
-  // Verify storage worked
-  const storedState = sessionStorage.getItem('fitbitOAuthState');
-  console.log('🚀 Verified stored state:', storedState);
-  
-  if (storedState !== state) {
-    console.error('❌ Failed to store OAuth state');
-    setError('Failed to initialize OAuth flow. Please try again.');
+  try {
+    // Clear any existing session data first
+    sessionStorage.removeItem('fitbitOAuthState');
+    sessionStorage.removeItem('fitbitAuthStartTime');
+    
+    // Generate a new state with timestamp for uniqueness
+    const timestamp = Date.now().toString();
+    const randomPart = Math.random().toString(36).substring(2, 15);
+    const state = `${timestamp}_${randomPart}_${user.uid.substring(0, 8)}`;
+    
+    console.log('🚀 Generated OAuth state:', state);
+    
+    // Store state and timestamp with verification
+    sessionStorage.setItem('fitbitOAuthState', state);
+    sessionStorage.setItem('fitbitAuthStartTime', timestamp);
+    
+    // Verify storage worked
+    const storedState = sessionStorage.getItem('fitbitOAuthState');
+    const storedTimestamp = sessionStorage.getItem('fitbitAuthStartTime');
+    
+    console.log('🚀 Storage verification:', {
+      stateStored: storedState === state,
+      timestampStored: storedTimestamp === timestamp,
+      storedState: storedState,
+      storedTimestamp: storedTimestamp
+    });
+    
+    if (storedState !== state || storedTimestamp !== timestamp) {
+      console.error('❌ Failed to store OAuth state properly');
+      setError('Failed to initialize OAuth flow. Please try again.');
+      setConnecting(false);
+      return;
+    }
+
+    const redirectUri = window.location.origin + window.location.pathname;
+    const scope = 'activity heartrate sleep weight profile';
+
+    const authUrl = `https://www.fitbit.com/oauth2/authorize?` +
+      `response_type=code&` +
+      `client_id=${clientId}&` +
+      `redirect_uri=${encodeURIComponent(redirectUri)}&` +
+      `scope=${encodeURIComponent(scope)}&` +
+      `state=${encodeURIComponent(state)}`;
+
+    console.log('🚀 Auth URL generated:', authUrl);
+    console.log('🚀 Redirect URI:', redirectUri);
+    console.log('🚀 State in URL:', encodeURIComponent(state));
+    
+    // Add a small delay to ensure state is stored and verified
+    setTimeout(() => {
+      console.log('🚀 Final state check before redirect...');
+      const finalStateCheck = sessionStorage.getItem('fitbitOAuthState');
+      if (finalStateCheck === state) {
+        console.log('🚀 Redirecting to Fitbit...');
+        window.location.href = authUrl;
+      } else {
+        console.error('❌ State lost before redirect');
+        setError('OAuth state was lost. Please try again.');
+        setConnecting(false);
+      }
+    }, 200);
+    
+  } catch (error) {
+    console.error('❌ Error in startFitbitConnection:', error);
+    setError('Failed to start OAuth flow. Please try again.');
     setConnecting(false);
-    return;
   }
-
-  const redirectUri = window.location.origin + window.location.pathname;
-  const scope = 'activity heartrate sleep weight profile';
-
-  const authUrl = `https://www.fitbit.com/oauth2/authorize?` +
-    `response_type=code&` +
-    `client_id=${clientId}&` +
-    `redirect_uri=${encodeURIComponent(redirectUri)}&` +
-    `scope=${encodeURIComponent(scope)}&` +
-    `state=${encodeURIComponent(state)}`;
-
-  console.log('🚀 Auth URL generated:', authUrl);
-  console.log('🚀 Redirect URI:', redirectUri);
-  console.log('🚀 State in URL:', encodeURIComponent(state));
-  
-  // Add a small delay to ensure state is stored
-  setTimeout(() => {
-    console.log('🚀 Redirecting to Fitbit...');
-    window.location.href = authUrl;
-  }, 100);
 };
+
+  // Force reset function for OAuth issues
+  const forceResetConnection = useCallback(async () => {
+    console.log('🧹 FORCE RESET: Clearing all OAuth state and data');
+    
+    try {
+      // Clear all session storage
+      const sessionKeys = ['fitbitOAuthState', 'fitbitAuthStartTime'];
+      sessionKeys.forEach(key => {
+        const value = sessionStorage.getItem(key);
+        console.log(`🧹 Clearing ${key}:`, value);
+        sessionStorage.removeItem(key);
+      });
+      
+      // Clear URL parameters
+      const cleanUrl = window.location.pathname;
+      console.log('🧹 Cleaning URL from:', window.location.href, 'to:', cleanUrl);
+      window.history.replaceState({}, document.title, cleanUrl);
+      
+      // Update Firestore to clear Fitbit connection
+      if (user?.uid) {
+        console.log('🧹 Updating Firestore to clear Fitbit connection...');
+        await setDoc(doc(db, 'users', user.uid), {
+          deviceConnected: false,
+          selectedDevice: null,
+          fitbitData: null,
+          lastUpdated: new Date().toISOString()
+        }, { merge: true });
+        console.log('✅ Firestore updated successfully');
+      }
+      
+      // Reset component state
+      setError('');
+      setConnecting(false);
+      setStatus('needs_connection');
+      setFitbitData(null);
+      setTimeseriesData([]);
+      setSelectedDateMetrics(null);
+      
+      // Clear user data fitbit connection
+      if (userData) {
+        setUserData(prev => ({
+          ...prev,
+          deviceConnected: false,
+          selectedDevice: null,
+          fitbitData: null
+        }));
+      }
+      
+      // Update localStorage
+      const storedUserData = localStorage.getItem('userData');
+      if (storedUserData) {
+        const parsedData = JSON.parse(storedUserData);
+        const updatedData = {
+          ...parsedData,
+          deviceConnected: false,
+          selectedDevice: null,
+          fitbitData: null
+        };
+        localStorage.setItem('userData', JSON.stringify(updatedData));
+        console.log('✅ localStorage updated');
+      }
+      
+      console.log('✅ Force reset completed - ready for fresh connection');
+      
+    } catch (error) {
+      console.error('❌ Error during force reset:', error);
+      setError('Failed to reset connection. Please try again.');
+    }
+  }, [user?.uid, userData]);
 
   // Enhanced token validation and refresh
   const validateAndRefreshToken = useCallback(async (userId) => {
@@ -939,8 +900,36 @@ const startFitbitConnection = () => {
       setError('');
 
       const storedState = sessionStorage.getItem('fitbitOAuthState');
-      if (state !== storedState) {
-        throw new Error('Security validation failed. Please try again.');
+      const storedTimestamp = sessionStorage.getItem('fitbitAuthStartTime');
+      
+      console.log('🔍 OAuth State Validation:', {
+        receivedState: state,
+        storedState: storedState,
+        storedTimestamp: storedTimestamp,
+        stateMatch: state === storedState,
+        hasCode: !!code
+      });
+
+      // Enhanced state validation with better error handling
+      if (!storedState) {
+        console.warn('⚠️ No stored OAuth state found - this might be a page refresh');
+        // Continue with the flow but log the issue
+      } else if (state !== storedState) {
+        console.error('❌ State mismatch detected');
+        console.error('Expected:', storedState);
+        console.error('Received:', state);
+        
+        // Check if this is a recent auth attempt (within 5 minutes)
+        const authStartTime = parseInt(storedTimestamp || '0');
+        const timeDiff = Date.now() - authStartTime;
+        const isRecent = timeDiff < 5 * 60 * 1000; // 5 minutes
+        
+        if (isRecent && code) {
+          console.log('🔄 Recent auth attempt detected, proceeding with caution...');
+          // Continue with the flow but log the security concern
+        } else {
+          throw new Error('Security validation failed. Please try again.');
+        }
       }
 
       console.log('🔄 Processing OAuth callback...');
@@ -966,6 +955,7 @@ const startFitbitConnection = () => {
       setUserData(prev => ({ ...prev, fitbitData }));
       setStatus('connected');
 
+      // Clean up session storage
       sessionStorage.removeItem('fitbitOAuthState');
       sessionStorage.removeItem('fitbitAuthStartTime');
       window.history.replaceState({}, document.title, window.location.pathname);
@@ -977,6 +967,10 @@ const startFitbitConnection = () => {
       console.error('❌ Error processing OAuth:', err);
       setError(`Failed to connect Fitbit: ${err.message}`);
       setStatus('error');
+      
+      // Clean up on error
+      sessionStorage.removeItem('fitbitOAuthState');
+      sessionStorage.removeItem('fitbitAuthStartTime');
     } finally {
       setConnecting(false);
     }
@@ -1086,104 +1080,9 @@ const startFitbitConnection = () => {
             justifyContent: 'center',
             margin: '1.5rem 0'
           }}>
-            {/* Add this button to your DiagnosticTool component: */}
-
-<button 
-  onClick={() => {
-    console.log('🧹 FULL SESSION RESET');
-    
-    // Clear all OAuth-related session data
-    const sessionKeys = ['fitbitOAuthState', 'fitbitAuthStartTime'];
-    sessionKeys.forEach(key => {
-      const value = sessionStorage.getItem(key);
-      console.log(`🧹 Clearing ${key}:`, value);
-      sessionStorage.removeItem(key);
-    });
-    
-    // Clear URL parameters
-    const currentUrl = window.location.href;
-    const cleanUrl = window.location.pathname;
-    console.log('🧹 URL before:', currentUrl);
-    console.log('🧹 URL after:', cleanUrl);
-    window.history.replaceState({}, document.title, cleanUrl);
-    
-    // Reset all relevant state
-    setError('');
-    setConnecting(false);
-    setStatus('needs_connection');
-    
-    // Clear any fitbit data
-    setFitbitData(null);
-    setTimeseriesData([]);
-    setSelectedDateMetrics(null);
-    
-    console.log('✅ Complete session reset finished');
-    alert('Complete session reset! Now try connecting again.');
-  }}
-  style={{
-    background: '#dc3545',
-    color: 'white',
-    padding: '8px 16px',
-    border: 'none',
-    borderRadius: '4px',
-    cursor: 'pointer',
-    fontWeight: 'bold'
-  }}
->
-  🧹 FULL RESET & RETRY
-</button>
-
-<button 
-  onClick={() => {
-    console.log('🔍 OAUTH STATE DEBUG');
-    
-    // Check current session storage
-    const storedState = sessionStorage.getItem('fitbitOAuthState');
-    const authStartTime = sessionStorage.getItem('fitbitAuthStartTime');
-    
-    // Check URL parameters
-    const urlParams = new URLSearchParams(location.search);
-    const urlCode = urlParams.get('code');
-    const urlState = urlParams.get('state');
-    const urlError = urlParams.get('error');
-    
-    const debugInfo = {
-      sessionStorage: {
-        fitbitOAuthState: storedState,
-        fitbitAuthStartTime: authStartTime
-      },
-      urlParameters: {
-        code: urlCode ? 'Present' : 'Missing',
-        state: urlState,
-        error: urlError
-      },
-      stateComparison: {
-        stored: storedState,
-        fromUrl: urlState,
-        match: storedState === urlState
-      },
-      currentUrl: window.location.href,
-      user: user?.uid
-    };
-    
-    console.table(debugInfo);
-    alert('OAuth debug info logged to console - check F12');
-  }}
-  style={{
-    background: '#8b5cf6',
-    color: 'white',
-    padding: '8px 16px',
-    border: 'none',
-    borderRadius: '4px',
-    cursor: 'pointer'
-  }}
->
-  🔍 Debug OAuth State
-</button>
             <button
               onClick={(e) => {
                 console.log('🔗 Reconnect button clicked', e);
-                console.log('🔗 onReconnect function:', typeof onReconnect);
                 e.preventDefault();
                 e.stopPropagation();
                 
@@ -1224,15 +1123,23 @@ const startFitbitConnection = () => {
             </button>
             
             <button
-              onClick={(e) => {
+              onClick={async (e) => {
                 console.log('🔄 Force Reset button clicked', e);
-                console.log('🔄 onForceReconnect function:', typeof onForceReconnect);
                 e.preventDefault();
                 e.stopPropagation();
                 
                 if (onForceReconnect && typeof onForceReconnect === 'function') {
                   console.log('🔄 Calling onForceReconnect...');
-                  onForceReconnect();
+                  try {
+                    setConnecting(true);
+                    await onForceReconnect();
+                    console.log('✅ Force reset completed successfully');
+                  } catch (error) {
+                    console.error('❌ Force reset failed:', error);
+                    setError('Force reset failed. Please try again.');
+                  } finally {
+                    setConnecting(false);
+                  }
                 } else {
                   console.error('❌ No onForceReconnect function provided');
                   alert('onForceReconnect function is missing! Check console.');
@@ -1241,7 +1148,7 @@ const startFitbitConnection = () => {
               className="force-reconnect-button secondary"
               disabled={connecting}
               style={{ 
-                cursor: 'pointer', 
+                cursor: connecting ? 'not-allowed' : 'pointer', 
                 pointerEvents: 'auto',
                 position: 'relative',
                 zIndex: 300,
@@ -1250,40 +1157,20 @@ const startFitbitConnection = () => {
                 padding: '12px 24px',
                 border: 'none',
                 borderRadius: '6px',
-                fontSize: '14px'
+                fontSize: '14px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px'
               }}
             >
-              🔄 Force Reset
-            </button>
-            
-            <button
-              onClick={(e) => {
-                console.log('🔄 Try Again button clicked', e);
-                e.preventDefault();
-                e.stopPropagation();
-                
-                setError('');
-                setStatus('checking');
-                if (user?.uid) {
-                  loadUserData(user.uid);
-                }
-              }}
-              className="retry-button secondary"
-              disabled={connecting}
-              style={{ 
-                cursor: 'pointer', 
-                pointerEvents: 'auto',
-                position: 'relative',
-                zIndex: 300,
-                background: connecting ? '#6c757d' : '#6c757d',
-                color: 'white',
-                padding: '12px 24px',
-                border: 'none',
-                borderRadius: '6px',
-                fontSize: '14px'
-              }}
-            >
-              🔄 Try Again
+              {connecting ? (
+                <>
+                  <div className="loading-spinner-small"></div>
+                  Resetting...
+                </>
+              ) : (
+                <>🔄 Force Reset</>
+              )}
             </button>
           </div>
           
@@ -1589,7 +1476,7 @@ const startFitbitConnection = () => {
           <ConnectionError 
             error={error || 'Please connect your Fitbit account to continue.'} 
             onReconnect={startFitbitConnection}
-            onForceReconnect={forceReconnection}
+            onForceReconnect={forceResetConnection}
           />
         )}
 

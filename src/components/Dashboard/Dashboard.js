@@ -66,11 +66,7 @@ function Dashboard() {
     navigate('/fitbit-dashboard');
   };
 
-  // Handle connecting Fitbit device
-  const handleConnectDevice = () => {
-    console.log('CLICKED: Connect Device button - navigating to Fitbit setup');
-    navigate('/fitbit-dashboard'); // This will show the connection screen
-  };
+
 
   // Handle navigation to personal settings
   const handlePersonalSettings = () => {
@@ -125,10 +121,11 @@ function Dashboard() {
     }
   };
 
-  // Enhanced Fitbit connection check
-  const isFitbitConnected = userData?.selectedDevice === 'fitbit' && 
-                           userData?.deviceConnected === true && 
-                           userData?.fitbitData?.accessToken;
+  // Enhanced device connection check
+  const isDeviceConnected = userData && 
+                           userData.deviceConnected === true && 
+                           userData.selectedDevice && 
+                           userData.fitbitData?.accessToken;
   
   // Show loading state
   if (loading) {
@@ -147,7 +144,7 @@ function Dashboard() {
   console.log('deviceConnected:', userData?.deviceConnected);
   console.log('fitbitData exists:', !!userData?.fitbitData);
   console.log('fitbitData accessToken exists:', !!userData?.fitbitData?.accessToken);
-  console.log('isFitbitConnected:', isFitbitConnected);
+  console.log('isDeviceConnected:', isDeviceConnected);
   console.log('=== END DEBUG INFO ===');
   
   return (
@@ -208,64 +205,33 @@ function Dashboard() {
                 🩺 Track Symptoms
               </button>
 
-              {isFitbitConnected ? (
+              {isDeviceConnected && (
                 <button 
                   className="action-button activity" 
                   onClick={handleViewActivityData}
                 >
                   📊 View Activity Data
                 </button>
-              ) : (
-                <button 
-                  className="action-button connect-device" 
-                  onClick={handleConnectDevice}
-                  style={{
-                    background: 'linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)',
-                    borderColor: '#3b82f6',
-                    color: 'white',
-                    cursor: 'pointer',
-                    transition: 'all 0.3s ease',
-                    boxShadow: '0 4px 12px rgba(59, 130, 246, 0.2)'
-                  }}
-                  onMouseOver={(e) => {
-                    e.target.style.transform = 'translateY(-2px)';
-                    e.target.style.boxShadow = '0 8px 25px rgba(59, 130, 246, 0.3)';
-                  }}
-                  onMouseOut={(e) => {
-                    e.target.style.transform = 'translateY(0)';
-                    e.target.style.boxShadow = '0 4px 12px rgba(59, 130, 246, 0.2)';
-                  }}
-                >
-                  🔗 Connect Fitbit
-                </button>
               )}
             </div>
 
             {/* Connection Status Indicator */}
-            <div className="connection-status" style={{
-              marginTop: '1rem',
-              padding: '0.75rem',
-              borderRadius: '8px',
-              fontSize: '0.9rem',
-              background: isFitbitConnected 
-                ? 'rgba(34, 197, 94, 0.1)' 
-                : 'rgba(245, 158, 11, 0.1)',
-              border: `1px solid ${isFitbitConnected 
-                ? 'rgba(34, 197, 94, 0.3)' 
-                : 'rgba(245, 158, 11, 0.3)'}`,
-              color: isFitbitConnected 
-                ? '#059669' 
-                : '#d97706'
-            }}>
-              <strong>Device Status:</strong> {isFitbitConnected ? (
-                <span>✅ Fitbit Connected</span>
-              ) : (
-                <span>⚠️ No device connected - Click "Connect Fitbit" to get started</span>
-              )}
-            </div>
+            {isDeviceConnected && (
+              <div className="connection-status" style={{
+                marginTop: '1rem',
+                padding: '0.75rem',
+                borderRadius: '8px',
+                fontSize: '0.9rem',
+                background: 'rgba(34, 197, 94, 0.1)',
+                border: '1px solid rgba(34, 197, 94, 0.3)',
+                color: '#059669'
+              }}>
+                <strong>Device Status:</strong> <span>✅ Activity tracker connected</span>
+              </div>
+            )}
 
             {/* Debug Panel (only show in development) */}
-            {process.env.NODE_ENV === 'development' && (
+            {process.env.NODE_ENV === 'development' && userData && (
               <details style={{ marginTop: '1rem' }}>
                 <summary style={{ 
                   color: '#6b7280', 
@@ -288,9 +254,9 @@ function Dashboard() {
                 }}>
                   <strong>User Data:</strong><br/>
                   Selected Device: {userData?.selectedDevice || 'none'}<br/>
-                  Device Connected: {userData?.deviceConnected?.toString() || 'false'}<br/>
+                  Device Connected: {userData?.deviceConnected === true ? 'true' : 'false'}<br/>
                   Fitbit Token Exists: {userData?.fitbitData?.accessToken ? 'yes' : 'no'}<br/>
-                  Connection Check Result: {isFitbitConnected.toString()}<br/>
+                  Connection Check Result: {isDeviceConnected === true ? 'true' : 'false'}<br/>
                   <br/>
                   <strong>Raw User Data:</strong><br/>
                   <pre style={{ 

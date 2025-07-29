@@ -487,6 +487,69 @@ const PersonalSettings = () => {
     }
   };
 
+  // Activity Tracker Management Handlers
+  const handleDisconnectDevice = async () => {
+    if (!userData?.id) return;
+    
+    try {
+      const updatedData = {
+        deviceConnected: false,
+        selectedDevice: null,
+        fitbitData: null,
+        lastDeviceUpdate: new Date().toISOString()
+      };
+      
+      const userDocRef = doc(db, "users", userData.id);
+      await updateDoc(userDocRef, updatedData);
+      
+      // Update local state
+      setUserData(prev => ({ ...prev, ...updatedData }));
+      
+      // Update localStorage
+      const storedUserData = JSON.parse(localStorage.getItem('userData'));
+      const updatedStoredData = { ...storedUserData, ...updatedData };
+      localStorage.setItem('userData', JSON.stringify(updatedStoredData));
+      
+      setSuccessMessage('Device disconnected successfully!');
+      setTimeout(() => setSuccessMessage(''), 3000);
+      
+    } catch (error) {
+      console.error('Error disconnecting device:', error);
+      setErrors({ device: 'Failed to disconnect device. Please try again.' });
+    }
+  };
+
+  const handleSyncSettingChange = async (e) => {
+    const { name, checked } = e.target;
+    
+    if (!userData?.id) return;
+    
+    try {
+      const updatedData = {
+        [name]: checked,
+        lastSyncUpdate: new Date().toISOString()
+      };
+      
+      const userDocRef = doc(db, "users", userData.id);
+      await updateDoc(userDocRef, updatedData);
+      
+      // Update local state
+      setUserData(prev => ({ ...prev, ...updatedData }));
+      
+      // Update localStorage
+      const storedUserData = JSON.parse(localStorage.getItem('userData'));
+      const updatedStoredData = { ...storedUserData, ...updatedData };
+      localStorage.setItem('userData', JSON.stringify(updatedStoredData));
+      
+      setSuccessMessage('Sync settings updated!');
+      setTimeout(() => setSuccessMessage(''), 3000);
+      
+    } catch (error) {
+      console.error('Error updating sync settings:', error);
+      setErrors({ sync: 'Failed to update sync settings. Please try again.' });
+    }
+  };
+
   const validateForm = () => {
     const newErrors = {};
     
@@ -878,6 +941,150 @@ const PersonalSettings = () => {
               {saving ? 'Saving...' : 'Save Profile'}
             </button>
           </form>
+        </div>
+
+        {/* Activity Tracker Management Section */}
+        <div className="settings-card">
+          <div className="card-header">
+            <h2 className="card-title">Activity Tracker Settings</h2>
+            <p className="card-description">
+              Connect and manage your activity tracking devices to sync your health data.
+            </p>
+          </div>
+
+          <div className="activity-tracker-section">
+            {/* Current Device Status */}
+            <div className="current-device-status">
+              <h3 className="section-subtitle">Current Device</h3>
+              {userData?.deviceConnected && userData?.selectedDevice ? (
+                <div className="connected-device">
+                  <div className="device-info">
+                    <div className="device-icon">📱</div>
+                    <div className="device-details">
+                      <div className="device-name">{userData.selectedDevice}</div>
+                      <div className="device-status connected">✅ Connected</div>
+                    </div>
+                  </div>
+                  <div className="device-actions">
+                    <button 
+                      onClick={() => navigate('/fitbit-dashboard')}
+                      className="btn btn-secondary btn-sm"
+                    >
+                      Manage Device
+                    </button>
+                    <button 
+                      onClick={handleDisconnectDevice}
+                      className="btn btn-danger btn-sm"
+                    >
+                      Disconnect
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div className="no-device">
+                  <div className="no-device-icon">📱</div>
+                  <div className="no-device-text">
+                    <h4>No device connected</h4>
+                    <p>Connect an activity tracker to sync your health data and get better insights.</p>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Available Devices */}
+            <div className="available-devices">
+              <h3 className="section-subtitle">Connect a Device</h3>
+              <div className="device-options">
+                <div className="device-option">
+                  <div className="device-option-header">
+                    <div className="device-option-icon">⌚</div>
+                    <div className="device-option-info">
+                      <h4>Fitbit</h4>
+                      <p>Sync steps, heart rate, sleep, and activity data</p>
+                    </div>
+                  </div>
+                  <button 
+                    onClick={() => navigate('/fitbit-dashboard')}
+                    className="btn btn-primary btn-sm"
+                    disabled={userData?.deviceConnected && userData?.selectedDevice === 'fitbit'}
+                  >
+                    {userData?.deviceConnected && userData?.selectedDevice === 'fitbit' 
+                      ? 'Connected' 
+                      : 'Connect Fitbit'
+                    }
+                  </button>
+                </div>
+
+                <div className="device-option">
+                  <div className="device-option-header">
+                    <div className="device-option-icon">🍎</div>
+                    <div className="device-option-info">
+                      <h4>Apple Health</h4>
+                      <p>Import data from Apple Health app (Coming Soon)</p>
+                    </div>
+                  </div>
+                  <button 
+                    className="btn btn-secondary btn-sm"
+                    disabled={true}
+                  >
+                    Coming Soon
+                  </button>
+                </div>
+
+                <div className="device-option">
+                  <div className="device-option-header">
+                    <div className="device-option-icon">🤖</div>
+                    <div className="device-option-info">
+                      <h4>Google Fit</h4>
+                      <p>Import data from Google Fit (Coming Soon)</p>
+                    </div>
+                  </div>
+                  <button 
+                    className="btn btn-secondary btn-sm"
+                    disabled={true}
+                  >
+                    Coming Soon
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* Data Sync Settings */}
+            {userData?.deviceConnected && (
+              <div className="sync-settings">
+                <h3 className="section-subtitle">Data Sync Settings</h3>
+                <div className="sync-options">
+                  <label className="sync-option">
+                    <input 
+                      type="checkbox" 
+                      checked={userData?.syncSteps !== false}
+                      onChange={handleSyncSettingChange}
+                      name="syncSteps"
+                    />
+                    <span className="sync-option-text">Sync step count and activity data</span>
+                  </label>
+                  <label className="sync-option">
+                    <input 
+                      type="checkbox" 
+                      checked={userData?.syncHeartRate !== false}
+                      onChange={handleSyncSettingChange}
+                      name="syncHeartRate"
+                    />
+                    <span className="sync-option-text">Sync heart rate data</span>
+                  </label>
+                  <label className="sync-option">
+                    <input 
+                      type="checkbox" 
+                      checked={userData?.syncSleep !== false}
+                      onChange={handleSyncSettingChange}
+                      name="syncSleep"
+                    />
+                    <span className="sync-option-text">Sync sleep data</span>
+                  </label>
+                </div>
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Password Change Section */}
@@ -1868,6 +2075,222 @@ const PersonalSettings = () => {
           margin-top: 1rem;
         }
 
+        /* Activity Tracker Section Styles */
+        .activity-tracker-section {
+          display: flex;
+          flex-direction: column;
+          gap: 2rem;
+        }
+
+        .section-subtitle {
+          font-size: 1.125rem;
+          font-weight: 600;
+          color: var(--gray-700);
+          margin: 0 0 1rem 0;
+        }
+
+        .current-device-status {
+          padding: 1.5rem;
+          background: rgba(255, 255, 255, 0.5);
+          border-radius: 16px;
+          border: 1px solid var(--gray-200);
+        }
+
+        .connected-device {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 1rem;
+        }
+
+        .device-info {
+          display: flex;
+          align-items: center;
+          gap: 1rem;
+        }
+
+        .device-icon {
+          font-size: 2rem;
+          width: 3rem;
+          height: 3rem;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          background: var(--primary-light);
+          border-radius: 12px;
+        }
+
+        .device-details {
+          display: flex;
+          flex-direction: column;
+          gap: 0.25rem;
+        }
+
+        .device-name {
+          font-weight: 600;
+          color: var(--gray-800);
+          text-transform: capitalize;
+        }
+
+        .device-status {
+          font-size: 0.875rem;
+          font-weight: 500;
+        }
+
+        .device-status.connected {
+          color: var(--success-color);
+        }
+
+        .device-actions {
+          display: flex;
+          gap: 0.5rem;
+        }
+
+        .btn-sm {
+          padding: 0.5rem 1rem;
+          font-size: 0.8125rem;
+          min-height: 2rem;
+        }
+
+        .no-device {
+          display: flex;
+          align-items: center;
+          gap: 1rem;
+          padding: 1.5rem;
+          background: var(--gray-50);
+          border-radius: 12px;
+          border: 2px dashed var(--gray-300);
+        }
+
+        .no-device-icon {
+          font-size: 2rem;
+          width: 3rem;
+          height: 3rem;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          background: var(--gray-100);
+          border-radius: 12px;
+          color: var(--gray-500);
+        }
+
+        .no-device-text h4 {
+          margin: 0 0 0.5rem 0;
+          color: var(--gray-700);
+          font-weight: 600;
+        }
+
+        .no-device-text p {
+          margin: 0;
+          color: var(--gray-600);
+          font-size: 0.875rem;
+        }
+
+        .available-devices {
+          padding: 1.5rem;
+          background: rgba(255, 255, 255, 0.5);
+          border-radius: 16px;
+          border: 1px solid var(--gray-200);
+        }
+
+        .device-options {
+          display: flex;
+          flex-direction: column;
+          gap: 1rem;
+        }
+
+        .device-option {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          padding: 1rem;
+          background: rgba(255, 255, 255, 0.8);
+          border-radius: 12px;
+          border: 1px solid var(--gray-200);
+          transition: var(--transition);
+        }
+
+        .device-option:hover {
+          border-color: var(--primary-color);
+          background: rgba(255, 255, 255, 0.95);
+          transform: translateY(-1px);
+          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+
+        .device-option-header {
+          display: flex;
+          align-items: center;
+          gap: 1rem;
+        }
+
+        .device-option-icon {
+          font-size: 1.5rem;
+          width: 2.5rem;
+          height: 2.5rem;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          background: var(--gray-100);
+          border-radius: 8px;
+        }
+
+        .device-option-info h4 {
+          margin: 0 0 0.25rem 0;
+          color: var(--gray-800);
+          font-weight: 600;
+        }
+
+        .device-option-info p {
+          margin: 0;
+          color: var(--gray-600);
+          font-size: 0.8125rem;
+        }
+
+        .sync-settings {
+          padding: 1.5rem;
+          background: rgba(255, 255, 255, 0.5);
+          border-radius: 16px;
+          border: 1px solid var(--gray-200);
+        }
+
+        .sync-options {
+          display: flex;
+          flex-direction: column;
+          gap: 1rem;
+        }
+
+        .sync-option {
+          display: flex;
+          align-items: center;
+          gap: 0.75rem;
+          padding: 0.75rem;
+          background: rgba(255, 255, 255, 0.8);
+          border-radius: 8px;
+          border: 1px solid var(--gray-200);
+          cursor: pointer;
+          transition: var(--transition);
+        }
+
+        .sync-option:hover {
+          background: rgba(255, 255, 255, 0.95);
+          border-color: var(--primary-color);
+        }
+
+        .sync-option input[type="checkbox"] {
+          width: 1.125rem;
+          height: 1.125rem;
+          accent-color: var(--primary-color);
+          cursor: pointer;
+        }
+
+        .sync-option-text {
+          font-size: 0.875rem;
+          color: var(--gray-700);
+          font-weight: 500;
+          cursor: pointer;
+          user-select: none;
+        }
+
         /* Enhanced responsive design */
         @media (max-width: 768px) {
           .personal-settings-page {
@@ -1915,6 +2338,28 @@ const PersonalSettings = () => {
           }
           
           .danger-actions .btn {
+            width: 100%;
+          }
+          
+          /* Activity tracker responsive */
+          .connected-device {
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 1rem;
+          }
+          
+          .device-actions {
+            width: 100%;
+            justify-content: flex-start;
+          }
+          
+          .device-option {
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 1rem;
+          }
+          
+          .device-option-header {
             width: 100%;
           }
         }
