@@ -8,7 +8,14 @@ import './SymptomTracker.css'; // Import the CSS file
 
 const LongCovidTracker = () => {
   const navigate = useNavigate();
-  const [currentDate, setCurrentDate] = useState(new Date().toISOString().split('T')[0]);
+  const [currentDate, setCurrentDate] = useState(() => {
+    // Use local date formatting to avoid timezone issues
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    const day = String(now.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  });
   const [symptomData, setSymptomData] = useState({});
   const [customSymptoms, setCustomSymptoms] = useState({});
   const [showAddSymptom, setShowAddSymptom] = useState(false);
@@ -25,6 +32,14 @@ const LongCovidTracker = () => {
   // Stable refs
   const isSavingRef = useRef(false);
   const saveTimeoutRef = useRef(null);
+
+  // Helper function to get local date string (consistent with other pages)
+  const getLocalDateString = useCallback((date = new Date()) => {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  }, []);
 
   // Static data
   const severityLevels = useMemo(() => [
@@ -119,7 +134,7 @@ const LongCovidTracker = () => {
       [symptomId]: {
         ...prev[symptomId],
         active: false,
-        endDate: new Date().toISOString().split('T')[0],
+        endDate: getLocalDateString(),
         lastUpdated: new Date().toLocaleDateString()
       }
     }));
@@ -128,7 +143,7 @@ const LongCovidTracker = () => {
       setShowOngoingModal(false);
       setSelectedOngoingSymptom(null);
     }
-  }, [selectedOngoingSymptom]);
+  }, [selectedOngoingSymptom, getLocalDateString]);
 
   // Save to Firestore
   const saveToFirestore = useCallback(async (date, data) => {
@@ -223,7 +238,7 @@ const LongCovidTracker = () => {
       for (let i = 1; i <= 30; i++) {
         const date = new Date();
         date.setDate(date.getDate() - i);
-        const dateStr = date.toISOString().split('T')[0];
+        const dateStr = getLocalDateString(date);
         
         const docRef = doc(db, 'users', userId, 'symptomData', dateStr);
         promises.push(
@@ -274,7 +289,7 @@ const LongCovidTracker = () => {
     } finally {
       setLoading(false); // End loading
     }
-  }, [currentDate]);
+  }, [currentDate, getLocalDateString]);
 
   // Load symptom data for a specific date
   const loadSymptomDataForDate = useCallback(async (date) => {
@@ -1007,7 +1022,7 @@ const LongCovidTracker = () => {
             onClick={() => {
               const date = new Date(currentDate);
               date.setDate(date.getDate() - 1);
-              setCurrentDate(date.toISOString().split('T')[0]);
+              setCurrentDate(getLocalDateString(date));
             }}
             className="date-nav-btn"
           >
@@ -1018,7 +1033,7 @@ const LongCovidTracker = () => {
             type="date"
             value={currentDate}
             onChange={(e) => setCurrentDate(e.target.value)}
-            max={new Date().toISOString().split('T')[0]}
+            max={getLocalDateString()}
             className="date-input"
           />
           
@@ -1028,11 +1043,11 @@ const LongCovidTracker = () => {
               const today = new Date();
               if (date < today) {
                 date.setDate(date.getDate() + 1);
-                setCurrentDate(date.toISOString().split('T')[0]);
+                setCurrentDate(getLocalDateString(date));
               }
             }}
-            disabled={currentDate === new Date().toISOString().split('T')[0]}
-            className={`date-nav-btn ${currentDate === new Date().toISOString().split('T')[0] ? 'disabled' : ''}`}
+            disabled={currentDate === getLocalDateString()}
+            className={`date-nav-btn ${currentDate === getLocalDateString() ? 'disabled' : ''}`}
           >
             Next Day →
           </button>

@@ -343,7 +343,7 @@ function SignInPage() {
               />
               <label htmlFor="password" className="form-label">Password</label>
               <div className="forgot-password">
-                <a href="#forgot">Forgot your password?</a>
+                <Link to="/login/forgot-password">Forgot your password?</Link>
               </div>
             </div>
             

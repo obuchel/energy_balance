@@ -388,41 +388,7 @@ useEffect(() => {
 checkUserAuthentication();
 }, [checkUserAuthentication]);
 
-// Initialize food log data
-const initializeFoodLogData = useCallback(async () => {
-if (!currentUser || !currentUser.id) return;
 
-try {
-const q = query(
-collection(db, 'users', currentUser.id, 'food_journal'),
-orderBy('date', 'desc'),
-orderBy('createdAt', 'desc'),
-limit(20)
-);
-
-const snap = await getDocs(q);
-const entries = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-
-setFoodLog(entries);
-
-if (entries.length === 0) {
-console.log('No food log entries found - showing empty state');
-} else {
-console.log(`Loaded ${entries.length} food log entries`);
-}
-} catch (error) {
-console.error('Error loading food log data:', error);
-setError('Failed to load food log data');
-setFoodLog([]);
-}
-}, [currentUser]);
-
-// Initialize food log when user is authenticated
-useEffect(() => {
-if (currentUser && currentUser.id && !authLoading) {
-initializeFoodLogData();
-}
-}, [currentUser, authLoading, initializeFoodLogData]);
 
 // Long COVID Food Information Component
 const LongCovidFoodInfo = ({ foodName, mealData }) => {
@@ -1143,12 +1109,12 @@ setLogLoading(false);
 }
 }, [currentUser]);
 
-// Fetch food log when tab changes
+// Fetch food log when user is authenticated (regardless of tab)
 useEffect(() => {
-if (tab === 'Food Journal' && currentUser) {
+if (currentUser && !authLoading) {
 fetchFoodLog(1);
 }
-}, [tab, currentUser, fetchFoodLog]);
+}, [currentUser, authLoading, fetchFoodLog]);
 
 // Back navigation
 const handleBack = () => {

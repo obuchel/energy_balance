@@ -4,6 +4,7 @@ import RegistrationPage from './components/Register/RegistrationPage';
 import FitbitCallback from './FitbitCallback';
 import Dashboard from './components/Dashboard/Dashboard';
 import SignInPage from './components/SignIn/SignInPage';
+import ForgotPasswordPage from './components/SignIn/ForgotPasswordPage';
 import FitbitDashboard from './components/FitbitDashboard/FitbitDashboard';
 import PersonalSettings from './components/Settings/PersonalSettings';
 import SymptomTracker from './components/SymptomTracker/SymptomTracker';
@@ -387,6 +388,25 @@ function App() {
             element={
               <PublicRoute>
                 <SignInPage />
+              </PublicRoute>
+            } 
+          />
+          
+          <Route 
+            path="/forgot-password" 
+            element={
+              <PublicRoute>
+                <ForgotPasswordPage />
+              </PublicRoute>
+            } 
+          />
+          
+          {/* Alternative route for forgot password */}
+          <Route 
+            path="/login/forgot-password" 
+            element={
+              <PublicRoute>
+                <ForgotPasswordPage />
               </PublicRoute>
             } 
           />
